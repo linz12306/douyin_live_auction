@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role          ENUM('merchant', 'user') NOT NULL,
     display_name  VARCHAR(50) NOT NULL,
-    avatar_url    VARCHAR(255) DEFAULT '',
+    avatar_url    VARCHAR(255) NOT NULL DEFAULT '',
     balance       DECIMAL(15,2) DEFAULT 1000000.00,
     frozen_amount DECIMAL(15,2) DEFAULT 0.00,
     created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
