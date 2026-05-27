@@ -40,11 +40,18 @@ func main() {
 	authH := handler.NewAuthHandler(authSvc)
 	userH := handler.NewUserHandler(userSvc, cfg.AvatarDir)
 
+	// Product
+	productRepo := repository.NewProductRepo(db)
+	auctionRepo := repository.NewAuctionRepo(db)
+	productSvc := service.NewProductService(productRepo, auctionRepo)
+	productH := handler.NewProductHandler(productSvc, cfg.ImageDir)
+
 	// Router
 	r := gin.Default()
 
 	// Static file serving for avatars
 	r.Static("/static/avatars", cfg.AvatarDir)
+	r.Static("/static/images", cfg.ImageDir)
 
 	api := r.Group("/api/v1")
 	{
@@ -72,6 +79,20 @@ func main() {
 			users.PUT("/me/password", userH.ChangePassword)
 			users.POST("/me/avatar", userH.UploadAvatar)
 			users.GET("/:id", userH.GetUser)
+		}
+
+		// Product routes
+		products := api.Group("/products")
+		products.Use(middleware.JWTAuth(cfg))
+		{
+			products.GET("", productH.List)
+			products.GET("/:id", productH.Get)
+			products.POST("", middleware.RoleGuard("merchant"), productH.Create)
+			products.PUT("/:id", middleware.RoleGuard("merchant"), productH.Update)
+			products.DELETE("/:id", middleware.RoleGuard("merchant"), productH.Delete)
+			products.POST("/:id/images", middleware.RoleGuard("merchant"), productH.UploadImage)
+			products.DELETE("/:id/images/:image_id", middleware.RoleGuard("merchant"), productH.DeleteImage)
+			products.POST("/:id/publish", middleware.RoleGuard("merchant"), productH.Publish)
 		}
 	}
 

@@ -13,6 +13,7 @@ type Config struct {
 	JWTSecret  string
 	ServerPort string
 	AvatarDir  string
+	ImageDir   string
 }
 
 func Load() *Config {
@@ -25,6 +26,7 @@ func Load() *Config {
 		JWTSecret:  getEnv("JWT_SECRET", "dev-secret-change-me"),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
 		AvatarDir:  getEnv("AVATAR_DIR", "./static/avatars"),
+		ImageDir:   getEnv("IMAGE_DIR", "./static/images"),
 	}
 }
 
