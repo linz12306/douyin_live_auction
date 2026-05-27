@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS orders (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    auction_id     BIGINT NOT NULL UNIQUE,
+    product_id     BIGINT NOT NULL,
+    merchant_id    BIGINT NOT NULL,
+    buyer_id       BIGINT NOT NULL,
+    amount         DECIMAL(15,2) NOT NULL,
+    status         ENUM('pending_confirm','pending_payment','paid','cancelled') DEFAULT 'pending_confirm',
+    cancel_reason  VARCHAR(500),
+    confirmed_at   DATETIME NULL,
+    paid_at        DATETIME NULL,
+    cancelled_at   DATETIME NULL,
+    created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (auction_id) REFERENCES auctions(id),
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (merchant_id) REFERENCES users(id),
+    FOREIGN KEY (buyer_id) REFERENCES users(id),
+    INDEX idx_buyer (buyer_id),
+    INDEX idx_merchant (merchant_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
