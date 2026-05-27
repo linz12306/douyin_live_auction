@@ -19,8 +19,8 @@ func Load() *Config {
 	_ = godotenv.Load()
 
 	return &Config{
-		DBDSN:      getEnv("DB_DSN", "root:auction123@tcp(127.0.0.1:3306)/auction_db?parseTime=true&charset=utf8mb4"),
-		RedisAddr:  getEnv("REDIS_ADDR", "127.0.0.1:6379"),
+		DBDSN:      getEnv("DB_DSN", "root:auction123@tcp(127.0.0.1:3307)/auction_db?parseTime=true&charset=utf8mb4"),
+		RedisAddr:  getEnv("REDIS_ADDR", "127.0.0.1:16379"),
 		RedisPass:  getEnv("REDIS_PASSWORD", ""),
 		JWTSecret:  getEnv("JWT_SECRET", "dev-secret-change-me"),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
