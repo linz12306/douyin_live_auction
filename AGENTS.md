@@ -11,11 +11,14 @@ The workflow is not "use Superpowers sometimes and OpenSpec sometimes". It is a 
 Before planning or implementing any non-trivial change, read these files when present:
 
 - `AGENTS.md`
+- `projects/proj-1779447357476-ryiijf/outputs/current-source-of-truth.md`
 - `projects/proj-1779447357476-ryiijf/outputs/requirements-v3.md`
 - `projects/proj-1779447357476-ryiijf/project.md`
 - `docs/superpowers/specs/`
 - `docs/superpowers/plans/`
 - `openspec/`
+
+`requirements-v3.md` is the authoritative latest requirements document. Any older statement that names `requirements-v2.md` as the current version is stale and must be ignored.
 
 If `openspec/` or the OpenSpec CLI is missing, say so explicitly and follow the fallback rules in this file. Do not silently skip the spec discipline.
 
