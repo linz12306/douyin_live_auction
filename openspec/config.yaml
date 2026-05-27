@@ -1,0 +1,5 @@
+schema: spec-driven
+context: |
+  Project: douyin_live_auction, a Go + Gin backend and React + TypeScript frontend for a Douyin live auction MVP.
+  Authoritative requirements live in projects/proj-1779447357476-ryiijf/outputs/requirements-v3.md.
+  Agents must follow AGENTS.md: Superpowers exploration -> OpenSpec lock -> Superpowers execution -> OpenSpec verification/archive -> Superpowers memory.
