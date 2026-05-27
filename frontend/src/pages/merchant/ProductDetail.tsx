@@ -1,0 +1,92 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { getProduct, deleteProduct } from '../../api/product';
+import type { ProductDetail as PD } from '../../types/product';
+
+const STATUS_TEXT: Record<string, string> = {
+  draft: '草稿', pending: '待开拍', active: '进行中',
+  ended_sold: '已成交', ended_no_bid: '流拍', cancelled: '已取消',
+};
+
+export default function ProductDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [detail, setDetail] = useState<PD | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getProduct(parseInt(id!)).then(setDetail).finally(() => setLoading(false));
+  }, [id]);
+
+  const handleDelete = async () => {
+    if (!confirm('确定删除？')) return;
+    await deleteProduct(parseInt(id!));
+    navigate('/merchant/products');
+  };
+
+  if (loading) return <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center"><p className="text-white/60">加载中...</p></div>;
+  if (!detail) return <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center"><p className="text-white/60">商品不存在</p></div>;
+
+  const { product, images, auction } = detail;
+  const canEdit = product.status === 'draft' || product.status === 'pending';
+  const canDelete = product.status === 'draft';
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="flex items-center gap-3 mb-6">
+          <Link to="/merchant/products" className="text-white/60 hover:text-white">&larr; 返回</Link>
+          <h1 className="text-2xl font-bold text-white">{product.title}</h1>
+          <span className="px-2 py-1 rounded text-xs border border-purple-400 bg-purple-500/20 text-purple-300">
+            {STATUS_TEXT[product.status]}
+          </span>
+        </div>
+
+        {images.length > 0 && (
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20 mb-4">
+            <div className="grid grid-cols-3 gap-2">
+              {images.map((img) => (
+                <img key={img.id} src={img.image_url} alt="" className="rounded-lg aspect-square object-cover" />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {product.description && (
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 mb-4">
+            <p className="text-white/80">{product.description}</p>
+          </div>
+        )}
+
+        {auction && (
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 mb-4">
+            <h3 className="text-white font-semibold mb-3">竞拍规则</h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-white/60">起拍价：</span><span className="text-white">{auction.start_price} 元</span></div>
+              <div><span className="text-white/60">加价：</span><span className="text-white">{auction.bid_increment_type === 'fixed' ? `${auction.bid_increment_value} 元` : `${auction.bid_increment_value}%`}</span></div>
+              <div><span className="text-white/60">封顶价：</span><span className="text-white">{auction.ceiling_price ? `${auction.ceiling_price} 元` : '不封顶'}</span></div>
+              <div><span className="text-white/60">时长：</span><span className="text-white">{auction.duration_seconds >= 60 ? `${auction.duration_seconds / 60} 分钟` : `${auction.duration_seconds} 秒`}</span></div>
+              <div><span className="text-white/60">延时：</span><span className="text-white">{auction.auto_extend_seconds}s &times; {auction.max_extend_count}次</span></div>
+              <div><span className="text-white/60">当前价：</span><span className="text-white">{auction.current_price} 元</span></div>
+            </div>
+          </div>
+        )}
+
+        {canEdit && (
+          <div className="flex gap-3">
+            <Link to={`/merchant/products/${product.id}/edit`}
+              className="flex-1 py-3 bg-purple-500 text-white text-center rounded-lg hover:opacity-90">
+              编辑
+            </Link>
+            {canDelete && (
+              <button onClick={handleDelete}
+                className="flex-1 py-3 bg-red-500 text-white rounded-lg hover:opacity-90">
+                删除
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
