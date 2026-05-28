@@ -17,9 +17,11 @@
   - Current status: snapshot provider added in `f56dde5`; consistency and start-price fallback fixed in `caff2a9`.
   - Verification: integration tests create auction/bids and assert snapshot fields and ranking order.
 
-- [ ] 4. Backend RealtimeHub and WebSocket endpoint
+- [x] 4. Backend RealtimeHub and WebSocket endpoint
   - Implement room join/leave, broadcast, private user message, ping/pong heartbeat, cleanup, and `/ws/auctions/:id` auth/upgrade.
   - Verification: WebSocket tests cover auth rejection, initial snapshot, room broadcast, private `outbid`, and reconnect snapshot.
+  - Current status: WebSocket hub and `/ws/auctions/:id` endpoint completed in `7bf5059`; Task 5 remains responsible for wiring `AuctionService` event publishing.
+  - Verification: `/Users/vivix/.local/go/bin/go test -count=1 ./internal/realtime ./internal/handler`, `/Users/vivix/.local/go/bin/go test -count=1 ./...`, `git diff --check`, and `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`.
 
 - [ ] 5. Auction service event publishing
   - Publish committed events after bid accepted, previous bidder outbid, Soft Close extension, ceiling settlement, time settlement, and merchant cancellation.

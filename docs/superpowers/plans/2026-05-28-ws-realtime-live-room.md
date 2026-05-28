@@ -370,7 +370,7 @@ Result: completed in `f56dde5 feat(realtime): add auction snapshot provider` and
 - Create: `backend/internal/handler/realtime_handler_test.go`
 - Modify: `backend/cmd/server/main.go`
 
-- [ ] **Step 1: Write hub tests**
+- [x] **Step 1: Write hub tests**
 
 Test:
 
@@ -379,7 +379,7 @@ Test:
 - sending private outbid to only the matching user id
 - unregister removes client
 
-- [ ] **Step 2: Implement hub**
+- [x] **Step 2: Implement hub**
 
 Expose:
 
@@ -395,15 +395,19 @@ func (h *Hub) SendToUser(auctionID int64, userID int64, msg Envelope)
 
 The hub must subscribe to `AuctionEventBus` and convert events into message envelopes.
 
-- [ ] **Step 3: Write WebSocket handler tests**
+- [x] **Step 3: Write WebSocket handler tests**
 
 Use `httptest.Server` and `websocket.DefaultDialer` to assert:
 
 - missing token fails
 - valid token connects
 - first message is `snapshot`
+- reconnect receives snapshot
+- room broadcast over the WebSocket endpoint
+- private `outbid` over the WebSocket endpoint
+- queued private `outbid` with snapshot version is not dropped after initial snapshot
 
-- [ ] **Step 4: Implement WebSocket handler**
+- [x] **Step 4: Implement WebSocket handler**
 
 Create `RealtimeHandler` with:
 
@@ -418,17 +422,17 @@ Auth behavior:
 - validate with existing JWT logic/helpers
 - reject invalid/missing token
 
-- [ ] **Step 5: Wire server route**
+- [x] **Step 5: Wire server route**
 
 In `backend/cmd/server/main.go`:
 
 - create one event bus
-- pass it to `AuctionService`
+- leave passing it to `AuctionService` for Task 5 event publishing
 - create snapshot provider and hub
 - start hub goroutine
 - add `GET /ws/auctions/:id`
 
-- [ ] **Step 6: Verify and commit**
+- [x] **Step 6: Verify and commit**
 
 Run:
 
@@ -443,6 +447,8 @@ Commit:
 git add backend/internal/realtime backend/internal/handler/realtime_handler.go backend/internal/handler/realtime_handler_test.go backend/cmd/server/main.go
 git commit -m "feat(realtime): add auction websocket hub"
 ```
+
+Result: completed in `7bf5059 feat(realtime): add auction websocket hub`. Spec compliance and code quality reviews approved the slice after fixes for join/snapshot ordering, snapshot-backed `price_update` version consistency, read deadlines, and private `outbid` delivery after initial snapshot. Verification included `/Users/vivix/.local/go/bin/go test -count=1 ./internal/realtime ./internal/handler`, `/Users/vivix/.local/go/bin/go test -count=1 ./...`, `git diff --check`, and `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`.
 
 ## Task 5: Auction Service Event Publishing
 
