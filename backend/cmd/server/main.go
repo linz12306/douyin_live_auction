@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -50,6 +51,7 @@ func main() {
 	auctionEngineRepo := repository.NewAuctionEngineRepo(db)
 	auctionSvc := service.NewAuctionService(auctionEngineRepo, rdb)
 	auctionH := handler.NewAuctionHandler(auctionSvc)
+	startAuctionSettlementWorker(auctionSvc)
 
 	// Router
 	r := gin.Default()
@@ -106,6 +108,8 @@ func main() {
 		{
 			auctions.POST("/:id/bid", middleware.RoleGuard("user"), auctionH.PlaceBid)
 			auctions.GET("/:id/rankings", auctionH.Rankings)
+			auctions.POST("/:id/activate", middleware.RoleGuard("merchant"), auctionH.Activate)
+			auctions.DELETE("/:id", middleware.RoleGuard("merchant"), auctionH.Cancel)
 		}
 	}
 
@@ -114,4 +118,15 @@ func main() {
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+func startAuctionSettlementWorker(auctionSvc *service.AuctionService) {
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		for range ticker.C {
+			if _, err := auctionSvc.SettleExpired(context.Background()); err != nil {
+				log.Printf("auction settlement worker failed: %v", err)
+			}
+		}
+	}()
 }

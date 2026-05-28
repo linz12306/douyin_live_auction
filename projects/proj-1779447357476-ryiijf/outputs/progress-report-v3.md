@@ -19,7 +19,7 @@
 
 - 用户认证与资料：注册、登录、刷新、登出、个人资料、头像、改密等主干已存在。
 - 商品 CRUD：商品列表/详情、商家创建/编辑/删除、图片上传/删除、发布竞拍主干已存在。
-- 竞拍 MVP 第一切片：已远程接入第一版出价闭环代码，但尚未经过本地编译和测试验证。
+- 竞拍 MVP 第一切片：已切到本地分支 `auction-engine-mvp-tdd` 开发，出价/排行榜/取消的关键路径已有集成测试，后端 `go test ./...` 通过。
 
 本次 `auction-engine-mvp` 已新增/接入：
 
@@ -30,6 +30,22 @@
 - `backend/cmd/server/main.go` 中接入：
   - `POST /api/v1/auctions/:id/bid`
   - `GET /api/v1/auctions/:id/rankings`
+  - `DELETE /api/v1/auctions/:id`
+
+本次本地补充的验证覆盖：
+
+- pending 竞拍可由所属商家取消，auction/product 状态变为 `cancelled`，写入审计日志。
+- active 竞拍在最近 30 秒内有出价时拒绝取消。
+- active 竞拍超过取消限制后取消，会解冻 active 出价并把 bid 置为 `cancelled`。
+- 用户 A 被用户 B 超价后，A 的冻结余额解冻、bid 变为 `outbid`，B 成为 active bid。
+- 排行榜按出价金额降序返回。
+- 达到封顶价时 auction 变为 `ended_sold`，bid 变为 `won`，生成 `pending_confirm` 订单，并扣减冻结余额。
+- pending 状态出价、低价出价、余额不足出价均被拒绝且不落 bid。
+- Soft Close 在临近结束时把倒计时重置到自动延时窗口。
+- Redis bid lock 被占用时返回 429，避免并发出价穿透。
+- 商家可通过 `POST /api/v1/auctions/:id/activate` 激活 pending 竞拍。
+- 后台 settlement worker 会定期推进过期 active 竞拍：无出价变 `ended_no_bid`，有 active bid 变 `ended_sold` 并生成订单。
+- 已补完整链路测试：注册 -> 创建商品 -> 发布竞拍 -> 激活 -> 出价 -> 超价 -> 到期结算 -> 订单。
 
 已被纳入本 change 的提前文件：
 
@@ -40,35 +56,38 @@
 
 ## 3. 仍未完成
 
-- 本地 clone/编译/测试未完成：当前机器缺少可用 GitHub SSH/GH 认证，无法稳定拉到本地跑 `go test ./...`。
-- 竞拍服务缺少 TDD 覆盖：出价、余额不足、低价拒绝、状态错误、超价解冻、Soft Close、封顶成交都需要补测试。
-- 状态机尚未完整：pending 激活、ended_no_bid、商家取消、取消限制仍待实现。
-- HTTP 接口尚未完整：商家取消竞拍 `DELETE /api/v1/auctions/:id` 未接入。
-- 端到端流程未验证：注册 -> 创建商品 -> 发布竞拍 -> 激活 -> 出价 -> 超价 -> 结算 -> 订单仍待跑通。
+- `auction-engine-mvp` 后端闭环已完成并通过本地测试；尚未 archive，需用户确认后再归档 OpenSpec change。
 - WebSocket/H5/商家看板/订单支付属于后续 change，不应混进当前 MVP。
 
 ## 4. 下一步计划
 
-优先级 1：恢复本地开发环境。
+优先级 1：确认并归档 `auction-engine-mvp`。
 
-- 在 `/Users/vivix/Documents/Codex` 下 clone 私有仓库。
-- 配置 SSH key、GitHub CLI 或 PAT，确保可以 pull/push。
-- 本地启动 MySQL/Redis，确认迁移可执行。
+- 用户确认当前后端竞拍闭环后，执行 OpenSpec archive。
+- 保留测试命令和环境说明，作为下一阶段开发前置条件。
 
-优先级 2：补 TDD 测试，再继续扩大实现。
+优先级 2：开启下一阶段 OpenSpec change。
 
-- 先给已接入的出价服务补 service/repository/handler 测试。
-- 跑 `go test ./...`，修正编译和行为问题。
-- 测试通过后再勾选 OpenSpec tasks。
-
-优先级 3：补完 auction-engine-mvp 剩余能力。
-
-- 实现 pending -> active 激活、到点结束、无出价流拍、商家取消。
-- 接入取消接口和状态机测试。
-- 完成端到端验证后，更新 OpenSpec、Superpowers plan、记忆文件，再考虑 archive。
+- `ws-realtime`：WebSocket 房间、竞价广播、倒计时同步、被超越通知。
+- `user-h5`：H5 竞拍大厅/详情/排行榜/出价体验。
+- `order-system`：中标确认、模拟支付、超时取消。
 
 ## 5. 当前开发方式
 
-当前仍是通过 GitHub connector 远程改文件，不是本地 checkout 开发。
+当前已经切换为本地 checkout 开发：
 
-这适合小步文档和代码接入，但不适合作为最终交付状态。正式完成 `auction-engine-mvp` 前必须切到本地开发，因为本地才能运行 Go 编译、MySQL/Redis 集成测试、OpenSpec 校验和端到端验证。
+- 仓库路径：`/Users/vivix/Documents/Codex/douyin_live_auction`
+- 当前分支：`auction-engine-mvp-tdd`
+- Go：`/Users/vivix/.local/go`
+- MySQL：`127.0.0.1:3307`，数据库 `auction_db`
+- Redis：`127.0.0.1:16379`
+
+最新验证命令：
+
+```bash
+cd /Users/vivix/Documents/Codex/douyin_live_auction
+npx -y @fission-ai/openspec@latest validate auction-engine-mvp --strict --no-interactive
+cd backend && go test ./...
+```
+
+结果：OpenSpec valid，后端测试通过。

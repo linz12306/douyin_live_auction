@@ -85,6 +85,29 @@ func (r *AuctionEngineRepo) FindAuctionForUpdate(ctx context.Context, tx *sql.Tx
 	return a, nil
 }
 
+func (r *AuctionEngineRepo) ListExpiredActiveAuctionIDs(ctx context.Context, tx *sql.Tx, now time.Time) ([]int64, error) {
+	rows, err := tx.QueryContext(ctx,
+		`SELECT id FROM auctions
+         WHERE status = 'active' AND ended_at IS NOT NULL AND ended_at <= ?
+         ORDER BY ended_at ASC
+         FOR UPDATE`, now,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (r *AuctionEngineRepo) FindActiveBidForUpdate(ctx context.Context, tx *sql.Tx, auctionID int64) (*model.Bid, error) {
 	bid := &model.Bid{}
 	err := tx.QueryRowContext(ctx,
@@ -96,6 +119,41 @@ func (r *AuctionEngineRepo) FindActiveBidForUpdate(ctx context.Context, tx *sql.
 		return nil, nil
 	}
 	return bid, err
+}
+
+func (r *AuctionEngineRepo) FindLatestBidForUpdate(ctx context.Context, tx *sql.Tx, auctionID int64) (*model.Bid, error) {
+	bid := &model.Bid{}
+	err := tx.QueryRowContext(ctx,
+		`SELECT id, auction_id, user_id, amount, status, created_at
+         FROM bids WHERE auction_id = ?
+         ORDER BY created_at DESC, id DESC LIMIT 1 FOR UPDATE`, auctionID,
+	).Scan(&bid.ID, &bid.AuctionID, &bid.UserID, &bid.Amount, &bid.Status, &bid.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return bid, err
+}
+
+func (r *AuctionEngineRepo) ListActiveBidsForUpdate(ctx context.Context, tx *sql.Tx, auctionID int64) ([]model.Bid, error) {
+	rows, err := tx.QueryContext(ctx,
+		`SELECT id, auction_id, user_id, amount, status, created_at
+         FROM bids WHERE auction_id = ? AND status = 'active'
+         FOR UPDATE`, auctionID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bids []model.Bid
+	for rows.Next() {
+		var bid model.Bid
+		if err := rows.Scan(&bid.ID, &bid.AuctionID, &bid.UserID, &bid.Amount, &bid.Status, &bid.CreatedAt); err != nil {
+			return nil, err
+		}
+		bids = append(bids, bid)
+	}
+	return bids, rows.Err()
 }
 
 func (r *AuctionEngineRepo) FreezeUserBalance(ctx context.Context, tx *sql.Tx, userID int64, amount float64) error {
@@ -153,6 +211,11 @@ func (r *AuctionEngineRepo) MarkBidStatus(ctx context.Context, tx *sql.Tx, bidID
 	return err
 }
 
+func (r *AuctionEngineRepo) CancelAllBids(ctx context.Context, tx *sql.Tx, auctionID int64) error {
+	_, err := tx.ExecContext(ctx, `UPDATE bids SET status = 'cancelled' WHERE auction_id = ?`, auctionID)
+	return err
+}
+
 func (r *AuctionEngineRepo) CreateBid(ctx context.Context, tx *sql.Tx, bid *model.Bid) error {
 	result, err := tx.ExecContext(ctx,
 		`INSERT INTO bids (auction_id, user_id, amount, status) VALUES (?, ?, ?, ?)`,
@@ -184,11 +247,51 @@ func (r *AuctionEngineRepo) UpdateAuctionBidState(ctx context.Context, tx *sql.T
 	return err
 }
 
-func (r *AuctionEngineRepo) SetAuctionSold(ctx context.Context, tx *sql.Tx, auctionID int64, endedAt time.Time) error {
-	_, err := tx.ExecContext(ctx,
+func (r *AuctionEngineRepo) ActivateAuction(ctx context.Context, tx *sql.Tx, auctionID, productID int64, startedAt, endedAt time.Time) error {
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE auctions
+         SET status = 'active', started_at = ?, ended_at = ?, version = version + 1
+         WHERE id = ?`,
+		startedAt, endedAt, auctionID,
+	); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE products SET status = 'active' WHERE id = ?`, productID)
+	return err
+}
+
+func (r *AuctionEngineRepo) CancelAuction(ctx context.Context, tx *sql.Tx, auctionID, productID int64, reason string, cancelledAt time.Time) error {
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE auctions
+         SET status = 'cancelled', cancel_reason = ?, cancelled_at = ?, version = version + 1
+         WHERE id = ?`,
+		reason, cancelledAt, auctionID,
+	); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE products SET status = 'cancelled' WHERE id = ?`, productID)
+	return err
+}
+
+func (r *AuctionEngineRepo) SetAuctionSold(ctx context.Context, tx *sql.Tx, auctionID, productID int64, endedAt time.Time) error {
+	if _, err := tx.ExecContext(ctx,
 		`UPDATE auctions SET status = 'ended_sold', ended_at = ?, version = version + 1 WHERE id = ?`,
 		endedAt, auctionID,
-	)
+	); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE products SET status = 'ended_sold' WHERE id = ?`, productID)
+	return err
+}
+
+func (r *AuctionEngineRepo) SetAuctionNoBid(ctx context.Context, tx *sql.Tx, auctionID, productID int64, endedAt time.Time) error {
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE auctions SET status = 'ended_no_bid', ended_at = ?, version = version + 1 WHERE id = ?`,
+		endedAt, auctionID,
+	); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE products SET status = 'ended_no_bid' WHERE id = ?`, productID)
 	return err
 }
 

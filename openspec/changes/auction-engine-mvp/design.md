@@ -47,6 +47,7 @@ Soft Close extends the auction when a valid bid arrives near the end and `curren
 
 - `POST /api/v1/auctions/:id/bid` for authenticated users with role `user`
 - `GET /api/v1/auctions/:id/rankings` for authenticated users
+- `POST /api/v1/auctions/:id/activate` for owning merchants to move a pending auction into active state in this MVP
 - `DELETE /api/v1/auctions/:id` for merchants, with cancellation reason
 
 ## Risks

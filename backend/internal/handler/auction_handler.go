@@ -50,13 +50,43 @@ func (h *AuctionHandler) Rankings(c *gin.Context) {
 	response.Success(c, http.StatusOK, result)
 }
 
+func (h *AuctionHandler) Activate(c *gin.Context) {
+	merchantID := c.GetInt64("user_id")
+	auctionID := getInt64Param(c, "id")
+
+	if err := h.svc.Activate(c.Request.Context(), merchantID, auctionID); err != nil {
+		h.handleAuctionError(c, err)
+		return
+	}
+	response.Success(c, http.StatusOK, nil)
+}
+
+func (h *AuctionHandler) Cancel(c *gin.Context) {
+	merchantID := c.GetInt64("user_id")
+	auctionID := getInt64Param(c, "id")
+
+	var req dto.CancelRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		return
+	}
+
+	if err := h.svc.Cancel(c.Request.Context(), merchantID, auctionID, req.Reason); err != nil {
+		h.handleAuctionError(c, err)
+		return
+	}
+	response.Success(c, http.StatusOK, nil)
+}
+
 func (h *AuctionHandler) handleAuctionError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, service.ErrAuctionNotFound):
 		response.Error(c, http.StatusNotFound, err.Error())
-	case errors.Is(err, service.ErrAuctionNotActive), errors.Is(err, service.ErrAuctionAlreadyClosed), errors.Is(err, service.ErrBidTooLow):
+	case errors.Is(err, service.ErrAuctionNotActive), errors.Is(err, service.ErrAuctionAlreadyClosed),
+		errors.Is(err, service.ErrBidTooLow), errors.Is(err, service.ErrCancelBlocked),
+		errors.Is(err, service.ErrCancelReasonRequired), errors.Is(err, service.ErrStatusImmutable):
 		response.Error(c, http.StatusBadRequest, err.Error())
-	case errors.Is(err, service.ErrMerchantCannotBid):
+	case errors.Is(err, service.ErrMerchantCannotBid), errors.Is(err, service.ErrNotOwner):
 		response.Error(c, http.StatusForbidden, err.Error())
 	case errors.Is(err, service.ErrAuctionLockBusy):
 		response.Error(c, http.StatusTooManyRequests, err.Error())

@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"douyin-live/backend/internal/dto"
@@ -22,6 +24,8 @@ var (
 	ErrMerchantCannotBid    = errors.New("商家账号不能出价")
 	ErrAuctionLockBusy      = errors.New("竞拍繁忙，请稍后重试")
 	ErrAuctionAlreadyClosed = errors.New("竞拍已结束")
+	ErrCancelBlocked        = errors.New("最后出价后30秒内不可取消")
+	ErrCancelReasonRequired = errors.New("取消原因不能为空")
 )
 
 type AuctionService struct {
@@ -119,7 +123,7 @@ func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string
 			if err := s.repo.MarkBidStatus(ctx, tx, bid.ID, "won"); err != nil {
 				return err
 			}
-			if err := s.repo.SetAuctionSold(ctx, tx, auctionID, now); err != nil {
+			if err := s.repo.SetAuctionSold(ctx, tx, auctionID, auction.ProductID, now); err != nil {
 				return err
 			}
 			if err := s.repo.DeductFrozenBalance(ctx, tx, userID, req.Amount); err != nil {
@@ -169,6 +173,168 @@ func (s *AuctionService) Rankings(ctx context.Context, auctionID int64) (*dto.Ra
 	return &dto.RankingResponse{AuctionID: auctionID, Items: items}, nil
 }
 
+func (s *AuctionService) Activate(ctx context.Context, merchantID, auctionID int64) error {
+	now := time.Now()
+	return s.repo.WithTx(ctx, func(tx *sql.Tx) error {
+		auction, err := s.repo.FindAuctionForUpdate(ctx, tx, auctionID)
+		if err != nil {
+			return err
+		}
+		if auction == nil {
+			return ErrAuctionNotFound
+		}
+		if auction.MerchantID != merchantID {
+			return ErrNotOwner
+		}
+		if auction.Status != "pending" {
+			return ErrStatusImmutable
+		}
+
+		endedAt := now.Add(time.Duration(auction.DurationSeconds) * time.Second)
+		if err := s.repo.ActivateAuction(ctx, tx, auctionID, auction.ProductID, now, endedAt); err != nil {
+			return err
+		}
+		return s.repo.InsertAuditLog(ctx, tx, auctionID, merchantID, "activated", mustJSON(map[string]interface{}{
+			"started_at": now.Format(time.RFC3339),
+			"ended_at":   endedAt.Format(time.RFC3339),
+		}))
+	})
+}
+
+func (s *AuctionService) SettleExpired(ctx context.Context) (int, error) {
+	now := time.Now()
+	settled := 0
+	err := s.repo.WithTx(ctx, func(tx *sql.Tx) error {
+		auctionIDs, err := s.repo.ListExpiredActiveAuctionIDs(ctx, tx, now)
+		if err != nil {
+			return err
+		}
+
+		for _, auctionID := range auctionIDs {
+			auction, err := s.repo.FindAuctionForUpdate(ctx, tx, auctionID)
+			if err != nil {
+				return err
+			}
+			if auction == nil || auction.Status != "active" {
+				continue
+			}
+
+			activeBid, err := s.repo.FindActiveBidForUpdate(ctx, tx, auctionID)
+			if err != nil {
+				return err
+			}
+			if activeBid == nil {
+				if err := s.repo.SetAuctionNoBid(ctx, tx, auctionID, auction.ProductID, now); err != nil {
+					return err
+				}
+				if err := s.repo.InsertAuditLog(ctx, tx, auctionID, auction.MerchantID, "settled_no_bid", mustJSON(map[string]interface{}{
+					"ended_at": now.Format(time.RFC3339),
+				})); err != nil {
+					return err
+				}
+				settled++
+				continue
+			}
+
+			if err := s.repo.MarkBidStatus(ctx, tx, activeBid.ID, "won"); err != nil {
+				return err
+			}
+			if err := s.repo.SetAuctionSold(ctx, tx, auctionID, auction.ProductID, now); err != nil {
+				return err
+			}
+			if err := s.repo.DeductFrozenBalance(ctx, tx, activeBid.UserID, activeBid.Amount); err != nil {
+				return err
+			}
+			order := &model.Order{
+				AuctionID:  auctionID,
+				ProductID:  auction.ProductID,
+				MerchantID: auction.MerchantID,
+				BuyerID:    activeBid.UserID,
+				Amount:     activeBid.Amount,
+			}
+			if err := s.repo.CreateOrder(ctx, tx, order); err != nil {
+				return err
+			}
+			if err := s.repo.InsertAuditLog(ctx, tx, auctionID, activeBid.UserID, "settled_time", mustJSON(map[string]interface{}{
+				"bid_id":   activeBid.ID,
+				"order_id": order.ID,
+				"amount":   activeBid.Amount,
+			})); err != nil {
+				return err
+			}
+			settled++
+		}
+		return nil
+	})
+	return settled, err
+}
+
+func (s *AuctionService) Cancel(ctx context.Context, merchantID, auctionID int64, reason string) error {
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return ErrCancelReasonRequired
+	}
+	if len(reason) > 500 {
+		return fmt.Errorf("%w: 取消原因不能超过500字符", ErrCancelReasonRequired)
+	}
+
+	now := time.Now()
+	return s.repo.WithTx(ctx, func(tx *sql.Tx) error {
+		auction, err := s.repo.FindAuctionForUpdate(ctx, tx, auctionID)
+		if err != nil {
+			return err
+		}
+		if auction == nil {
+			return ErrAuctionNotFound
+		}
+		if auction.MerchantID != merchantID {
+			return ErrNotOwner
+		}
+
+		switch auction.Status {
+		case "pending":
+		case "active":
+			latestBid, err := s.repo.FindLatestBidForUpdate(ctx, tx, auctionID)
+			if err != nil {
+				return err
+			}
+			if latestBid != nil && now.Sub(latestBid.CreatedAt) < 30*time.Second {
+				return ErrCancelBlocked
+			}
+
+			activeBids, err := s.repo.ListActiveBidsForUpdate(ctx, tx, auctionID)
+			if err != nil {
+				return err
+			}
+			for _, bid := range activeBids {
+				if err := s.repo.UnfreezeUserBalance(ctx, tx, bid.UserID, bid.Amount); err != nil {
+					return err
+				}
+				if err := s.repo.InsertAuditLog(ctx, tx, auctionID, bid.UserID, "wallet_unfreeze", mustJSON(map[string]interface{}{
+					"bid_id": bid.ID,
+					"amount": bid.Amount,
+					"reason": "auction_cancelled",
+				})); err != nil {
+					return err
+				}
+			}
+			if err := s.repo.CancelAllBids(ctx, tx, auctionID); err != nil {
+				return err
+			}
+		default:
+			return ErrStatusImmutable
+		}
+
+		if err := s.repo.CancelAuction(ctx, tx, auctionID, auction.ProductID, reason, now); err != nil {
+			return err
+		}
+		return s.repo.InsertAuditLog(ctx, tx, auctionID, merchantID, "cancelled", mustJSON(map[string]interface{}{
+			"reason": reason,
+			"status": auction.Status,
+		}))
+	})
+}
+
 func (s *AuctionService) acquireBidLock(ctx context.Context, auctionID int64) (func(), error) {
 	if s.redis == nil {
 		return func() {}, nil
@@ -206,4 +372,12 @@ func shouldExtendAuction(auction *model.Auction, now time.Time) (bool, *time.Tim
 	}
 	next := now.Add(window)
 	return true, &next
+}
+
+func mustJSON(value interface{}) string {
+	payload, err := json.Marshal(value)
+	if err != nil {
+		return "{}"
+	}
+	return string(payload)
 }

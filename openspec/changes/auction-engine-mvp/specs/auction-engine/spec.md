@@ -62,6 +62,13 @@ The system SHALL settle an active auction as sold when a valid bid reaches or ex
 ### Requirement: Time-based settlement
 The system SHALL settle active auctions when their end time is reached.
 
+#### Scenario: Pending auction is activated
+- **GIVEN** a pending auction owned by a merchant
+- **WHEN** the merchant activates the auction
+- **THEN** the auction status becomes `active`
+- **AND** the product status becomes `active`
+- **AND** `started_at` and `ended_at` are set from the activation time and duration
+
 #### Scenario: Auction ends with a bid
 - **GIVEN** an active auction has an active highest bid
 - **WHEN** the auction end time is reached

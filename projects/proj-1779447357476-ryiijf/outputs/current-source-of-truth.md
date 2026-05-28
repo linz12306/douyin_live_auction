@@ -19,9 +19,9 @@
 
 当前业务代码真实状态以以下文件为准：
 
-- `projects/proj-1779447357476-ryiijf/outputs/progress-report-v2.md`
+- `projects/proj-1779447357476-ryiijf/outputs/progress-report-v3.md`
 
-该报告已按当前 GitHub `master`、`AGENTS.md`、`requirements-v3.md`、`project.md` 和 `openspec/changes/auction-engine-mvp/` 重新盘点。
+该报告已按当前本地分支、`AGENTS.md`、`requirements-v3.md`、`project.md` 和 `openspec/changes/auction-engine-mvp/` 重新盘点。
 
 ## 当前执行规范
 
