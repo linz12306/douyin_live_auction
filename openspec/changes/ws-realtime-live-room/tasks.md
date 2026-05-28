@@ -12,8 +12,9 @@
   - Current status: message/event contracts added in `5dba7e7`; event bus drop/close contract hardened in `7edc16f`.
   - Verification: Go unit tests for message serialization and in-memory event bus publish/subscribe.
 
-- [ ] 3. Backend snapshot provider
+- [x] 3. Backend snapshot provider
   - Add snapshot query/building for auction room state: auction status, current price, highest bidder, end time, extension count, product summary, images, rankings, and next required bid when possible.
+  - Current status: snapshot provider added in `f56dde5`; consistency and start-price fallback fixed in `caff2a9`.
   - Verification: integration tests create auction/bids and assert snapshot fields and ranking order.
 
 - [ ] 4. Backend RealtimeHub and WebSocket endpoint

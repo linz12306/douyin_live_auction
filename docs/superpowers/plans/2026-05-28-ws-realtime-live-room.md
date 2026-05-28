@@ -307,7 +307,7 @@ Result: completed in `5dba7e7 feat(realtime): define auction message contracts` 
 - Create: `backend/internal/realtime/snapshot_test.go`
 - Modify: `backend/internal/repository/auction_engine_repo.go`
 
-- [ ] **Step 1: Add repository snapshot helper test**
+- [x] **Step 1: Add repository snapshot helper test**
 
 Add an integration test that creates an active auction with two bids, calls the snapshot provider, and asserts:
 
@@ -317,7 +317,7 @@ Add an integration test that creates an active auction with two bids, calls the 
 - `next_bid_amount` equals current price plus increment
 - `version` equals auction version
 
-- [ ] **Step 2: Implement snapshot repository query**
+- [x] **Step 2: Implement snapshot repository query**
 
 Add a method to `AuctionEngineRepo`:
 
@@ -327,7 +327,7 @@ func (r *AuctionEngineRepo) FindAuctionSnapshot(ctx context.Context, auctionID i
 
 `AuctionSnapshotRow` should include auction fields, product title/description, and image URLs. Prefer structured scanning with `sql.Null*` types as in `FindAuctionForUpdate`.
 
-- [ ] **Step 3: Implement snapshot provider**
+- [x] **Step 3: Implement snapshot provider**
 
 Create:
 
@@ -343,7 +343,7 @@ func (p *SnapshotProvider) Snapshot(ctx context.Context, auctionID int64) (*Enve
 
 `Snapshot` must call existing rankings query and convert `dto.RankingItem` to `realtime.RankingItem`.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run:
 
@@ -358,6 +358,8 @@ Commit:
 git add backend/internal/realtime/snapshot.go backend/internal/realtime/snapshot_test.go backend/internal/repository/auction_engine_repo.go backend/tests/integration/auction_engine_test.go
 git commit -m "feat(realtime): add auction snapshot provider"
 ```
+
+Result: completed in `f56dde5 feat(realtime): add auction snapshot provider` and corrected in `caff2a9 fix(realtime): make snapshots consistent`. Spec compliance and code quality reviews approved the slice. Verification included `/Users/vivix/.local/go/bin/go test -count=1 ./internal/realtime ./tests/integration`.
 
 ## Task 4: Backend Hub And WebSocket Endpoint
 
