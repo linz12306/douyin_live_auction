@@ -43,6 +43,16 @@ type AuctionSnapshotRow struct {
 	ImageURLs          []string
 }
 
+type AuctionSnapshot struct {
+	Row      *AuctionSnapshotRow
+	Rankings []model.BidRanking
+}
+
+type auctionSnapshotQuerier interface {
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+}
+
 func NewAuctionEngineRepo(db *sql.DB) *AuctionEngineRepo {
 	return &AuctionEngineRepo{db: db}
 }
@@ -113,6 +123,49 @@ func (r *AuctionEngineRepo) FindAuctionForUpdate(ctx context.Context, tx *sql.Tx
 }
 
 func (r *AuctionEngineRepo) FindAuctionSnapshot(ctx context.Context, auctionID int64) (*AuctionSnapshotRow, error) {
+	row, err := r.readAuctionSnapshotRow(ctx, r.db, auctionID)
+	if err != nil || row == nil {
+		return row, err
+	}
+
+	images, err := r.findAuctionSnapshotImages(ctx, r.db, row.ProductID)
+	if err != nil {
+		return nil, err
+	}
+	row.ImageURLs = images
+	return row, nil
+}
+
+func (r *AuctionEngineRepo) BuildAuctionSnapshot(ctx context.Context, auctionID int64, limit int) (*AuctionSnapshot, error) {
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	row, err := r.readAuctionSnapshotRow(ctx, tx, auctionID)
+	if err != nil || row == nil {
+		return nil, err
+	}
+
+	images, err := r.findAuctionSnapshotImages(ctx, tx, row.ProductID)
+	if err != nil {
+		return nil, err
+	}
+	row.ImageURLs = images
+
+	rankings, err := r.listRankings(ctx, tx, auctionID, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return &AuctionSnapshot{Row: row, Rankings: rankings}, nil
+}
+
+func (r *AuctionEngineRepo) readAuctionSnapshotRow(ctx context.Context, q auctionSnapshotQuerier, auctionID int64) (*AuctionSnapshotRow, error) {
 	row := &AuctionSnapshotRow{}
 	var ceilingPrice sql.NullFloat64
 	var highestBidderID sql.NullInt64
@@ -122,7 +175,7 @@ func (r *AuctionEngineRepo) FindAuctionSnapshot(ctx context.Context, auctionID i
 	var cancelledAt sql.NullTime
 	var productDescription sql.NullString
 
-	err := r.db.QueryRowContext(ctx,
+	err := q.QueryRowContext(ctx,
 		`SELECT a.id, a.product_id, a.merchant_id, a.start_price, a.bid_increment_type, a.bid_increment_value,
                 a.ceiling_price, a.duration_seconds, a.auto_extend_seconds, a.max_extend_count, a.current_extend_count,
                 a.status, a.current_price, a.highest_bidder_id, a.cancel_reason, a.version,
@@ -170,16 +223,11 @@ func (r *AuctionEngineRepo) FindAuctionSnapshot(ctx context.Context, auctionID i
 		row.ProductDescription = productDescription.String
 	}
 
-	images, err := r.findAuctionSnapshotImages(ctx, row.ProductID)
-	if err != nil {
-		return nil, err
-	}
-	row.ImageURLs = images
 	return row, nil
 }
 
-func (r *AuctionEngineRepo) findAuctionSnapshotImages(ctx context.Context, productID int64) ([]string, error) {
-	rows, err := r.db.QueryContext(ctx,
+func (r *AuctionEngineRepo) findAuctionSnapshotImages(ctx context.Context, q auctionSnapshotQuerier, productID int64) ([]string, error) {
+	rows, err := q.QueryContext(ctx,
 		`SELECT image_url FROM product_images WHERE product_id = ? ORDER BY sort_order, id`, productID,
 	)
 	if err != nil {
@@ -430,10 +478,14 @@ func (r *AuctionEngineRepo) InsertAuditLog(ctx context.Context, tx *sql.Tx, auct
 }
 
 func (r *AuctionEngineRepo) ListRankings(ctx context.Context, auctionID int64, limit int) ([]model.BidRanking, error) {
+	return r.listRankings(ctx, r.db, auctionID, limit)
+}
+
+func (r *AuctionEngineRepo) listRankings(ctx context.Context, q auctionSnapshotQuerier, auctionID int64, limit int) ([]model.BidRanking, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	rows, err := r.db.QueryContext(ctx,
+	rows, err := q.QueryContext(ctx,
 		`SELECT b.id, b.user_id, u.display_name, u.avatar_url, b.amount, b.status, b.created_at
          FROM bids b
          JOIN users u ON u.id = b.user_id

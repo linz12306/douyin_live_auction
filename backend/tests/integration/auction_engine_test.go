@@ -521,6 +521,39 @@ func TestSnapshotProviderReturnsAuctionStateAndRankings(t *testing.T) {
 	}
 }
 
+func TestSnapshotProviderUsesStartPriceForNextBidWhenNoBids(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	if _, err := db.Exec("UPDATE auctions SET start_price = 100, current_price = 0 WHERE id = ?", auctionID); err != nil {
+		t.Fatalf("set start price: %v", err)
+	}
+	activateAuction(t, db, auctionID)
+
+	provider := realtime.NewSnapshotProvider(repository.NewAuctionEngineRepo(db))
+	envelope, err := provider.Snapshot(context.Background(), auctionID)
+	if err != nil {
+		t.Fatalf("snapshot provider failed: %v", err)
+	}
+
+	payload, ok := envelope.Payload.(realtime.SnapshotPayload)
+	if !ok {
+		t.Fatalf("expected SnapshotPayload, got %T", envelope.Payload)
+	}
+	if payload.CurrentPrice != 0 {
+		t.Fatalf("expected current price 0, got %.2f", payload.CurrentPrice)
+	}
+	if payload.NextBidAmount != 110 {
+		t.Fatalf("expected next bid amount 110, got %.2f", payload.NextBidAmount)
+	}
+	if len(payload.Rankings) != 0 {
+		t.Fatalf("expected no rankings, got %d", len(payload.Rankings))
+	}
+}
+
 func TestCeilingBidSettlesAuctionAndCreatesOrder(t *testing.T) {
 	r, db := setupAuctionServer(t)
 	ts := httptest.NewServer(r)

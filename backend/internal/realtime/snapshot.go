@@ -19,17 +19,18 @@ func NewSnapshotProvider(repo *repository.AuctionEngineRepo) *SnapshotProvider {
 }
 
 func (p *SnapshotProvider) Snapshot(ctx context.Context, auctionID int64) (*Envelope, error) {
-	row, err := p.repo.FindAuctionSnapshot(ctx, auctionID)
+	snapshot, err := p.repo.BuildAuctionSnapshot(ctx, auctionID, 50)
 	if err != nil {
 		return nil, err
+	}
+	var row *repository.AuctionSnapshotRow
+	var rankings []model.BidRanking
+	if snapshot != nil {
+		row = snapshot.Row
+		rankings = snapshot.Rankings
 	}
 	if row == nil {
 		return nil, sql.ErrNoRows
-	}
-
-	rankings, err := p.repo.ListRankings(ctx, auctionID, 50)
-	if err != nil {
-		return nil, err
 	}
 
 	payload := SnapshotPayload{
@@ -47,7 +48,7 @@ func (p *SnapshotProvider) Snapshot(ctx context.Context, auctionID int64) (*Enve
 		CurrentExtendCount: row.CurrentExtendCount,
 		BidIncrementType:   row.BidIncrementType,
 		BidIncrementValue:  row.BidIncrementValue,
-		NextBidAmount:      nextBidAmount(row.CurrentPrice, row.BidIncrementType, row.BidIncrementValue),
+		NextBidAmount:      nextBidAmount(row.CurrentPrice, row.StartPrice, row.BidIncrementType, row.BidIncrementValue),
 		Rankings:           toRealtimeRankings(rankings),
 	}
 
@@ -76,8 +77,12 @@ func toRealtimeRankings(rankings []model.BidRanking) []RankingItem {
 	return items
 }
 
-func nextBidAmount(current float64, incrementType string, value float64) float64 {
-	return current + bidIncrement(current, incrementType, value)
+func nextBidAmount(current, startPrice float64, incrementType string, value float64) float64 {
+	base := current
+	if base <= 0 {
+		base = startPrice
+	}
+	return base + bidIncrement(base, incrementType, value)
 }
 
 func bidIncrement(current float64, incrementType string, value float64) float64 {
