@@ -73,11 +73,24 @@ func (h *ProductHandler) Get(c *gin.Context) {
 
 func (h *ProductHandler) List(c *gin.Context) {
 	merchantID := c.GetInt64("user_id")
+	role := c.GetString("role")
 	var query dto.ProductListQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		response.Error(c, http.StatusBadRequest, "参数格式错误")
 		return
 	}
+	if role == "user" {
+		items, total, err := h.svc.ListAuctionLobby(&query)
+		if err != nil {
+			response.Error(c, http.StatusInternalServerError, "获取列表失败")
+			return
+		}
+		response.Success(c, http.StatusOK, gin.H{
+			"items": items, "total": total, "page": query.Page, "size": query.Size,
+		})
+		return
+	}
+
 	products, total, err := h.svc.List(merchantID, &query)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "获取列表失败")

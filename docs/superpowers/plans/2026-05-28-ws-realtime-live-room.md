@@ -527,7 +527,7 @@ Result: implementation verified locally with `/Users/vivix/.local/go/bin/go test
 - Modify: `frontend/src/pages/Login.tsx`
 - Modify: `frontend/src/pages/Register.tsx`
 
-- [ ] **Step 1: Define user-side auction types**
+- [x] **Step 1: Define user-side auction types**
 
 Create `frontend/src/types/auction.ts` with:
 
@@ -545,7 +545,7 @@ export interface AuctionLobbyItem {
 }
 ```
 
-- [ ] **Step 2: Add API helpers**
+- [x] **Step 2: Add API helpers**
 
 Create `frontend/src/api/auction.ts`:
 
@@ -570,7 +570,7 @@ export async function listAuctionLobby(): Promise<AuctionLobbyItem[]> {
 
 If `/products` does not return auction data for list rows, add a backend list extension in this task and cover it with `npm run build` plus Playwright smoke.
 
-- [ ] **Step 3: Implement mobile lobby**
+- [x] **Step 3: Implement mobile lobby**
 
 Create `AuctionLobby.tsx` with:
 
@@ -581,7 +581,7 @@ Create `AuctionLobby.tsx` with:
 - status badge
 - `进入直播间` link to `/app/auctions/:auctionId`
 
-- [ ] **Step 4: Add routes and redirects**
+- [x] **Step 4: Add routes and redirects**
 
 Modify:
 
@@ -589,7 +589,7 @@ Modify:
 - `Login.tsx`: user role redirects to `/app/auctions`.
 - `Register.tsx`: user role redirects to `/app/auctions`.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run:
 
@@ -604,6 +604,8 @@ Commit:
 git add frontend/src/api/auction.ts frontend/src/types/auction.ts frontend/src/pages/app/AuctionLobby.tsx frontend/src/App.tsx frontend/src/pages/Login.tsx frontend/src/pages/Register.tsx
 git commit -m "feat(frontend): add user auction lobby"
 ```
+
+Result: implemented with a minimal backend extension for user lobby rows because merchant-scoped `GET /api/v1/products` did not include global auction data. The frontend stores the authenticated user role, hydrates unknown refresh-token sessions through `/users/me` before rendering protected role routes, redirects merchants away from `/app/auctions`, redirects users away from `/merchant/products`, logs failed hydration out to `/login`, and normalizes unexpected `/products` rows defensively. Verification passed with `cd frontend && npm run build`, `/Users/vivix/.local/go/bin/go test -count=1 ./tests/integration -run TestUserListsActiveAuctionLobbyRows`, `/Users/vivix/.local/go/bin/go test -count=1 ./tests/integration`, `/Users/vivix/.local/go/bin/go test -count=1 ./...`, `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`, `git diff --check`, and Playwright smoke covering auth hydration redirects, `/profile` reload hydration, failed hydration logout, and merchant-shaped `/products` data rendering an empty lobby without page errors; commit recorded as part of the Task 6 slice.
 
 ## Task 7: Frontend Live Room State And WebSocket Client
 

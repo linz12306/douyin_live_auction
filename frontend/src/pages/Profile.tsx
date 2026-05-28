@@ -5,6 +5,14 @@ import { getMe, updateProfile, changePassword, uploadAvatar } from '../api/user'
 import { logout as apiLogout } from '../api/auth';
 import AvatarUpload from '../components/AvatarUpload';
 
+function getErrorMessage(err: unknown, fallback: string) {
+  if (typeof err === 'object' && err !== null && 'response' in err) {
+    const response = (err as { response?: { data?: { message?: unknown } } }).response;
+    if (typeof response?.data?.message === 'string') return response.data.message;
+  }
+  return fallback;
+}
+
 export default function Profile() {
   const { user, logout: storeLogout } = useAuthStore();
   const navigate = useNavigate();
@@ -17,18 +25,31 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const token = useAuthStore.getState().accessToken;
-    if (!token) {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
       navigate('/login');
       return;
     }
+
+    let mounted = true;
     getMe().then((u) => {
-      useAuthStore.getState().setAuth(u, token!, localStorage.getItem('refresh_token') || '');
+      if (!mounted) return;
+      useAuthStore.getState().setAuth(
+        u,
+        useAuthStore.getState().accessToken || '',
+        localStorage.getItem('refresh_token') || refreshToken,
+      );
       setDisplayName(u.display_name);
     }).catch(() => {
+      if (!mounted) return;
+      storeLogout();
       navigate('/login');
     });
-  }, []);
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate, storeLogout]);
 
   const handleUpdateName = async () => {
     setNameMsg('');
@@ -36,8 +57,8 @@ export default function Profile() {
     try {
       await updateProfile(displayName);
       setNameMsg('保存成功');
-    } catch (err: any) {
-      setNameMsg(err.response?.data?.message || '保存失败');
+    } catch (err: unknown) {
+      setNameMsg(getErrorMessage(err, '保存失败'));
     } finally {
       setLoading(false);
     }
@@ -51,8 +72,8 @@ export default function Profile() {
       setPwdMsg('密码修改成功');
       setOldPwd('');
       setNewPwd('');
-    } catch (err: any) {
-      setPwdMsg(err.response?.data?.message || '修改失败');
+    } catch (err: unknown) {
+      setPwdMsg(getErrorMessage(err, '修改失败'));
     } finally {
       setLoading(false);
     }
@@ -79,7 +100,13 @@ export default function Profile() {
     return url;
   };
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 px-4 py-10 text-center text-white/65">
+        加载中...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">

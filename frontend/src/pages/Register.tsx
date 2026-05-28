@@ -3,6 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { register } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 
+function getErrorMessage(err: unknown, fallback: string) {
+  if (typeof err === 'object' && err !== null && 'response' in err) {
+    const response = (err as { response?: { data?: { message?: unknown } } }).response;
+    if (typeof response?.data?.message === 'string') return response.data.message;
+  }
+  return fallback;
+}
+
 export default function Register() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -20,9 +28,9 @@ export default function Register() {
     try {
       const res = await register(username, password, role, displayName);
       setAuth(res.user, res.access_token, res.refresh_token);
-      navigate(res.user.role === 'merchant' ? '/merchant/products' : '/profile');
-    } catch (err: any) {
-      setError(err.response?.data?.message || '注册失败');
+      navigate(res.user.role === 'merchant' ? '/merchant/products' : '/app/auctions');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, '注册失败'));
     } finally {
       setLoading(false);
     }

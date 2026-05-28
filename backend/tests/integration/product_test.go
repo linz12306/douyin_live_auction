@@ -36,6 +36,7 @@ func setupProductServer(t *testing.T) (*gin.Engine, *sql.DB) {
 	db.Exec("DELETE FROM product_images WHERE product_id IN (SELECT id FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'test_merchant_%'))")
 	db.Exec("DELETE FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'test_merchant_%')")
 	db.Exec("DELETE FROM users WHERE username LIKE 'test_merchant_%'")
+	db.Exec("DELETE FROM users WHERE username LIKE 'test_user_%'")
 
 	rdb, _ := config.NewRedis(cfg.RedisAddr, cfg.RedisPass)
 
@@ -84,11 +85,56 @@ func registerMerchant(t *testing.T, ts *httptest.Server) string {
 	return data["access_token"].(string)
 }
 
+func registerUser(t *testing.T, ts *httptest.Server) string {
+	uname := "test_user_" + randomSuffix()
+	body, _ := json.Marshal(map[string]string{
+		"username": uname, "password": "test123",
+		"role": "user", "display_name": "Test User",
+	})
+	resp, _ := http.Post(ts.URL+"/api/v1/auth/register", "application/json", bytes.NewReader(body))
+	defer resp.Body.Close()
+	var result map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&result)
+	data := result["data"].(map[string]interface{})
+	return data["access_token"].(string)
+}
+
 func makeRequest(method, url, token string, body []byte) (*http.Response, error) {
 	req, _ := http.NewRequest(method, url, bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	return http.DefaultClient.Do(req)
+}
+
+func createAndPublishProduct(t *testing.T, ts *httptest.Server, token, title, imageURL string) (int64, int64) {
+	body, _ := json.Marshal(map[string]interface{}{
+		"title": title, "description": "desc",
+		"image_urls": []string{imageURL},
+	})
+	resp, _ := makeRequest("POST", ts.URL+"/api/v1/products", token, body)
+	if resp.StatusCode != 201 {
+		t.Fatalf("expected create 201, got %d", resp.StatusCode)
+	}
+	var result map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&result)
+	resp.Body.Close()
+	productData := result["data"].(map[string]interface{})["product"].(map[string]interface{})
+	productID := int64(productData["id"].(float64))
+
+	pubBody, _ := json.Marshal(map[string]interface{}{
+		"start_price": 20, "bid_increment_type": "fixed",
+		"bid_increment_value": 10, "duration_seconds": 300,
+		"auto_extend_seconds": 15, "max_extend_count": 5,
+	})
+	resp2, _ := makeRequest("POST", ts.URL+fmt.Sprintf("/api/v1/products/%d/publish", productID), token, pubBody)
+	if resp2.StatusCode != 200 {
+		t.Fatalf("expected publish 200, got %d", resp2.StatusCode)
+	}
+	var publishResult map[string]interface{}
+	json.NewDecoder(resp2.Body).Decode(&publishResult)
+	resp2.Body.Close()
+	auction := publishResult["data"].(map[string]interface{})["auction"].(map[string]interface{})
+	return productID, int64(auction["id"].(float64))
 }
 
 func TestCreateAndPublishProduct(t *testing.T) {
@@ -134,6 +180,78 @@ func TestCreateAndPublishProduct(t *testing.T) {
 	data2 := detail["data"].(map[string]interface{})
 	if data2["auction"] == nil {
 		t.Fatal("expected auction in detail after publish")
+	}
+}
+
+func TestUserListsActiveAuctionLobbyRows(t *testing.T) {
+	r, db := setupProductServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerMerchant(t, ts)
+	userToken := registerUser(t, ts)
+
+	activeProductID, activeAuctionID := createAndPublishProduct(t, ts, merchantToken, "Active Lobby Product", "/static/images/active.jpg")
+	_, pendingAuctionID := createAndPublishProduct(t, ts, merchantToken, "Pending Lobby Product", "/static/images/pending.jpg")
+
+	_, err := db.Exec(
+		`UPDATE products p
+         JOIN auctions a ON a.product_id = p.id
+         SET p.status = 'active', a.status = 'active', a.started_at = NOW(),
+             a.ended_at = DATE_ADD(NOW(), INTERVAL 5 MINUTE), a.current_price = 30
+         WHERE a.id = ?`,
+		activeAuctionID,
+	)
+	if err != nil {
+		t.Fatalf("activate lobby auction: %v", err)
+	}
+
+	resp, err := makeRequest("GET", ts.URL+"/api/v1/products?status=active&page=1&size=20", userToken, nil)
+	if err != nil {
+		t.Fatalf("list lobby rows failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected list 200, got %d", resp.StatusCode)
+	}
+
+	var listResult map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&listResult); err != nil {
+		t.Fatalf("decode lobby list response: %v", err)
+	}
+	data := listResult["data"].(map[string]interface{})
+	items, ok := data["items"].([]interface{})
+	if !ok {
+		t.Fatalf("expected lobby items array, got %T", data["items"])
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected exactly 1 active lobby item, got %d", len(items))
+	}
+
+	item := items[0].(map[string]interface{})
+	if int64(item["product_id"].(float64)) != activeProductID {
+		t.Fatalf("expected product_id %d, got %v", activeProductID, item["product_id"])
+	}
+	if int64(item["auction_id"].(float64)) != activeAuctionID {
+		t.Fatalf("expected auction_id %d, got %v", activeAuctionID, item["auction_id"])
+	}
+	if item["title"] != "Active Lobby Product" {
+		t.Fatalf("expected active title, got %v", item["title"])
+	}
+	if item["image_url"] != "/static/images/active.jpg" {
+		t.Fatalf("expected first image url, got %v", item["image_url"])
+	}
+	if item["status"] != "active" {
+		t.Fatalf("expected active auction status, got %v", item["status"])
+	}
+	if item["current_price"].(float64) != 30 {
+		t.Fatalf("expected current price 30, got %v", item["current_price"])
+	}
+	if item["ended_at"] == nil {
+		t.Fatal("expected ended_at in lobby row")
+	}
+	if fmt.Sprintf("%.0f", item["auction_id"].(float64)) == fmt.Sprintf("%d", pendingAuctionID) {
+		t.Fatal("pending auction should not be visible in lobby")
 	}
 }
 

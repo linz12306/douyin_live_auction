@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+
 	"douyin-live/backend/internal/dto"
 	"douyin-live/backend/internal/model"
 	"douyin-live/backend/internal/repository"
@@ -120,6 +121,19 @@ func (s *ProductService) List(merchantID int64, query *dto.ProductListQuery) ([]
 		query.Size = 20
 	}
 	return s.productRepo.ListByMerchant(merchantID, query.Status, query.Page, query.Size)
+}
+
+func (s *ProductService) ListAuctionLobby(query *dto.ProductListQuery) ([]dto.AuctionLobbyItem, int, error) {
+	if query.Page <= 0 {
+		query.Page = 1
+	}
+	if query.Size <= 0 || query.Size > 50 {
+		query.Size = 20
+	}
+	if query.Status != "" && query.Status != "active" {
+		return []dto.AuctionLobbyItem{}, 0, nil
+	}
+	return s.productRepo.ListAuctionLobby(query.Page, query.Size)
 }
 
 func (s *ProductService) Update(merchantID, productID int64, req *dto.UpdateProductRequest) (*dto.ProductDetailResponse, error) {

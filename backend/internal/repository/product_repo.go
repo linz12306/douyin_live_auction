@@ -2,6 +2,8 @@ package repository
 
 import (
 	"database/sql"
+
+	"douyin-live/backend/internal/dto"
 	"douyin-live/backend/internal/model"
 )
 
@@ -105,6 +107,56 @@ func (r *ProductRepo) ListByMerchant(merchantID int64, status string, page, size
 		products = append(products, p)
 	}
 	return products, total, nil
+}
+
+func (r *ProductRepo) ListAuctionLobby(page, size int) ([]dto.AuctionLobbyItem, int, error) {
+	where := `WHERE p.status = 'active' AND a.status = 'active' AND a.ended_at > NOW()`
+
+	var total int
+	if err := r.db.QueryRow("SELECT COUNT(*) FROM products p JOIN auctions a ON a.product_id = p.id " + where).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * size
+	rows, err := r.db.Query(
+		`SELECT p.id, a.id, p.title,
+                (SELECT pi.image_url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.sort_order, pi.id LIMIT 1) AS image_url,
+                a.status, a.current_price, a.ended_at
+         FROM products p
+         JOIN auctions a ON a.product_id = p.id
+         `+where+`
+         ORDER BY a.ended_at ASC, a.id DESC
+         LIMIT ? OFFSET ?`,
+		size, offset,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var items []dto.AuctionLobbyItem
+	for rows.Next() {
+		var item dto.AuctionLobbyItem
+		var imageURL sql.NullString
+		var endedAt sql.NullTime
+		if err := rows.Scan(
+			&item.ProductID, &item.AuctionID, &item.Title, &imageURL,
+			&item.Status, &item.CurrentPrice, &endedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		if imageURL.Valid {
+			item.ImageURL = &imageURL.String
+		}
+		if endedAt.Valid {
+			item.EndedAt = &endedAt.Time
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
 }
 
 func (r *ProductRepo) Update(p *model.Product) error {

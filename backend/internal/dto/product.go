@@ -1,6 +1,10 @@
 package dto
 
-import "douyin-live/backend/internal/model"
+import (
+	"time"
+
+	"douyin-live/backend/internal/model"
+)
 
 type CreateProductRequest struct {
 	Title       string   `json:"title" binding:"required"`
@@ -37,4 +41,14 @@ type ProductDetailResponse struct {
 	Product model.Product        `json:"product"`
 	Images  []model.ProductImage `json:"images"`
 	Auction *model.Auction       `json:"auction"`
+}
+
+type AuctionLobbyItem struct {
+	ProductID    int64      `json:"product_id"`
+	AuctionID    int64      `json:"auction_id"`
+	Title        string     `json:"title"`
+	ImageURL     *string    `json:"image_url,omitempty"`
+	Status       string     `json:"status"`
+	CurrentPrice float64    `json:"current_price"`
+	EndedAt      *time.Time `json:"ended_at,omitempty"`
 }

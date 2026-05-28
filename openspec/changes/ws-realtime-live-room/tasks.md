@@ -29,10 +29,11 @@
   - Current status: completed in Task 5 slice; `AuctionService` publishes committed events through `AuctionEventBus`, and server wiring shares the hub event bus.
   - Verification: `/Users/vivix/.local/go/bin/go test -count=1 ./internal/service ./tests/integration`, `/Users/vivix/.local/go/bin/go test -count=1 ./...`, and `git diff --check`.
 
-- [ ] 6. Frontend user auction lobby
+- [x] 6. Frontend user auction lobby
   - Add `/app/auctions`, API helpers, mobile-first lobby UI, and user-login redirect to the lobby.
   - Show joinable products with status, image, current price, and room entry action.
-  - Verification: frontend build plus route/render tests or Playwright smoke test for user login to lobby.
+  - Current status: completed in Task 6 slice; user role login/register redirects to `/app/auctions`, unknown refresh-token sessions hydrate via `/users/me` before rendering protected role routes, merchants are redirected away from `/app/auctions`, users are redirected away from `/merchant/products`, failed hydration logs out to `/login`, and `GET /api/v1/products?status=active` returns global active lobby rows for authenticated users.
+  - Verification: `cd frontend && npm run build`, `/Users/vivix/.local/go/bin/go test -count=1 ./tests/integration -run TestUserListsActiveAuctionLobbyRows`, `/Users/vivix/.local/go/bin/go test -count=1 ./tests/integration`, `/Users/vivix/.local/go/bin/go test -count=1 ./...`, `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`, `git diff --check`, and Playwright smoke covering auth hydration redirects, `/profile` reload hydration, failed hydration logout, and merchant-shaped `/products` data rendering an empty lobby without page errors.
 
 - [ ] 7. Frontend live room state and WebSocket client
   - Add `/app/auctions/:id`, room state reducer/store, WebSocket connection/reconnect, token query auth, server time offset, version-based stale-message ignore, and message handlers.

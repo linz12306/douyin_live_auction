@@ -3,6 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 
+function getErrorMessage(err: unknown, fallback: string) {
+  if (typeof err === 'object' && err !== null && 'response' in err) {
+    const response = (err as { response?: { data?: { message?: unknown } } }).response;
+    if (typeof response?.data?.message === 'string') return response.data.message;
+  }
+  return fallback;
+}
+
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -18,9 +26,9 @@ export default function Login() {
     try {
       const res = await login(username, password);
       setAuth(res.user, res.access_token, res.refresh_token);
-      navigate(res.user.role === 'merchant' ? '/merchant/products' : '/profile');
-    } catch (err: any) {
-      setError(err.response?.data?.message || '登录失败');
+      navigate(res.user.role === 'merchant' ? '/merchant/products' : '/app/auctions');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, '登录失败'));
     } finally {
       setLoading(false);
     }
