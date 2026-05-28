@@ -9,6 +9,7 @@ import (
 	"douyin-live/backend/internal/config"
 	"douyin-live/backend/internal/handler"
 	"douyin-live/backend/internal/middleware"
+	"douyin-live/backend/internal/realtime"
 	"douyin-live/backend/internal/repository"
 	"douyin-live/backend/internal/service"
 
@@ -49,8 +50,13 @@ func main() {
 
 	// Auction engine
 	auctionEngineRepo := repository.NewAuctionEngineRepo(db)
+	eventBus := realtime.NewInMemoryAuctionEventBus()
+	snapshotProvider := realtime.NewSnapshotProvider(auctionEngineRepo)
+	realtimeHub := realtime.NewHub(eventBus, snapshotProvider)
+	go realtimeHub.Run(context.Background())
 	auctionSvc := service.NewAuctionService(auctionEngineRepo, rdb)
 	auctionH := handler.NewAuctionHandler(auctionSvc)
+	realtimeH := handler.NewRealtimeHandler(realtimeHub, snapshotProvider, cfg)
 	startAuctionSettlementWorker(auctionSvc)
 
 	// Router
@@ -112,6 +118,8 @@ func main() {
 			auctions.DELETE("/:id", middleware.RoleGuard("merchant"), auctionH.Cancel)
 		}
 	}
+
+	r.GET("/ws/auctions/:id", realtimeH.AuctionRoom)
 
 	addr := fmt.Sprintf(":%s", cfg.ServerPort)
 	log.Printf("Server starting on %s", addr)
