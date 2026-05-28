@@ -173,11 +173,39 @@ Goal: execute the locked OpenSpec change with disciplined implementation.
 Required actions:
 
 1. Generate or update `docs/superpowers/plans/YYYY-MM-DD-<change-id>.md` from OpenSpec `tasks.md`.
-2. Implement in small, verifiable steps.
-3. Prefer TDD for service logic, state machines, bidding, wallet, and order behavior.
-4. Use systematic debugging when a failure appears; do not guess-and-patch.
-5. Keep OpenSpec `tasks.md` and the Superpowers execution plan synchronized.
-6. Commit each verified slice according to the Git Branch and Commit Management rules.
+2. Before dispatching implementation subagents, classify task dependencies and write scopes.
+3. Implement in small, verifiable steps.
+4. Prefer TDD for service logic, state machines, bidding, wallet, and order behavior.
+5. Use systematic debugging when a failure appears; do not guess-and-patch.
+6. Keep OpenSpec `tasks.md` and the Superpowers execution plan synchronized.
+7. Commit each verified slice according to the Git Branch and Commit Management rules.
+
+### Subagent Scheduling
+
+Default to parallel subagent execution when tasks are independent.
+
+Before dispatching subagents, create a brief dependency map:
+
+- task goal
+- files or modules each task may write
+- upstream inputs each task needs
+- verification each task owns
+
+Parallelize tasks when all of these are true:
+
+- no task depends on another task's unmerged output
+- write scopes are disjoint or clearly non-conflicting
+- verification can run independently
+- failures in one task do not invalidate the assumptions of the other task
+
+Keep tasks sequential when any of these are true:
+
+- two tasks edit the same file or shared state-heavy module
+- one task defines contracts, types, migrations, routes, or schemas needed by another
+- order matters for correctness, such as backend contract before frontend integration
+- review findings from one task are likely to change another task's assumptions
+
+For parallel work, each subagent must receive an explicit ownership boundary and must not revert unrelated edits. After parallel subagents finish, integrate and review in dependency order: spec compliance first, code quality second, then verification and commit.
 
 Rules:
 
