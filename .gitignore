@@ -1,2 +1,6 @@
 node_modules/
 *.exe
+backend/static/avatars/*
+!backend/static/avatars/.gitkeep
+backend/static/images/*
+!backend/static/images/.gitkeep

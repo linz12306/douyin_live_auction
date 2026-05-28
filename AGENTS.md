@@ -42,6 +42,40 @@ Lightweight workflow is allowed only for:
 
 Even lightweight work must state its verification method.
 
+## Git Branch and Commit Management
+
+Goal: keep every meaningful change reviewable, reproducible, and recoverable.
+
+Relevant skills/tools:
+
+- Use `superpowers:using-git-worktrees` or an equivalent isolated branch/worktree flow before starting non-lightweight feature work.
+- Use `superpowers:finishing-a-development-branch` before merge or handoff.
+- Use the GitHub/PR publishing flow, such as `yeet`, only when the user explicitly asks to stage, commit, push, and open a PR.
+
+Branch rules:
+
+- Do not implement non-lightweight work directly on `master` or `main`.
+- Start significant work from an up-to-date base branch when possible: fetch, fast-forward the base branch, then create a topic branch.
+- If the current worktree is already dirty, inspect and report the unrelated changes before adding more work. Do not mix unrelated edits into the active change.
+- Prefer branch names that identify the change, such as `feat/ws-realtime`, `fix/product-create-image-upload`, or `auction-engine-mvp-tdd`.
+- If a change belongs to an OpenSpec change, the branch name should include or clearly map to the OpenSpec `<change-id>`.
+
+Commit rules:
+
+- Commit every coherent, verified implementation slice before moving to the next major slice.
+- A "slice" should normally map to one OpenSpec task or one small set of tightly related tasks.
+- Do not commit broken or knowingly incomplete code unless the user explicitly asks for a checkpoint commit, and label that commit clearly.
+- Before each commit, run the verification that matches the slice and record the command/result in the Superpowers plan, OpenSpec task notes, or final report.
+- Keep commit messages concise and conventional when possible, for example `feat(auction): add bid placement`, `fix(product): upload images after draft create`, `docs(workflow): add git branch rules`, or `test(auction): cover settlement worker`.
+- Never include secrets, `.env`, `node_modules`, build output, local database files, or runtime uploads such as `backend/static/avatars/*` and `backend/static/images/*` unless the file is an intentional tracked fixture.
+
+Remote/PR rules:
+
+- Push the feature branch after meaningful verified checkpoints or before ending a significant work session, unless the user asks to keep changes local.
+- Do not merge to `master`/`main` without explicit user approval.
+- Prefer PR review before merging non-lightweight changes.
+- If the user says not to commit or not to push, obey that instruction and report the uncommitted diff plus recommended next git action.
+
 ## Phase 0: Preflight
 
 Goal: establish repo truth before producing any plan or code.
@@ -52,6 +86,7 @@ Required actions:
 2. Inspect the current implementation and tests related to the requested change.
 3. Check whether OpenSpec tooling and Superpowers skills are available.
 4. Identify unplanned or partial prior work before building on it.
+5. Confirm the active branch/worktree is appropriate for the change and note any dirty or unrelated files.
 
 Rules:
 
@@ -123,6 +158,7 @@ Required actions:
 3. Prefer TDD for service logic, state machines, bidding, wallet, and order behavior.
 4. Use systematic debugging when a failure appears; do not guess-and-patch.
 5. Keep OpenSpec `tasks.md` and the Superpowers execution plan synchronized.
+6. Commit each verified slice according to the Git Branch and Commit Management rules.
 
 Rules:
 
@@ -148,8 +184,10 @@ Required actions:
 1. Run the relevant tests/build/checks and record the exact commands and results.
 2. Confirm implementation matches OpenSpec requirements and scenarios.
 3. Confirm OpenSpec `tasks.md` and Superpowers plan checkboxes match reality.
-4. Archive the OpenSpec change after the change is accepted/merged, when appropriate.
-5. Update project memory with current state, key decisions, known risks, and suggested next step.
+4. Confirm the git branch contains only intended changes, with generated/runtime files excluded.
+5. Push the branch and/or open a PR when requested or appropriate for handoff.
+6. Archive the OpenSpec change after the change is accepted/merged, when appropriate.
+7. Update project memory with current state, key decisions, known risks, and suggested next step.
 
 Suggested memory locations:
 
@@ -189,6 +227,9 @@ If both are unavailable:
 - Prefer repo-local patterns over new abstractions unless the OpenSpec design explicitly chooses otherwise.
 - Keep edits scoped to the active OpenSpec change.
 - Protect user work: do not revert unrelated changes unless explicitly requested.
+- Do not leave significant verified implementation only in the local worktree without telling the user the commit/push state and recommended next git action.
+- Do not commit unrelated runtime artifacts, generated uploads, secrets, or dependency folders.
+- Do not merge or rewrite published history unless the user explicitly asks for that exact git operation.
 
 ## Source Notes
 
