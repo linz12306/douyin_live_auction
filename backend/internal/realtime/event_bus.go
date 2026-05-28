@@ -3,8 +3,11 @@ package realtime
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 )
+
+const subscriberBufferSize = 16
 
 type AuctionEventType string
 
@@ -31,13 +34,21 @@ type AuctionEvent struct {
 }
 
 type AuctionEventBus interface {
+	// Publish delivers event to current subscribers on a best-effort basis.
+	// Delivery is non-blocking; subscribers with full buffers do not receive the
+	// event, and in-memory buses count those drops via DroppedEvents.
 	Publish(ctx context.Context, event AuctionEvent) error
+	// Subscribe returns a buffered event channel and an idempotent unsubscribe
+	// function. Unsubscribe removes and closes the subscriber channel.
 	Subscribe() (<-chan AuctionEvent, func())
 }
 
+// InMemoryAuctionEventBus is a concurrency-safe best-effort event bus.
+// Slow subscribers are isolated by dropping events when their buffers are full.
 type InMemoryAuctionEventBus struct {
 	mu          sync.RWMutex
 	subscribers map[chan AuctionEvent]struct{}
+	dropped     atomic.Uint64
 }
 
 func NewInMemoryAuctionEventBus() *InMemoryAuctionEventBus {
@@ -62,14 +73,19 @@ func (b *InMemoryAuctionEventBus) Publish(ctx context.Context, event AuctionEven
 			return ctx.Err()
 		case subscriber <- event:
 		default:
+			b.dropped.Add(1)
 		}
 	}
 
 	return nil
 }
 
+func (b *InMemoryAuctionEventBus) DroppedEvents() uint64 {
+	return b.dropped.Load()
+}
+
 func (b *InMemoryAuctionEventBus) Subscribe() (<-chan AuctionEvent, func()) {
-	events := make(chan AuctionEvent, 16)
+	events := make(chan AuctionEvent, subscriberBufferSize)
 
 	b.mu.Lock()
 	b.subscribers[events] = struct{}{}
@@ -80,6 +96,7 @@ func (b *InMemoryAuctionEventBus) Subscribe() (<-chan AuctionEvent, func()) {
 		once.Do(func() {
 			b.mu.Lock()
 			delete(b.subscribers, events)
+			close(events)
 			b.mu.Unlock()
 		})
 	}
