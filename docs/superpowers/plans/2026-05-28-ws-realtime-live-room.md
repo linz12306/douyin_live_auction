@@ -612,8 +612,14 @@ Result: implemented with a minimal backend extension for user lobby rows because
 **Files:**
 - Create: `frontend/src/store/liveRoomStore.ts`
 - Create: `frontend/src/pages/app/liveRoomUtils.ts`
+- Create: `frontend/src/store/liveRoomStore.test.ts`
+- Create: `frontend/vite.config.test.ts`
+- Modify: `frontend/src/types/auction.ts`
+- Modify: `frontend/vite.config.ts`
+- Modify: `frontend/package.json`
+- Modify: `frontend/package-lock.json`
 
-- [ ] **Step 1: Define message types and reducer behavior**
+- [x] **Step 1: Define message types and reducer behavior**
 
 In `frontend/src/types/auction.ts`, add:
 
@@ -629,7 +635,7 @@ export interface RealtimeEnvelope<T = unknown> {
 }
 ```
 
-- [ ] **Step 2: Implement version-aware store**
+- [x] **Step 2: Implement version-aware store**
 
 Create `liveRoomStore.ts` with:
 
@@ -642,7 +648,7 @@ Create `liveRoomStore.ts` with:
 
 `applyMessage` must ignore any non-`outbid` message where `message.version < state.version`.
 
-- [ ] **Step 3: Implement countdown helpers**
+- [x] **Step 3: Implement countdown helpers**
 
 Create `liveRoomUtils.ts`:
 
@@ -653,11 +659,11 @@ export function computeServerOffset(serverTime: string, clientNow = Date.now()):
 
 export function remainingMs(endedAt: string | undefined, offsetMs: number, clientNow = Date.now()): number {
   if (!endedAt) return 0;
-  return Math.max(0, new Date(endedAt).getTime() - clientNow + offsetMs);
+  return Math.max(0, new Date(endedAt).getTime() - clientNow - offsetMs);
 }
 ```
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run:
 
@@ -672,6 +678,8 @@ Commit:
 git add frontend/src/types/auction.ts frontend/src/store/liveRoomStore.ts frontend/src/pages/app/liveRoomUtils.ts
 git commit -m "feat(frontend): add realtime room state"
 ```
+
+Result: implemented in the Task 7 slice. Frontend realtime types mirror backend snake_case envelope/payload fields, `liveRoomStore.ts` owns WebSocket connect/disconnect/reconnect state, version-aware message application, server time offset, submit state, and notifications, and `liveRoomUtils.ts` contains countdown helpers. Vite now proxies `/ws` with WebSocket support for local frontend dev, and Vitest coverage verifies snapshot, price update, extension, terminal auction end, outbid notification, reconnect behavior, stale-version ignore, token-query URL construction, and server time offset. Verification passed with `cd frontend && npm run build`, `cd frontend && npm test -- vite.config.test.ts src/store/liveRoomStore.test.ts`, `cd frontend && npx eslint vite.config.ts vite.config.test.ts src/types/auction.ts src/store/liveRoomStore.ts src/store/liveRoomStore.test.ts src/pages/app/liveRoomUtils.ts --quiet`, `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`, and `git diff --check`. Full room UI and bid interaction remain Task 8.
 
 ## Task 8: Frontend Live Room UI And Bid Interaction
 
