@@ -747,7 +747,7 @@ Result: implemented in the Task 8 slice. `LiveAuctionRoom.tsx` provides the mobi
 - Modify: `openspec/changes/ws-realtime-live-room/tasks.md`
 - Modify: `docs/superpowers/plans/2026-05-28-ws-realtime-live-room.md`
 
-- [ ] **Step 1: Add Playwright smoke test**
+- [x] **Step 1: Add Playwright smoke test**
 
 Create `tests/e2e/realtime-live-room.spec.ts` to cover:
 
@@ -759,8 +759,10 @@ Create `tests/e2e/realtime-live-room.spec.ts` to cover:
 6. second browser context user B bids higher
 7. user A sees outbid notification
 8. room ranking/current price update
+9. user A sees countdown from the WebSocket snapshot
+10. user A places the ceiling bid and sees the terminal `auction_end` state with bid controls disabled
 
-- [ ] **Step 2: Run full validation**
+- [x] **Step 2: Run full validation**
 
 Ensure backend and frontend dev servers are running, then run:
 
@@ -779,7 +781,7 @@ Expected:
 - Backend tests pass.
 - Frontend build passes.
 
-- [ ] **Step 3: Update task statuses and memory**
+- [x] **Step 3: Update task statuses and memory**
 
 Update:
 
@@ -789,15 +791,16 @@ Update:
 - `projects/proj-1779447357476-ryiijf/memory/2026-05-28.md`
 - `projects/proj-1779447357476-ryiijf/memory/long-term.md`
 
-- [ ] **Step 4: Commit final implementation slice**
+- [x] **Step 4: Commit final implementation slice**
 
 Run:
 
 ```bash
-git add tests/e2e/realtime-live-room.spec.ts openspec/changes/ws-realtime-live-room/tasks.md docs/superpowers/plans/2026-05-28-ws-realtime-live-room.md projects/proj-1779447357476-ryiijf/outputs/progress-report-v3.md projects/proj-1779447357476-ryiijf/memory/2026-05-28.md projects/proj-1779447357476-ryiijf/memory/long-term.md
+git add tests/e2e/realtime-live-room.spec.ts playwright.config.ts frontend/vite.config.ts openspec/changes/ws-realtime-live-room/tasks.md docs/superpowers/plans/2026-05-28-ws-realtime-live-room.md projects/proj-1779447357476-ryiijf/outputs/progress-report-v3.md projects/proj-1779447357476-ryiijf/memory/2026-05-28.md projects/proj-1779447357476-ryiijf/memory/long-term.md
 git commit -m "test(realtime): cover live room flow"
-git push --no-verify
 ```
+
+Result: implemented in the Task 9 slice. `tests/e2e/realtime-live-room.spec.ts` performs API setup for merchant/user accounts, product creation with the tracked `/favicon.svg` image path, publish, and auction activation, then drives user A through `/app/auctions` into `/app/auctions/:auctionId`, verifies WebSocket snapshot-derived current price and countdown ticking, submits user A's next bid, uses a second browser context for user B to submit a higher bid, verifies user A receives the private outbid notification plus current price/ranking updates, then has user A place the ceiling bid to receive a real WebSocket `auction_end` and assert terminal current price, `已成交` status, terminal message, and disabled quick/custom bid actions. Playwright now supports `PLAYWRIGHT_BASE_URL`, Vite dev proxy supports `VITE_BACKEND_TARGET`, and the backend has an explicit `DISABLE_RATE_LIMIT=1` test-mode switch so repeated local E2E runs do not hit the `/auth/register` IP limiter. These allowed validation against a current backend on `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` without killing the already-running `localhost:8080` process. Verification passed with two consecutive `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/realtime-live-room.spec.ts` runs, `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`, `cd backend && /Users/vivix/.local/go/bin/go test ./...`, `cd frontend && npm run build`, and `git diff --check`. Commit: `test(realtime): cover live room flow`.
 
 ## Self-Review
 

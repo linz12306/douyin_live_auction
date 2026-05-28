@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"douyin-live/backend/pkg/response"
@@ -14,6 +15,11 @@ import (
 
 func RateLimit(rdb *redis.Client, action string, limit int, window time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if os.Getenv("DISABLE_RATE_LIMIT") == "1" {
+			c.Next()
+			return
+		}
+
 		ip := c.ClientIP()
 		key := fmt.Sprintf("rate_limit:%s:%s", action, ip)
 

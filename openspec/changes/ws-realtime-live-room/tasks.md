@@ -49,9 +49,11 @@
   - Review follow-up: fixed reload sessions with stored user + refresh token + empty access token so protected routes hydrate before rendering room content, recompute `nextBidAmount` from fixed/percent increment rules on `price_update`, and neutralize stale room state while route auction id and store auction id differ.
   - Verification: `cd frontend && npm run build`, `cd frontend && npm test -- src/pages/app/LiveAuctionRoom.test.tsx src/store/liveRoomStore.test.ts vite.config.test.ts`, `cd frontend && npx eslint src/api/auction.ts src/pages/app/LiveAuctionRoom.tsx src/pages/app/LiveAuctionRoom.test.tsx src/App.tsx src/store/liveRoomStore.ts src/store/liveRoomStore.test.ts --quiet`, `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`, and `git diff --check`.
 
-- [ ] 9. End-to-end realtime validation
+- [x] 9. End-to-end realtime validation
   - Cover merchant publish/activate, user A room snapshot, user A bid, user B outbid, user A private outbid notification, ranking update, countdown/terminal update.
   - Verification: Playwright or integration E2E records the command and result; backend and frontend test/build commands pass.
+  - Current status: completed in Task 9 slice; `tests/e2e/realtime-live-room.spec.ts` uses API setup for merchant/user accounts, product creation, publish, and activation, then validates user A entering from `/app/auctions`, WebSocket snapshot-derived current price/countdown, user A bid, user B higher bid from a second browser context, user A private outbid notification, room ranking/current price updates, and a real WebSocket `auction_end` after user A places the ceiling bid with terminal message/status and disabled bid actions.
+  - Verification: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/realtime-live-room.spec.ts` passed twice against current backend code on `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` via `VITE_BACKEND_TARGET=http://localhost:18080`; final required validation commands recorded in the Task 9 plan result.
 
 - [ ] 10. Documentation, plan sync, and memory
   - Update Superpowers execution plan, OpenSpec task statuses, current status docs, and project memory.
