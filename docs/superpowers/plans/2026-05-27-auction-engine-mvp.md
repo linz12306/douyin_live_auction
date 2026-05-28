@@ -1,8 +1,8 @@
 # Superpowers Execution Plan: auction-engine-mvp
 
-Source of truth: `openspec/changes/auction-engine-mvp/tasks.md`.
+Source of truth: `openspec/changes/archive/2026-05-28-auction-engine-mvp/tasks.md` and `openspec/specs/auction-engine/spec.md`.
 
-Current execution mode: local checkout on branch `auction-engine-mvp-tdd`. Local Go/MySQL/Redis are configured and `go test ./...` is runnable.
+Current execution mode: completed and merged to `master`. Local Go/MySQL/Redis are configured and `go test ./...` is runnable.
 
 - [x] Reconcile partial bids/orders work.
 - [x] Finalize schema and models.
@@ -20,8 +20,10 @@ Current execution mode: local checkout on branch `auction-engine-mvp-tdd`. Local
 - [x] Run backend integration tests and `go test ./...`.
   - Status: latest local run passed.
 - [x] Update OpenSpec tasks and project memory.
+- [x] Archive OpenSpec change after user acceptance.
 
-Next implementation slice:
-1. Review whether `auction-engine-mvp` is ready to archive after user acceptance.
-2. Start the next OpenSpec change for realtime WebSocket updates.
-3. Keep order confirmation/payment as a separate later change.
+Final state:
+1. `auction-engine-mvp` is archived as `openspec/changes/archive/2026-05-28-auction-engine-mvp/`.
+2. Main spec is now `openspec/specs/auction-engine/spec.md`.
+3. Next OpenSpec change should be realtime WebSocket/live-room frontend integration.
+4. Keep order confirmation/payment as a separate later change.

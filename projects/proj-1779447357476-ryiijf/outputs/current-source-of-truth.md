@@ -1,6 +1,6 @@
 # 当前权威文档与状态说明
 
-> 更新时间：2026-05-27
+> 更新时间：2026-05-28
 
 ## 权威需求版本
 
@@ -21,7 +21,7 @@
 
 - `projects/proj-1779447357476-ryiijf/outputs/progress-report-v3.md`
 
-该报告已按当前本地分支、`AGENTS.md`、`requirements-v3.md`、`project.md` 和 `openspec/changes/auction-engine-mvp/` 重新盘点。
+该报告已按当前 `master`、`AGENTS.md`、`requirements-v3.md`、`project.md` 和已归档的 `auction-engine-mvp` 重新盘点。
 
 ## 当前执行规范
 
@@ -30,13 +30,14 @@
 - `AGENTS.md`
 - `projects/proj-1779447357476-ryiijf/outputs/requirements-v3.md`
 - `projects/proj-1779447357476-ryiijf/outputs/current-source-of-truth.md`
-- `openspec/changes/auction-engine-mvp/`
+- `openspec/specs/auction-engine/spec.md`
+- `openspec/changes/archive/2026-05-28-auction-engine-mvp/`
 - `docs/superpowers/plans/2026-05-27-auction-engine-mvp.md`
 
 ## 下一步
 
-当前下一步不是重新读 v2，也不是直接写业务代码，而是执行 `auction-engine-mvp` 的 OpenSpec tasks：
+当前下一步不是重新读 v2，也不是直接写业务代码，而是开启新的 OpenSpec change：
 
-1. 审查并纳入/修正提前加入的 `bids/orders` 相关文件。
-2. 实现 auction-engine 后端最小闭环。
-3. 运行 Go 测试、迁移验证和出价流程集成测试。
+1. 已完成并归档：`auction-engine-mvp`。
+2. 建议下一步：`ws-realtime-live-room`，打通 WebSocket 实时竞价和前端用户体验。
+3. 仍需保持 Superpowers + OpenSpec 五段式流程，并在每个可验证切片提交。

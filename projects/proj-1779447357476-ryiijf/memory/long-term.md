@@ -247,3 +247,10 @@
 ## 2026-05-27 自动提取
 - 前端启动时间从 Day7 提前到 Day4（5.31）
 - MVP 定义为 Day6（6.2）可演示（接入 WebSocket 实时数据）
+
+## 2026-05-28 自动提取
+- `auction-engine-mvp` 已完成、合并并推送到 `master`，并归档到 `openspec/changes/archive/2026-05-28-auction-engine-mvp/`。
+- 后端竞拍引擎主规范已沉淀为 `openspec/specs/auction-engine/spec.md`。
+- 后续复杂开发必须先开新的 OpenSpec change，并同步 Superpowers exploration/plan；不要在已归档的 `auction-engine-mvp` 上继续追加功能。
+- 下一阶段优先建议：`ws-realtime-live-room`，打通 WebSocket 实时竞价和前端用户竞拍体验；订单确认/支付作为后续独立 change。
+- Git 管理规则已写入 `AGENTS.md`：非轻量开发使用分支，按可验证切片提交，推送/合并状态必须明确记录。
