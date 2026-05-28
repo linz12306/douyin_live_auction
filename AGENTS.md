@@ -24,6 +24,8 @@ If `openspec/` or the OpenSpec CLI is missing, say so explicitly and follow the 
 
 ## Change Classes
 
+Use the smallest workflow that still protects correctness. Do not turn every small UI affordance or narrow bugfix into a full OpenSpec change.
+
 Full integrated workflow is required for:
 
 - behavior changes
@@ -33,14 +35,31 @@ Full integrated workflow is required for:
 - concurrency, WebSocket, auction engine, payment/order, or wallet changes
 - any feature that affects acceptance criteria in `requirements-v3.md`
 
-Lightweight workflow is allowed only for:
+Routine fast-lane workflow is allowed for small, low-risk changes such as:
+
+- adding or wiring a single existing backend action into the UI, such as a missing button for an already-specified endpoint
+- narrow frontend display/state fixes that do not change backend contracts or core auction semantics
+- small route, navigation, validation-message, or error-display fixes
+- test-only changes that exercise existing behavior
+- documentation updates that change process guidance without changing product behavior
+
+Routine fast-lane requirements:
+
+1. Read `AGENTS.md` and only the directly relevant code/docs.
+2. State why the work is fast-lane instead of full OpenSpec.
+3. Implement the smallest coherent patch.
+4. Run focused verification for the touched surface.
+5. Commit and push the verified slice when the repository git rules call for it.
+6. If the change expands into behavior, API, schema, architecture, concurrency, payment/order, wallet, or unclear requirements, stop and promote it to the full integrated workflow.
+
+Lightweight documentation-only workflow is allowed for:
 
 - typo fixes
 - formatting-only documentation edits
 - comments that do not change behavior
 - small README clarifications
 
-Even lightweight work must state its verification method.
+Even fast-lane and lightweight work must state its verification method.
 
 ## Git Branch and Commit Management
 
