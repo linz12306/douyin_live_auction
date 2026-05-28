@@ -43,6 +43,27 @@ type AuctionEventBus interface {
 	Subscribe() (<-chan AuctionEvent, func())
 }
 
+type NoopAuctionEventBus struct{}
+
+func NewNoopAuctionEventBus() *NoopAuctionEventBus {
+	return &NoopAuctionEventBus{}
+}
+
+func (b *NoopAuctionEventBus) Publish(ctx context.Context, event AuctionEvent) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return nil
+	}
+}
+
+func (b *NoopAuctionEventBus) Subscribe() (<-chan AuctionEvent, func()) {
+	events := make(chan AuctionEvent)
+	close(events)
+	return events, func() {}
+}
+
 // InMemoryAuctionEventBus is a concurrency-safe best-effort event bus.
 // Slow subscribers are isolated by dropping events when their buffers are full.
 type InMemoryAuctionEventBus struct {

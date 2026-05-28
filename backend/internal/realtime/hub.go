@@ -10,12 +10,16 @@ type Hub struct {
 	mu        sync.RWMutex
 	rooms     map[int64]map[*hubClient]struct{}
 	bus       AuctionEventBus
-	snapshots *SnapshotProvider
+	snapshots snapshotReader
 }
 
 type hubClient struct {
 	userID int64
 	send   chan<- Envelope
+}
+
+type snapshotReader interface {
+	Snapshot(ctx context.Context, auctionID int64) (*Envelope, error)
 }
 
 func NewHub(bus AuctionEventBus, snapshots *SnapshotProvider) *Hub {
@@ -173,6 +177,9 @@ func (h *Hub) priceUpdateEnvelope(event AuctionEvent) Envelope {
 
 	snapshot, err := h.snapshots.Snapshot(context.Background(), event.AuctionID)
 	if err != nil {
+		return envelope
+	}
+	if snapshot.Version != event.Version {
 		return envelope
 	}
 	snapshotPayload, ok := snapshot.Payload.(SnapshotPayload)

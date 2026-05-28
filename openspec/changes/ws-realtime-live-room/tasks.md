@@ -23,10 +23,11 @@
   - Current status: WebSocket hub and `/ws/auctions/:id` endpoint completed in `7bf5059`; Task 5 remains responsible for wiring `AuctionService` event publishing.
   - Verification: `/Users/vivix/.local/go/bin/go test -count=1 ./internal/realtime ./internal/handler`, `/Users/vivix/.local/go/bin/go test -count=1 ./...`, `git diff --check`, and `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`.
 
-- [ ] 5. Auction service event publishing
+- [x] 5. Auction service event publishing
   - Publish committed events after bid accepted, previous bidder outbid, Soft Close extension, ceiling settlement, time settlement, and merchant cancellation.
   - Keep WebSocket dependencies outside `AuctionService`; publish only domain events through `AuctionEventBus`.
-  - Verification: integration tests assert expected events for bid, outbid, extension, auction end, and cancellation.
+  - Current status: completed in Task 5 slice; `AuctionService` publishes committed events through `AuctionEventBus`, and server wiring shares the hub event bus.
+  - Verification: `/Users/vivix/.local/go/bin/go test -count=1 ./internal/service ./tests/integration`, `/Users/vivix/.local/go/bin/go test -count=1 ./...`, and `git diff --check`.
 
 - [ ] 6. Frontend user auction lobby
   - Add `/app/auctions`, API helpers, mobile-first lobby UI, and user-login redirect to the lobby.

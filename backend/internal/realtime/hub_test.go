@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -61,6 +62,54 @@ func TestHubSendsPrivateOutbidOnlyToMatchingUserID(t *testing.T) {
 	assertNoEnvelope(t, otherUser)
 }
 
+func TestHubPriceUpdateKeepsEventVersionWhenSnapshotVersionDiffers(t *testing.T) {
+	snapshotVersion := int64(8)
+	highestBidderID := int64(202)
+	hub := &Hub{
+		rooms: make(map[int64]map[*hubClient]struct{}),
+		snapshots: &fakeSnapshotProvider{
+			envelope: Envelope{
+				Type:       MessageSnapshot,
+				AuctionID:  1,
+				Version:    snapshotVersion,
+				ServerTime: time.Date(2026, 5, 28, 11, 0, 0, 0, time.UTC),
+				Payload: SnapshotPayload{
+					CurrentPrice:    999,
+					HighestBidderID: &highestBidderID,
+					Rankings: []RankingItem{{
+						UserID: 202,
+						Amount: 999,
+					}},
+				},
+			},
+		},
+	}
+	send := make(chan Envelope, 1)
+	unregister := hub.Register(1, 101, send)
+	defer unregister()
+
+	hub.handleEvent(AuctionEvent{
+		Type:       EventBidAccepted,
+		AuctionID:  1,
+		Version:    7,
+		UserID:     101,
+		Amount:     120,
+		OccurredAt: time.Date(2026, 5, 28, 10, 59, 59, 0, time.UTC),
+	})
+
+	msg := assertEnvelope(t, send, MessagePriceUpdate)
+	if msg.Version != 7 {
+		t.Fatalf("price_update version = %d, want event version 7", msg.Version)
+	}
+	payload, ok := msg.Payload.(PriceUpdatePayload)
+	if !ok {
+		t.Fatalf("payload type = %T, want PriceUpdatePayload", msg.Payload)
+	}
+	if payload.CurrentPrice != 120 || payload.HighestBidderID != 101 || len(payload.Rankings) != 0 {
+		t.Fatalf("expected event-only payload when snapshot version differs, got %#v", payload)
+	}
+}
+
 func TestHubUnregisterRemovesClient(t *testing.T) {
 	hub := NewHub(nil, nil)
 	send := make(chan Envelope, 1)
@@ -70,6 +119,15 @@ func TestHubUnregisterRemovesClient(t *testing.T) {
 	hub.Broadcast(1, Envelope{Type: MessagePriceUpdate, AuctionID: 1, Version: 2})
 
 	assertNoEnvelope(t, send)
+}
+
+type fakeSnapshotProvider struct {
+	envelope Envelope
+	err      error
+}
+
+func (p *fakeSnapshotProvider) Snapshot(ctx context.Context, auctionID int64) (*Envelope, error) {
+	return &p.envelope, p.err
 }
 
 func assertEnvelope(t *testing.T, ch <-chan Envelope, expectedType string) Envelope {

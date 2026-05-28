@@ -22,6 +22,11 @@ import (
 )
 
 func setupAuctionServer(t *testing.T) (*gin.Engine, *sql.DB) {
+	r, db, _ := setupAuctionServerWithEventBus(t)
+	return r, db
+}
+
+func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realtime.InMemoryAuctionEventBus) {
 	t.Helper()
 
 	cfg := config.Load()
@@ -44,7 +49,8 @@ func setupAuctionServer(t *testing.T) (*gin.Engine, *sql.DB) {
 
 	authSvc := service.NewAuthService(userRepo, rdb, cfg)
 	productSvc := service.NewProductService(productRepo, auctionRepo)
-	auctionSvc := service.NewAuctionService(auctionEngineRepo, rdb)
+	eventBus := realtime.NewInMemoryAuctionEventBus()
+	auctionSvc := service.NewAuctionServiceWithEvents(auctionEngineRepo, rdb, eventBus)
 
 	authH := handler.NewAuthHandler(authSvc)
 	productH := handler.NewProductHandler(productSvc, cfg.ImageDir)
@@ -73,7 +79,7 @@ func setupAuctionServer(t *testing.T) (*gin.Engine, *sql.DB) {
 		auctions.DELETE("/:id", middleware.RoleGuard("merchant"), auctionH.Cancel)
 	}
 
-	return r, db
+	return r, db, eventBus
 }
 
 func cleanupAuctionTestData(t *testing.T, db *sql.DB) {
@@ -239,6 +245,47 @@ func placeBid(t *testing.T, ts *httptest.Server, auctionID int64, userToken stri
 	}
 }
 
+func requireAuctionEvent(t *testing.T, events <-chan realtime.AuctionEvent, eventType realtime.AuctionEventType) realtime.AuctionEvent {
+	t.Helper()
+
+	deadline := time.After(500 * time.Millisecond)
+	for {
+		select {
+		case event := <-events:
+			if event.Type == eventType {
+				return event
+			}
+		case <-deadline:
+			t.Fatalf("timed out waiting for auction event %s", eventType)
+		}
+	}
+}
+
+func requireNextAuctionEvent(t *testing.T, events <-chan realtime.AuctionEvent, eventType realtime.AuctionEventType) realtime.AuctionEvent {
+	t.Helper()
+
+	select {
+	case event := <-events:
+		if event.Type != eventType {
+			t.Fatalf("expected next auction event %s, got %+v", eventType, event)
+		}
+		return event
+	case <-time.After(500 * time.Millisecond):
+		t.Fatalf("timed out waiting for next auction event %s", eventType)
+	}
+	return realtime.AuctionEvent{}
+}
+
+func assertNoAuctionEvent(t *testing.T, events <-chan realtime.AuctionEvent) {
+	t.Helper()
+
+	select {
+	case event := <-events:
+		t.Fatalf("unexpected auction event: %+v", event)
+	case <-time.After(100 * time.Millisecond):
+	}
+}
+
 func requestBid(t *testing.T, ts *httptest.Server, auctionID int64, userToken string, amount float64) *http.Response {
 	t.Helper()
 
@@ -288,6 +335,40 @@ func TestMerchantCanCancelPendingAuction(t *testing.T) {
 	}
 	if logCount != 1 {
 		t.Fatalf("expected one cancel audit log, got %d", logCount)
+	}
+}
+
+func TestMerchantCancellationPublishesRealtimeEvent(t *testing.T) {
+	r, db, eventBus := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+	events, unsubscribe := eventBus.Subscribe()
+	defer unsubscribe()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+
+	cancelBody, _ := json.Marshal(map[string]string{"reason": "库存异常"})
+	resp, err := makeRequest("DELETE", ts.URL+fmt.Sprintf("/api/v1/auctions/%d", auctionID), merchantToken, cancelBody)
+	if err != nil {
+		t.Fatalf("cancel auction failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected cancel 200, got %d", resp.StatusCode)
+	}
+
+	event := requireAuctionEvent(t, events, realtime.EventAuctionCancelled)
+	var version int64
+	var status string
+	if err := db.QueryRow("SELECT version, status FROM auctions WHERE id = ?", auctionID).Scan(&version, &status); err != nil {
+		t.Fatalf("query cancellation state: %v", err)
+	}
+	if event.AuctionID != auctionID || event.Version != version || event.Status != status {
+		t.Fatalf("unexpected cancellation event: %+v, want auction=%d version=%d status=%s", event, auctionID, version, status)
+	}
+	if event.Status != "cancelled" {
+		t.Fatalf("expected cancelled event status, got %s", event.Status)
 	}
 }
 
@@ -458,6 +539,68 @@ func TestOutbidUnfreezesPreviousBidAndRanksByAmount(t *testing.T) {
 	}
 }
 
+func TestAcceptedBidPublishesRealtimeEvent(t *testing.T) {
+	r, db, eventBus := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+	events, unsubscribe := eventBus.Subscribe()
+	defer unsubscribe()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, userID := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	placeBid(t, ts, auctionID, userToken, 10)
+
+	event := requireAuctionEvent(t, events, realtime.EventBidAccepted)
+	var version int64
+	if err := db.QueryRow("SELECT version FROM auctions WHERE id = ?", auctionID).Scan(&version); err != nil {
+		t.Fatalf("query auction version: %v", err)
+	}
+	if event.AuctionID != auctionID || event.UserID != userID || event.Amount != 10 || event.Version != version {
+		t.Fatalf("unexpected accepted event: %+v, want auction=%d user=%d amount=10 version=%d", event, auctionID, userID, version)
+	}
+	if event.PreviousUserID != nil || event.PreviousAmount != 0 {
+		t.Fatalf("accepted event should not include previous bidder data: %+v", event)
+	}
+	if event.OccurredAt.IsZero() {
+		t.Fatal("accepted event should include occurred_at")
+	}
+}
+
+func TestOutbidPublishesRealtimeEvent(t *testing.T) {
+	r, db, eventBus := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	firstToken, firstUserID := registerAuctionUser(t, ts)
+	secondToken, secondUserID := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+	placeBid(t, ts, auctionID, firstToken, 10)
+
+	events, unsubscribe := eventBus.Subscribe()
+	defer unsubscribe()
+	placeBid(t, ts, auctionID, secondToken, 20)
+
+	event := requireAuctionEvent(t, events, realtime.EventBidOutbid)
+	var version int64
+	if err := db.QueryRow("SELECT version FROM auctions WHERE id = ?", auctionID).Scan(&version); err != nil {
+		t.Fatalf("query auction version: %v", err)
+	}
+	if event.AuctionID != auctionID || event.UserID != secondUserID || event.Amount != 20 || event.Version != version {
+		t.Fatalf("unexpected outbid event: %+v, want auction=%d user=%d amount=20 version=%d", event, auctionID, secondUserID, version)
+	}
+	if event.PreviousUserID == nil || *event.PreviousUserID != firstUserID {
+		t.Fatalf("expected previous user %d, got %+v", firstUserID, event.PreviousUserID)
+	}
+	if event.PreviousAmount != 10 {
+		t.Fatalf("expected previous amount 10, got %.2f", event.PreviousAmount)
+	}
+}
+
 func TestSnapshotProviderReturnsAuctionStateAndRankings(t *testing.T) {
 	r, db := setupAuctionServer(t)
 	ts := httptest.NewServer(r)
@@ -610,6 +753,65 @@ func TestCeilingBidSettlesAuctionAndCreatesOrder(t *testing.T) {
 	}
 }
 
+func TestCeilingBidPublishesAuctionEndedEvent(t *testing.T) {
+	r, db, eventBus := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+	events, unsubscribe := eventBus.Subscribe()
+	defer unsubscribe()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, userID := registerAuctionUser(t, ts)
+	ceiling := 20.0
+	_, auctionID := publishAuction(t, ts, merchantToken, &ceiling)
+	activateAuction(t, db, auctionID)
+
+	placeBid(t, ts, auctionID, userToken, 20)
+
+	acceptedEvent := requireNextAuctionEvent(t, events, realtime.EventBidAccepted)
+	endedEvent := requireNextAuctionEvent(t, events, realtime.EventAuctionEnded)
+	var version int64
+	var status string
+	if err := db.QueryRow("SELECT version, status FROM auctions WHERE id = ?", auctionID).Scan(&version, &status); err != nil {
+		t.Fatalf("query auction terminal state: %v", err)
+	}
+	if acceptedEvent.AuctionID != auctionID || acceptedEvent.UserID != userID || acceptedEvent.Amount != 20 {
+		t.Fatalf("unexpected ceiling accepted event: %+v, want auction=%d user=%d amount=20", acceptedEvent, auctionID, userID)
+	}
+	if endedEvent.AuctionID != auctionID || endedEvent.UserID != userID || endedEvent.Amount != 20 || endedEvent.Version != version || endedEvent.Status != status {
+		t.Fatalf("unexpected ceiling ended event: %+v, want auction=%d user=%d amount=20 version=%d status=%s", endedEvent, auctionID, userID, version, status)
+	}
+	if endedEvent.Status != "ended_sold" {
+		t.Fatalf("expected ended_sold event status, got %s", endedEvent.Status)
+	}
+	if endedEvent.Version <= acceptedEvent.Version {
+		t.Fatalf("expected terminal version to advance after accepted event, got accepted=%d ended=%d", acceptedEvent.Version, endedEvent.Version)
+	}
+}
+
+func TestCeilingBidNearEndDoesNotPublishAuctionExtendedEvent(t *testing.T) {
+	r, db, eventBus := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+	events, unsubscribe := eventBus.Subscribe()
+	defer unsubscribe()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, _ := registerAuctionUser(t, ts)
+	ceiling := 20.0
+	_, auctionID := publishAuction(t, ts, merchantToken, &ceiling)
+	activateAuction(t, db, auctionID)
+	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_ADD(NOW(), INTERVAL 10 SECOND), current_extend_count = 0 WHERE id = ?", auctionID); err != nil {
+		t.Fatalf("set auction near end: %v", err)
+	}
+
+	placeBid(t, ts, auctionID, userToken, 20)
+
+	requireNextAuctionEvent(t, events, realtime.EventBidAccepted)
+	requireNextAuctionEvent(t, events, realtime.EventAuctionEnded)
+	assertNoAuctionEvent(t, events)
+}
+
 func TestBidValidationRejectsInvalidStateLowBidAndInsufficientBalance(t *testing.T) {
 	r, db := setupAuctionServer(t)
 	ts := httptest.NewServer(r)
@@ -678,6 +880,38 @@ func TestBidNearEndTriggersSoftClose(t *testing.T) {
 	}
 }
 
+func TestSoftCloseBidPublishesAuctionExtendedEvent(t *testing.T) {
+	r, db, eventBus := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+	events, unsubscribe := eventBus.Subscribe()
+	defer unsubscribe()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, _ := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_ADD(NOW(), INTERVAL 10 SECOND), current_extend_count = 0 WHERE id = ?", auctionID); err != nil {
+		t.Fatalf("set auction near end: %v", err)
+	}
+
+	placeBid(t, ts, auctionID, userToken, 10)
+
+	event := requireAuctionEvent(t, events, realtime.EventAuctionExtended)
+	var version int64
+	var extendCount int
+	var endedAt time.Time
+	if err := db.QueryRow("SELECT version, current_extend_count, ended_at FROM auctions WHERE id = ?", auctionID).Scan(&version, &extendCount, &endedAt); err != nil {
+		t.Fatalf("query extension state: %v", err)
+	}
+	if event.AuctionID != auctionID || event.Version != version || event.ExtendCount != extendCount {
+		t.Fatalf("unexpected extension event: %+v, want auction=%d version=%d extend_count=%d", event, auctionID, version, extendCount)
+	}
+	if event.EndedAt == nil || !event.EndedAt.Equal(endedAt) {
+		t.Fatalf("expected ended_at %s, got %+v", endedAt.Format(time.RFC3339Nano), event.EndedAt)
+	}
+}
+
 func TestRedisBidLockContentionRejectsBid(t *testing.T) {
 	r, db := setupAuctionServer(t)
 	ts := httptest.NewServer(r)
@@ -742,6 +976,43 @@ func TestSettleExpiredAuctionWithoutBidsMarksNoBid(t *testing.T) {
 	}
 }
 
+func TestSettleExpiredAuctionWithoutBidsPublishesEndedNoBidEvent(t *testing.T) {
+	r, db, eventBus := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+	events, unsubscribe := eventBus.Subscribe()
+	defer unsubscribe()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuctionViaAPI(t, ts, merchantToken, auctionID)
+	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_SUB(NOW(), INTERVAL 1 SECOND) WHERE id = ?", auctionID); err != nil {
+		t.Fatalf("expire auction: %v", err)
+	}
+
+	auctionSvc := service.NewAuctionServiceWithEvents(repository.NewAuctionEngineRepo(db), nil, eventBus)
+	settled, err := auctionSvc.SettleExpired(context.Background())
+	if err != nil {
+		t.Fatalf("settle expired auctions: %v", err)
+	}
+	if settled != 1 {
+		t.Fatalf("expected one settled auction, got %d", settled)
+	}
+
+	event := requireAuctionEvent(t, events, realtime.EventAuctionEnded)
+	var version int64
+	var status string
+	if err := db.QueryRow("SELECT version, status FROM auctions WHERE id = ?", auctionID).Scan(&version, &status); err != nil {
+		t.Fatalf("query auction terminal state: %v", err)
+	}
+	if event.AuctionID != auctionID || event.Version != version || event.Status != status {
+		t.Fatalf("unexpected no-bid ended event: %+v, want auction=%d version=%d status=%s", event, auctionID, version, status)
+	}
+	if event.Status != "ended_no_bid" || event.UserID != 0 || event.Amount != 0 {
+		t.Fatalf("expected no-bid terminal event, got %+v", event)
+	}
+}
+
 func TestSettleExpiredAuctionWithBidCreatesOrder(t *testing.T) {
 	r, db := setupAuctionServer(t)
 	ts := httptest.NewServer(r)
@@ -791,6 +1062,45 @@ func TestSettleExpiredAuctionWithBidCreatesOrder(t *testing.T) {
 	}
 	if balance != 999990 || frozen != 0 {
 		t.Fatalf("expected settled wallet 999990/0, got %.2f/%.2f", balance, frozen)
+	}
+}
+
+func TestSettleExpiredAuctionWithBidPublishesEndedSoldEvent(t *testing.T) {
+	r, db, eventBus := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, userID := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuctionViaAPI(t, ts, merchantToken, auctionID)
+	placeBid(t, ts, auctionID, userToken, 10)
+	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_SUB(NOW(), INTERVAL 1 SECOND) WHERE id = ?", auctionID); err != nil {
+		t.Fatalf("expire auction: %v", err)
+	}
+
+	events, unsubscribe := eventBus.Subscribe()
+	defer unsubscribe()
+	auctionSvc := service.NewAuctionServiceWithEvents(repository.NewAuctionEngineRepo(db), nil, eventBus)
+	settled, err := auctionSvc.SettleExpired(context.Background())
+	if err != nil {
+		t.Fatalf("settle expired auctions: %v", err)
+	}
+	if settled != 1 {
+		t.Fatalf("expected one settled auction, got %d", settled)
+	}
+
+	event := requireAuctionEvent(t, events, realtime.EventAuctionEnded)
+	var version int64
+	var status string
+	if err := db.QueryRow("SELECT version, status FROM auctions WHERE id = ?", auctionID).Scan(&version, &status); err != nil {
+		t.Fatalf("query auction terminal state: %v", err)
+	}
+	if event.AuctionID != auctionID || event.UserID != userID || event.Amount != 10 || event.Version != version || event.Status != status {
+		t.Fatalf("unexpected sold ended event: %+v, want auction=%d user=%d amount=10 version=%d status=%s", event, auctionID, userID, version, status)
+	}
+	if event.Status != "ended_sold" {
+		t.Fatalf("expected ended_sold event status, got %s", event.Status)
 	}
 }
 

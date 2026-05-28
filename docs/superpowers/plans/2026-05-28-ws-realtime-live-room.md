@@ -457,7 +457,7 @@ Result: completed in `7bf5059 feat(realtime): add auction websocket hub`. Spec c
 - Modify: `backend/internal/service/auction_service_test.go`
 - Modify: `backend/tests/integration/auction_engine_test.go`
 
-- [ ] **Step 1: Add service constructor compatibility**
+- [x] **Step 1: Add service constructor compatibility**
 
 Keep existing tests simple by supporting both:
 
@@ -468,7 +468,7 @@ func NewAuctionServiceWithEvents(repo *repository.AuctionEngineRepo, redis *redi
 
 `NewAuctionService` should call `NewAuctionServiceWithEvents(repo, redis, realtime.NewNoopAuctionEventBus())`.
 
-- [ ] **Step 2: Add event assertions**
+- [x] **Step 2: Add event assertions**
 
 Create tests that subscribe to the in-memory bus, call service methods, and assert events:
 
@@ -478,7 +478,7 @@ Create tests that subscribe to the in-memory bus, call service methods, and asse
 - ceiling settlement emits `auction.ended`
 - cancellation emits `auction.cancelled`
 
-- [ ] **Step 3: Implement event publishing after commit**
+- [x] **Step 3: Implement event publishing after commit**
 
 Do not publish inside the DB transaction before commit. Collect events in a local slice during the transaction, then publish after `repo.WithTx` returns nil:
 
@@ -499,7 +499,7 @@ for _, event := range events {
 
 If publish fails, log the failure and keep the already committed business result.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run:
 
@@ -514,6 +514,8 @@ Commit:
 git add backend/internal/service/auction_service.go backend/internal/service/auction_service_test.go backend/tests/integration/auction_engine_test.go
 git commit -m "feat(auction): publish realtime domain events"
 ```
+
+Result: implementation verified locally with `/Users/vivix/.local/go/bin/go test -count=1 ./internal/service ./tests/integration`, `/Users/vivix/.local/go/bin/go test -count=1 ./...`, and `git diff --check`; commit recorded as part of the Task 5 slice.
 
 ## Task 6: Frontend Auction API And Lobby
 

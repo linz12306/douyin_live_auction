@@ -85,10 +85,11 @@ func TestRealtimeHandlerBroadcastsPriceUpdateToSameAuctionWebSocketClients(t *te
 	assertSnapshotEnvelope(t, secondSnapshot, setup.auctionID)
 
 	updateRealtimeAuctionPrice(t, setup.db, setup.auctionID, setup.userAID, 120)
+	expectedVersion := firstSnapshot.Version + 1
 	if err := setup.bus.Publish(context.Background(), realtime.AuctionEvent{
 		Type:       realtime.EventBidAccepted,
 		AuctionID:  setup.auctionID,
-		Version:    99,
+		Version:    expectedVersion,
 		UserID:     setup.userAID,
 		Amount:     120,
 		OccurredAt: time.Now(),
@@ -98,12 +99,8 @@ func TestRealtimeHandlerBroadcastsPriceUpdateToSameAuctionWebSocketClients(t *te
 
 	firstUpdate := readEnvelope(t, first)
 	assertEnvelopeType(t, firstUpdate, realtime.MessagePriceUpdate)
-	expectedVersion := firstSnapshot.Version + 1
 	if firstUpdate.Version != expectedVersion {
 		t.Fatalf("expected price_update version to match snapshot-backed payload version %d, got %d", expectedVersion, firstUpdate.Version)
-	}
-	if firstUpdate.Version == 99 {
-		t.Fatal("expected snapshot-backed price_update version, got event version")
 	}
 	secondUpdate := readEnvelope(t, second)
 	assertEnvelopeType(t, secondUpdate, realtime.MessagePriceUpdate)

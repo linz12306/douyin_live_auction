@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"time"
 
 	"douyin-live/backend/internal/dto"
 	"douyin-live/backend/internal/model"
+	"douyin-live/backend/internal/realtime"
 	"douyin-live/backend/internal/repository"
 
 	"github.com/redis/go-redis/v9"
@@ -29,12 +31,20 @@ var (
 )
 
 type AuctionService struct {
-	repo  *repository.AuctionEngineRepo
-	redis *redis.Client
+	repo     *repository.AuctionEngineRepo
+	redis    *redis.Client
+	eventBus realtime.AuctionEventBus
 }
 
 func NewAuctionService(repo *repository.AuctionEngineRepo, redis *redis.Client) *AuctionService {
-	return &AuctionService{repo: repo, redis: redis}
+	return NewAuctionServiceWithEvents(repo, redis, realtime.NewNoopAuctionEventBus())
+}
+
+func NewAuctionServiceWithEvents(repo *repository.AuctionEngineRepo, redis *redis.Client, bus realtime.AuctionEventBus) *AuctionService {
+	if bus == nil {
+		bus = realtime.NewNoopAuctionEventBus()
+	}
+	return &AuctionService{repo: repo, redis: redis, eventBus: bus}
 }
 
 func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string, auctionID int64, req *dto.PlaceBidRequest) (*dto.PlaceBidResponse, error) {
@@ -50,6 +60,7 @@ func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string
 
 	now := time.Now()
 	result := &dto.PlaceBidResponse{AuctionID: auctionID}
+	var events []realtime.AuctionEvent
 
 	err = s.repo.WithTx(ctx, func(tx *sql.Tx) error {
 		auction, err := s.repo.FindAuctionForUpdate(ctx, tx, auctionID)
@@ -145,6 +156,51 @@ func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string
 			}
 		}
 
+		bidEventVersion := int64(auction.Version) + 1
+		events = append(events, realtime.AuctionEvent{
+			Type:       realtime.EventBidAccepted,
+			AuctionID:  auctionID,
+			Version:    bidEventVersion,
+			UserID:     userID,
+			Amount:     req.Amount,
+			OccurredAt: now,
+		})
+		if previousBid != nil {
+			previousUserID := previousBid.UserID
+			events = append(events, realtime.AuctionEvent{
+				Type:           realtime.EventBidOutbid,
+				AuctionID:      auctionID,
+				Version:        bidEventVersion,
+				UserID:         userID,
+				PreviousUserID: &previousUserID,
+				Amount:         req.Amount,
+				PreviousAmount: previousBid.Amount,
+				OccurredAt:     now,
+			})
+		}
+		if extended && !settled && nextEndAt != nil {
+			committedEndAt := nextEndAt.Round(time.Second)
+			events = append(events, realtime.AuctionEvent{
+				Type:        realtime.EventAuctionExtended,
+				AuctionID:   auctionID,
+				Version:     bidEventVersion,
+				EndedAt:     &committedEndAt,
+				ExtendCount: auction.CurrentExtendCount + 1,
+				OccurredAt:  now,
+			})
+		}
+		if settled {
+			events = append(events, realtime.AuctionEvent{
+				Type:       realtime.EventAuctionEnded,
+				AuctionID:  auctionID,
+				Version:    bidEventVersion + 1,
+				UserID:     userID,
+				Amount:     req.Amount,
+				Status:     "ended_sold",
+				OccurredAt: now,
+			})
+		}
+
 		result.BidID = bid.ID
 		result.Amount = req.Amount
 		result.CurrentPrice = req.Amount
@@ -162,6 +218,7 @@ func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string
 		return nil, err
 	}
 
+	s.publishAuctionEvents(ctx, events)
 	return result, nil
 }
 
@@ -204,6 +261,7 @@ func (s *AuctionService) Activate(ctx context.Context, merchantID, auctionID int
 func (s *AuctionService) SettleExpired(ctx context.Context) (int, error) {
 	now := time.Now()
 	settled := 0
+	var events []realtime.AuctionEvent
 	err := s.repo.WithTx(ctx, func(tx *sql.Tx) error {
 		auctionIDs, err := s.repo.ListExpiredActiveAuctionIDs(ctx, tx, now)
 		if err != nil {
@@ -232,6 +290,13 @@ func (s *AuctionService) SettleExpired(ctx context.Context) (int, error) {
 				})); err != nil {
 					return err
 				}
+				events = append(events, realtime.AuctionEvent{
+					Type:       realtime.EventAuctionEnded,
+					AuctionID:  auctionID,
+					Version:    int64(auction.Version) + 1,
+					Status:     "ended_no_bid",
+					OccurredAt: now,
+				})
 				settled++
 				continue
 			}
@@ -262,11 +327,24 @@ func (s *AuctionService) SettleExpired(ctx context.Context) (int, error) {
 			})); err != nil {
 				return err
 			}
+			events = append(events, realtime.AuctionEvent{
+				Type:       realtime.EventAuctionEnded,
+				AuctionID:  auctionID,
+				Version:    int64(auction.Version) + 1,
+				UserID:     activeBid.UserID,
+				Amount:     activeBid.Amount,
+				Status:     "ended_sold",
+				OccurredAt: now,
+			})
 			settled++
 		}
 		return nil
 	})
-	return settled, err
+	if err != nil {
+		return settled, err
+	}
+	s.publishAuctionEvents(ctx, events)
+	return settled, nil
 }
 
 func (s *AuctionService) Cancel(ctx context.Context, merchantID, auctionID int64, reason string) error {
@@ -279,7 +357,8 @@ func (s *AuctionService) Cancel(ctx context.Context, merchantID, auctionID int64
 	}
 
 	now := time.Now()
-	return s.repo.WithTx(ctx, func(tx *sql.Tx) error {
+	var events []realtime.AuctionEvent
+	err := s.repo.WithTx(ctx, func(tx *sql.Tx) error {
 		auction, err := s.repo.FindAuctionForUpdate(ctx, tx, auctionID)
 		if err != nil {
 			return err
@@ -328,11 +407,40 @@ func (s *AuctionService) Cancel(ctx context.Context, merchantID, auctionID int64
 		if err := s.repo.CancelAuction(ctx, tx, auctionID, auction.ProductID, reason, now); err != nil {
 			return err
 		}
-		return s.repo.InsertAuditLog(ctx, tx, auctionID, merchantID, "cancelled", mustJSON(map[string]interface{}{
+		if err := s.repo.InsertAuditLog(ctx, tx, auctionID, merchantID, "cancelled", mustJSON(map[string]interface{}{
 			"reason": reason,
 			"status": auction.Status,
-		}))
+		})); err != nil {
+			return err
+		}
+		events = append(events, realtime.AuctionEvent{
+			Type:       realtime.EventAuctionCancelled,
+			AuctionID:  auctionID,
+			Version:    int64(auction.Version) + 1,
+			Status:     "cancelled",
+			OccurredAt: now,
+		})
+		return nil
 	})
+	if err != nil {
+		return err
+	}
+	s.publishAuctionEvents(ctx, events)
+	return nil
+}
+
+func (s *AuctionService) publishAuctionEvents(ctx context.Context, events []realtime.AuctionEvent) {
+	for _, event := range events {
+		if event.OccurredAt.IsZero() {
+			event.OccurredAt = time.Now()
+		}
+		publishCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		err := s.eventBus.Publish(publishCtx, event)
+		cancel()
+		if err != nil {
+			log.Printf("auction event publish failed: type=%s auction_id=%d version=%d: %v", event.Type, event.AuctionID, event.Version, err)
+		}
+	}
 }
 
 func (s *AuctionService) acquireBidLock(ctx context.Context, auctionID int64) (func(), error) {

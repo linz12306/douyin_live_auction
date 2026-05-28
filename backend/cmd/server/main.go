@@ -54,7 +54,7 @@ func main() {
 	snapshotProvider := realtime.NewSnapshotProvider(auctionEngineRepo)
 	realtimeHub := realtime.NewHub(eventBus, snapshotProvider)
 	go realtimeHub.Run(context.Background())
-	auctionSvc := service.NewAuctionService(auctionEngineRepo, rdb)
+	auctionSvc := service.NewAuctionServiceWithEvents(auctionEngineRepo, rdb, eventBus)
 	auctionH := handler.NewAuctionHandler(auctionSvc)
 	realtimeH := handler.NewRealtimeHandler(realtimeHub, snapshotProvider, cfg)
 	startAuctionSettlementWorker(auctionSvc)
