@@ -6,9 +6,10 @@
   - Current status: baseline validation passed; `github.com/gorilla/websocket v1.5.3` added in commit `689ecc9`.
   - Verification: `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`, `/Users/vivix/.local/go/bin/go test ./...`, and `cd frontend && npm run build`.
 
-- [ ] 2. Backend realtime message and event contracts
+- [x] 2. Backend realtime message and event contracts
   - Define WebSocket message DTOs, payloads, auction domain events, and `AuctionEventBus` interface.
   - Include `type`, `auction_id`, `version`, `server_time`, and `payload` on every message.
+  - Current status: message/event contracts added in `5dba7e7`; event bus drop/close contract hardened in `7edc16f`.
   - Verification: Go unit tests for message serialization and in-memory event bus publish/subscribe.
 
 - [ ] 3. Backend snapshot provider

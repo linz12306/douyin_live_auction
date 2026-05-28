@@ -133,7 +133,7 @@ Result: completed in commit `689ecc9 chore(realtime): add websocket dependency`.
 - Create: `backend/internal/realtime/event_bus.go`
 - Create: `backend/internal/realtime/event_bus_test.go`
 
-- [ ] **Step 1: Write message serialization tests**
+- [x] **Step 1: Write message serialization tests**
 
 Create `backend/internal/realtime/message_test.go` with tests named:
 
@@ -150,7 +150,7 @@ Assert that marshalled JSON includes:
 - `server_time`
 - `payload`
 
-- [ ] **Step 2: Implement message contracts**
+- [x] **Step 2: Implement message contracts**
 
 Create `backend/internal/realtime/message.go` with these exported types:
 
@@ -232,7 +232,7 @@ type OutbidPayload struct {
 }
 ```
 
-- [ ] **Step 3: Write event bus tests**
+- [x] **Step 3: Write event bus tests**
 
 Create tests:
 
@@ -243,7 +243,7 @@ func TestInMemoryAuctionEventBusUnsubscribeStopsDelivery(t *testing.T)
 
 Use a buffered channel and a short timeout to assert delivery and no delivery after unsubscribe.
 
-- [ ] **Step 4: Implement event bus**
+- [x] **Step 4: Implement event bus**
 
 Create `backend/internal/realtime/event_bus.go` with:
 
@@ -280,7 +280,7 @@ type AuctionEventBus interface {
 
 `InMemoryAuctionEventBus` must be concurrency safe and non-blocking for slow subscribers.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run:
 
@@ -297,6 +297,8 @@ Commit:
 git add backend/internal/realtime/message.go backend/internal/realtime/message_test.go backend/internal/realtime/event_bus.go backend/internal/realtime/event_bus_test.go
 git commit -m "feat(realtime): define auction message contracts"
 ```
+
+Result: completed in `5dba7e7 feat(realtime): define auction message contracts` and hardened in `7edc16f fix(realtime): harden event bus contract`. Spec compliance and code quality reviews approved the slice. Verification included `/Users/vivix/.local/go/bin/go test -race -count=1 ./internal/realtime`.
 
 ## Task 3: Backend Snapshot Provider
 
