@@ -74,8 +74,9 @@ Run:
 ```bash
 cd /Users/vivix/Documents/Codex/douyin_live_auction
 npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive
+cd backend
 /Users/vivix/.local/go/bin/go test ./...
-cd frontend && npm run build
+cd ../frontend && npm run build
 ```
 
 Expected:
