@@ -35,6 +35,13 @@ func (r *AuctionEngineRepo) WithTx(ctx context.Context, fn func(*sql.Tx) error) 
 
 func (r *AuctionEngineRepo) FindAuctionForUpdate(ctx context.Context, tx *sql.Tx, auctionID int64) (*model.Auction, error) {
 	a := &model.Auction{}
+	var ceilingPrice sql.NullFloat64
+	var highestBidderID sql.NullInt64
+	var cancelReason sql.NullString
+	var startedAt sql.NullTime
+	var endedAt sql.NullTime
+	var cancelledAt sql.NullTime
+
 	err := tx.QueryRowContext(ctx,
 		`SELECT id, product_id, merchant_id, start_price, bid_increment_type, bid_increment_value,
                 ceiling_price, duration_seconds, auto_extend_seconds, max_extend_count, current_extend_count,
@@ -42,13 +49,40 @@ func (r *AuctionEngineRepo) FindAuctionForUpdate(ctx context.Context, tx *sql.Tx
                 started_at, ended_at, cancelled_at, created_at, updated_at
          FROM auctions WHERE id = ? FOR UPDATE`, auctionID,
 	).Scan(&a.ID, &a.ProductID, &a.MerchantID, &a.StartPrice, &a.BidIncrementType, &a.BidIncrementValue,
-		&a.CeilingPrice, &a.DurationSeconds, &a.AutoExtendSeconds, &a.MaxExtendCount, &a.CurrentExtendCount,
-		&a.Status, &a.CurrentPrice, &a.HighestBidderID, &a.CancelReason, &a.Version,
-		&a.StartedAt, &a.EndedAt, &a.CancelledAt, &a.CreatedAt, &a.UpdatedAt)
+		&ceilingPrice, &a.DurationSeconds, &a.AutoExtendSeconds, &a.MaxExtendCount, &a.CurrentExtendCount,
+		&a.Status, &a.CurrentPrice, &highestBidderID, &cancelReason, &a.Version,
+		&startedAt, &endedAt, &cancelledAt, &a.CreatedAt, &a.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	return a, err
+	if err != nil {
+		return nil, err
+	}
+
+	if ceilingPrice.Valid {
+		value := ceilingPrice.Float64
+		a.CeilingPrice = &value
+	}
+	if highestBidderID.Valid {
+		value := highestBidderID.Int64
+		a.HighestBidderID = &value
+	}
+	if cancelReason.Valid {
+		a.CancelReason = cancelReason.String
+	}
+	if startedAt.Valid {
+		value := startedAt.Time
+		a.StartedAt = &value
+	}
+	if endedAt.Valid {
+		value := endedAt.Time
+		a.EndedAt = &value
+	}
+	if cancelledAt.Valid {
+		value := cancelledAt.Time
+		a.CancelledAt = &value
+	}
+	return a, nil
 }
 
 func (r *AuctionEngineRepo) FindActiveBidForUpdate(ctx context.Context, tx *sql.Tx, auctionID int64) (*model.Bid, error) {
@@ -137,7 +171,7 @@ func (r *AuctionEngineRepo) UpdateAuctionBidState(ctx context.Context, tx *sql.T
 			`UPDATE auctions
              SET current_price = ?, highest_bidder_id = ?, current_extend_count = current_extend_count + ?, ended_at = ?, version = version + 1
              WHERE id = ?`,
-			amount, bidderID, boolToInt(extended), endedAt, auctionID,
+			amount, bidderID, boolToInt(extended), *endedAt, auctionID,
 		)
 		return err
 	}
