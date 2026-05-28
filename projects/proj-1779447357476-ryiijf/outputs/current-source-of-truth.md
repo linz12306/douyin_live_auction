@@ -21,7 +21,7 @@
 
 - `projects/proj-1779447357476-ryiijf/outputs/progress-report-v3.md`
 
-该报告已按当前 `master`、`AGENTS.md`、`requirements-v3.md`、`project.md` 和已归档的 `auction-engine-mvp` 重新盘点。
+该报告已按当前 `ws-realtime-live-room`、`AGENTS.md`、`requirements-v3.md`、`project.md`、已归档的 `auction-engine-mvp` 和已归档的 `ws-realtime-live-room` 重新盘点。
 
 ## 当前执行规范
 
@@ -31,13 +31,17 @@
 - `projects/proj-1779447357476-ryiijf/outputs/requirements-v3.md`
 - `projects/proj-1779447357476-ryiijf/outputs/current-source-of-truth.md`
 - `openspec/specs/auction-engine/spec.md`
+- `openspec/specs/realtime-live-room/spec.md`
 - `openspec/changes/archive/2026-05-28-auction-engine-mvp/`
+- `openspec/changes/archive/2026-05-28-ws-realtime-live-room/`
 - `docs/superpowers/plans/2026-05-27-auction-engine-mvp.md`
+- `docs/superpowers/plans/2026-05-28-ws-realtime-live-room.md`
 
 ## 下一步
 
-当前下一步不是重新读 v2，也不是直接写业务代码，而是开启新的 OpenSpec change：
+当前下一步不是重新读 v2，也不是继续在已归档 change 上直接写业务代码，而是开启新的 OpenSpec change：
 
 1. 已完成并归档：`auction-engine-mvp`。
-2. 建议下一步：`ws-realtime-live-room`，打通 WebSocket 实时竞价和前端用户体验。
-3. 仍需保持 Superpowers + OpenSpec 五段式流程，并在每个可验证切片提交。
+2. 已完成并归档：`ws-realtime-live-room`，打通 WebSocket 实时竞价和前端用户体验。
+3. 建议下一步：`order-system`，做中标确认、模拟支付、超时处理、订单展示。
+4. 仍需保持 Superpowers + OpenSpec 五段式流程，并在每个可验证切片提交。

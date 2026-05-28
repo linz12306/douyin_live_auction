@@ -252,7 +252,7 @@
 - `auction-engine-mvp` 已完成、合并并推送到 `master`，并归档到 `openspec/changes/archive/2026-05-28-auction-engine-mvp/`。
 - 后端竞拍引擎主规范已沉淀为 `openspec/specs/auction-engine/spec.md`。
 - 后续复杂开发必须先开新的 OpenSpec change，并同步 Superpowers exploration/plan；不要在已归档的 `auction-engine-mvp` 上继续追加功能。
-- 下一阶段优先建议：`ws-realtime-live-room`，打通 WebSocket 实时竞价和前端用户竞拍体验；订单确认/支付作为后续独立 change。
+- `ws-realtime-live-room` 后来已完成并归档；当前下一阶段优先建议见下方 `2026-05-28 ws-realtime-live-room` 记忆，应新开 `order-system` change 做订单确认/支付/履约。
 - Git 管理规则已写入 `AGENTS.md`：非轻量开发使用分支，按可验证切片提交，推送/合并状态必须明确记录。
 
 ## 2026-05-28 ws-realtime-live-room
@@ -261,3 +261,4 @@
 - `ws-realtime-live-room` 已完成用户端实时房间主链路：WebSocket `/ws/auctions/:id` 快照/广播/私有 outbid，用户大厅 `/app/auctions`，直播间 `/app/auctions/:id`，REST 出价后由 WebSocket 驱动当前价与排行榜更新。
 - Task 9 E2E 约定：用 API setup 注册/登录商家和用户、创建商品、发布并激活竞拍；用户 A 必须从 `/app/auctions` 进入房间；用户 A 应看到 snapshot 倒计时；用户 B 使用第二浏览器上下文出更高价；用户 A 应看到私有 `您已被超过` 通知以及当前价/排行榜更新；用户 A 再封顶出价触发真实 `auction_end`，并断言终态消息/状态和禁用出价控件。
 - 为避免误用旧服务，Playwright 支持 `PLAYWRIGHT_BASE_URL`，Vite dev proxy 支持 `VITE_BACKEND_TARGET`，后端支持显式测试开关 `DISABLE_RATE_LIMIT=1`。已有 `localhost:8080` 不一定是当前后端代码时，优先用 `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` 起当前后端到备用端口并让前端代理过去验证 `/ws`。
+- OpenSpec change 已归档到 `openspec/changes/archive/2026-05-28-ws-realtime-live-room/`，持久规范位于 `openspec/specs/realtime-live-room/spec.md`。下一阶段订单/支付/履约必须新开 OpenSpec change。

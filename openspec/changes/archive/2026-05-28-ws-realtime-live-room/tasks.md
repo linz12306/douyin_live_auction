@@ -55,6 +55,8 @@
   - Current status: completed in Task 9 slice; `tests/e2e/realtime-live-room.spec.ts` uses API setup for merchant/user accounts, product creation, publish, and activation, then validates user A entering from `/app/auctions`, WebSocket snapshot-derived current price/countdown, user A bid, user B higher bid from a second browser context, user A private outbid notification, room ranking/current price updates, and a real WebSocket `auction_end` after user A places the ceiling bid with terminal message/status and disabled bid actions.
   - Verification: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/realtime-live-room.spec.ts` passed twice against current backend code on `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` via `VITE_BACKEND_TARGET=http://localhost:18080`; final required validation commands recorded in the Task 9 plan result.
 
-- [ ] 10. Documentation, plan sync, and memory
+- [x] 10. Documentation, plan sync, and memory
   - Update Superpowers execution plan, OpenSpec task statuses, current status docs, and project memory.
-  - Verification: docs reference `requirements-v3.md`, active OpenSpec change, latest validation commands, and no stale `auction-engine-mvp` active-change paths.
+  - Verification: docs reference `requirements-v3.md`, archived OpenSpec change, latest validation commands, and no stale `auction-engine-mvp` active-change paths.
+  - Current status: completed in final documentation slice; Superpowers plan, OpenSpec task status, progress report, and memory files now record the realtime live-room state, latest validation commands, and next-step recommendation to start a fresh OpenSpec change for order/payment work.
+  - Verification: `rg` review for `requirements-v3.md`, `ws-realtime-live-room`, and stale `auction-engine-mvp` active-change references; OpenSpec archive validation and `git diff --check`.
