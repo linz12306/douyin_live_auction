@@ -46,6 +46,11 @@ func main() {
 	productSvc := service.NewProductService(productRepo, auctionRepo)
 	productH := handler.NewProductHandler(productSvc, cfg.ImageDir)
 
+	// Auction engine
+	auctionEngineRepo := repository.NewAuctionEngineRepo(db)
+	auctionSvc := service.NewAuctionService(auctionEngineRepo, rdb)
+	auctionH := handler.NewAuctionHandler(auctionSvc)
+
 	// Router
 	r := gin.Default()
 
@@ -93,6 +98,14 @@ func main() {
 			products.POST("/:id/images", middleware.RoleGuard("merchant"), productH.UploadImage)
 			products.DELETE("/:id/images/:image_id", middleware.RoleGuard("merchant"), productH.DeleteImage)
 			products.POST("/:id/publish", middleware.RoleGuard("merchant"), productH.Publish)
+		}
+
+		// Auction routes
+		auctions := api.Group("/auctions")
+		auctions.Use(middleware.JWTAuth(cfg))
+		{
+			auctions.POST("/:id/bid", middleware.RoleGuard("user"), auctionH.PlaceBid)
+			auctions.GET("/:id/rankings", auctionH.Rankings)
 		}
 	}
 
