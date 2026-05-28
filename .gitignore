@@ -1,5 +1,6 @@
 node_modules/
 *.exe
+.superpowers/
 backend/static/avatars/*
 !backend/static/avatars/.gitkeep
 backend/static/images/*
