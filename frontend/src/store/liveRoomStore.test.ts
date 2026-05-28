@@ -188,6 +188,30 @@ describe('useLiveRoomStore', () => {
     expect(state.serverTimeOffsetMs).toBe(offsetAfterFreshMessage);
   });
 
+  it('recomputes next bid for fixed and percent increments after price_update messages', () => {
+    useLiveRoomStore.getState().applyMessage(snapshot(3));
+    useLiveRoomStore.getState().applyMessage({
+      type: 'price_update',
+      auction_id: 7,
+      version: 4,
+      server_time: '2026-05-28T10:00:01.000Z',
+      payload: { current_price: 140, highest_bidder_id: 12, rankings: [] },
+    });
+
+    expect(useLiveRoomStore.getState().nextBidAmount).toBe(150);
+
+    useLiveRoomStore.setState({ bidIncrementType: 'percent', bidIncrementValue: 12.5 });
+    useLiveRoomStore.getState().applyMessage({
+      type: 'price_update',
+      auction_id: 7,
+      version: 5,
+      server_time: '2026-05-28T10:00:02.000Z',
+      payload: { current_price: 99.99, highest_bidder_id: 13, rankings: [] },
+    });
+
+    expect(useLiveRoomStore.getState().nextBidAmount).toBe(112.49);
+  });
+
   it('normalizes null price_update rankings to an empty array', () => {
     useLiveRoomStore.getState().applyMessage(snapshot(3));
     useLiveRoomStore.getState().applyMessage({

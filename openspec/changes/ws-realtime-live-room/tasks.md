@@ -41,10 +41,13 @@
   - Current status: completed in Task 7 slice; live room state/client utilities, typed realtime payloads, countdown helpers, Vite `/ws` dev proxy, and Vitest coverage for required store/client scenarios are in place. The `/app/auctions/:id` UI route wiring, full room UI, and bid interaction remain Task 8.
   - Verification: `cd frontend && npm run build`, `cd frontend && npm test -- vite.config.test.ts src/store/liveRoomStore.test.ts`, `cd frontend && npx eslint vite.config.ts vite.config.test.ts src/types/auction.ts src/store/liveRoomStore.ts src/store/liveRoomStore.test.ts src/pages/app/liveRoomUtils.ts --quiet`, `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`, and `git diff --check`.
 
-- [ ] 8. Frontend live room UI and bid interaction
+- [x] 8. Frontend live room UI and bid interaction
   - Implement approved layout A: simulated live ambience, current price, countdown, primary next-bid button, custom amount, rankings, realtime status messages, and terminal-state disabled bidding.
   - Submit bids through REST and update realtime fields only from WebSocket messages.
   - Verification: frontend tests or Playwright smoke test for rendering, custom bid, REST failure toast, and WS-driven update.
+  - Current status: completed in Task 8 slice; `/app/auctions/:id` now renders the mobile-first live room, connects to `/ws/auctions/:id?token=...` only after an access token is available, disconnects on unmount, submits quick/custom bids through REST, leaves current price/rankings to WebSocket updates, shows visible bid errors, and disables bidding for terminal states.
+  - Review follow-up: fixed reload sessions with stored user + refresh token + empty access token so protected routes hydrate before rendering room content, recompute `nextBidAmount` from fixed/percent increment rules on `price_update`, and neutralize stale room state while route auction id and store auction id differ.
+  - Verification: `cd frontend && npm run build`, `cd frontend && npm test -- src/pages/app/LiveAuctionRoom.test.tsx src/store/liveRoomStore.test.ts vite.config.test.ts`, `cd frontend && npx eslint src/api/auction.ts src/pages/app/LiveAuctionRoom.tsx src/pages/app/LiveAuctionRoom.test.tsx src/App.tsx src/store/liveRoomStore.ts src/store/liveRoomStore.test.ts --quiet`, `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`, and `git diff --check`.
 
 - [ ] 9. End-to-end realtime validation
   - Cover merchant publish/activate, user A room snapshot, user A bid, user B outbid, user A private outbid notification, ranking update, countdown/terminal update.

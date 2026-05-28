@@ -112,6 +112,13 @@ function normalizeRankings(rankings: RankingItem[] | null): RankingItem[] {
   return rankings ?? [];
 }
 
+function calculateNextBidAmount(currentPrice: number, incrementType: string | undefined, incrementValue: number): number {
+  const increment = incrementType === 'percent'
+    ? Math.ceil(currentPrice * incrementValue) / 100
+    : incrementValue;
+  return Number((currentPrice + increment).toFixed(2));
+}
+
 function startSocket(auctionId: number, token: string, set: StoreSet, get: StoreGet, reconnecting = false) {
   clearReconnectTimer();
   closeActiveSocket();
@@ -279,6 +286,7 @@ export const useLiveRoomStore = create<LiveRoomState>((set, get) => ({
         set({
           currentPrice: payload.current_price,
           highestBidderId: payload.highest_bidder_id,
+          nextBidAmount: calculateNextBidAmount(payload.current_price, state.bidIncrementType, state.bidIncrementValue),
           rankings: normalizeRankings(payload.rankings),
           version: message.version,
           serverTimeOffsetMs,

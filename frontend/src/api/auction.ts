@@ -42,3 +42,7 @@ export async function listAuctionLobby(): Promise<AuctionLobbyItem[]> {
   const items = Array.isArray(envelope?.items) ? envelope.items : [];
   return items.map(normalizeLobbyItem).filter((item: AuctionLobbyItem | null): item is AuctionLobbyItem => item !== null);
 }
+
+export async function placeBid(auctionId: number, amount: number): Promise<void> {
+  await client.post(`/auctions/${auctionId}/bid`, { amount });
+}

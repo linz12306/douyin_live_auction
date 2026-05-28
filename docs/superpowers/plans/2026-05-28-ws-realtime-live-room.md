@@ -688,7 +688,7 @@ Result: implemented in the Task 7 slice. Frontend realtime types mirror backend 
 - Modify: `frontend/src/api/auction.ts`
 - Modify: `frontend/src/App.tsx`
 
-- [ ] **Step 1: Add bid API helper**
+- [x] **Step 1: Add bid API helper**
 
 In `frontend/src/api/auction.ts`:
 
@@ -698,7 +698,7 @@ export async function placeBid(auctionId: number, amount: number): Promise<void>
 }
 ```
 
-- [ ] **Step 2: Implement approved layout A**
+- [x] **Step 2: Implement approved layout A**
 
 `LiveAuctionRoom.tsx` must render:
 
@@ -712,7 +712,7 @@ export async function placeBid(auctionId: number, amount: number): Promise<void>
 - realtime status/outbid messages
 - disabled bidding for terminal states
 
-- [ ] **Step 3: Enforce WebSocket truth source**
+- [x] **Step 3: Enforce WebSocket truth source**
 
 On bid submit:
 
@@ -722,7 +722,7 @@ On bid submit:
 - wait for WebSocket `price_update` or `auction_end`
 - show REST failure as visible error/toast
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run:
 
@@ -737,6 +737,8 @@ Commit:
 git add frontend/src/pages/app/LiveAuctionRoom.tsx frontend/src/api/auction.ts frontend/src/App.tsx
 git commit -m "feat(frontend): add live auction room"
 ```
+
+Result: implemented in the Task 8 slice. `LiveAuctionRoom.tsx` provides the mobile-first live auction room with live ambience, product/title media, current price, countdown driven by `remainingMs(endedAt, serverTimeOffsetMs)`, quick bid, custom bid, ranking list, realtime notifications, connection/status badges, and terminal-state disabled bidding. `placeBid` posts `{ amount }` to `/auctions/:id/bid`, `/app/auctions/:id` now uses the room component behind the existing user protected route, and bid success leaves price/rankings unchanged until WebSocket messages arrive. Review follow-up fixed reload sessions with stored user + refresh token + empty access token so protected routes hydrate before rendering room content, recomputes `nextBidAmount` from fixed/percent increment rules on `price_update`, and neutralizes stale room state while route auction id and store auction id differ. Vitest coverage verifies render/connect state, quick bid REST submission without local price mutation, custom bid, visible REST failure, terminal disable behavior, access-token hydration, price_update-driven current/next bid UI, and route-change stale-store safety. Verification passed with `cd frontend && npm run build`, `cd frontend && npm test -- src/pages/app/LiveAuctionRoom.test.tsx src/store/liveRoomStore.test.ts vite.config.test.ts`, `cd frontend && npx eslint src/api/auction.ts src/pages/app/LiveAuctionRoom.tsx src/pages/app/LiveAuctionRoom.test.tsx src/App.tsx src/store/liveRoomStore.ts src/store/liveRoomStore.test.ts --quiet`, `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`, and `git diff --check`.
 
 ## Task 9: End-To-End Realtime Validation
 
