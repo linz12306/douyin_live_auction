@@ -13,7 +13,7 @@ export async function getProduct(id: number): Promise<ProductDetail> {
 
 export async function listProducts(status?: string, page = 1, size = 20): Promise<ProductListResponse> {
   const { data } = await client.get('/products', { params: { status, page, size } });
-  return data.data;
+  return { ...data.data, items: data.data.items ?? [] };
 }
 
 export async function updateProduct(id: number, title: string, description: string): Promise<ProductDetail> {

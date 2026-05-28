@@ -5,7 +5,7 @@ import "douyin-live/backend/internal/model"
 type CreateProductRequest struct {
 	Title       string   `json:"title" binding:"required"`
 	Description string   `json:"description"`
-	ImageURLs   []string `json:"image_urls" binding:"required,min=1,max=9"`
+	ImageURLs   []string `json:"image_urls" binding:"max=9"`
 }
 
 type UpdateProductRequest struct {

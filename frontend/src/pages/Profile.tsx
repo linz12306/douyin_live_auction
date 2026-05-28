@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { getMe, updateProfile, changePassword, uploadAvatar } from '../api/user';
 import { logout as apiLogout } from '../api/auth';
@@ -86,12 +86,22 @@ export default function Profile() {
       <div className="max-w-lg mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-white">个人中心</h1>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-white/10 text-white/80 rounded-lg hover:bg-white/20 transition"
-          >
-            退出登录
-          </button>
+          <div className="flex gap-2">
+            {user.role === 'merchant' && (
+              <Link
+                to="/merchant/products"
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:opacity-90 transition"
+              >
+                商品管理
+              </Link>
+            )}
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-white/10 text-white/80 rounded-lg hover:bg-white/20 transition"
+            >
+              退出登录
+            </button>
+          </div>
         </div>
 
         <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 mb-4">

@@ -20,7 +20,7 @@ export default function Register() {
     try {
       const res = await register(username, password, role, displayName);
       setAuth(res.user, res.access_token, res.refresh_token);
-      navigate('/profile');
+      navigate(res.user.role === 'merchant' ? '/merchant/products' : '/profile');
     } catch (err: any) {
       setError(err.response?.data?.message || '注册失败');
     } finally {

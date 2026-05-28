@@ -13,6 +13,7 @@ export default function ProductForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [images, setImages] = useState<string[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [rules, setRules] = useState<PublishRequest>({
     start_price: 0, bid_increment_type: 'fixed', bid_increment_value: 10,
     ceiling_price: null, duration_seconds: 300, auto_extend_seconds: 15, max_extend_count: 5,
@@ -50,7 +51,14 @@ export default function ProductForm() {
       if (isEdit) {
         await updateProduct(parseInt(id!), title, description);
       } else {
-        const result = await createProduct(title, description, images);
+        if (pendingFiles.length === 0) {
+          setError('请至少上传一张商品图片');
+          return;
+        }
+        const result = await createProduct(title, description, []);
+        for (const file of pendingFiles) {
+          await uploadProductImage(result.product.id, file);
+        }
         await publishProduct(result.product.id, rules);
       }
       navigate('/merchant/products');
@@ -81,15 +89,21 @@ export default function ProductForm() {
       setImages([...images, url]);
       return url;
     }
-    return new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const url = reader.result as string;
-        setImages([...images, url]);
-        resolve(url);
-      };
-      reader.readAsDataURL(file);
-    });
+    const previewURL = URL.createObjectURL(file);
+    setImages([...images, previewURL]);
+    setPendingFiles([...pendingFiles, file]);
+    return previewURL;
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const removed = images[index];
+    if (removed?.startsWith('blob:')) {
+      URL.revokeObjectURL(removed);
+    }
+    setImages(images.filter((_, idx) => idx !== index));
+    if (!id) {
+      setPendingFiles(pendingFiles.filter((_, idx) => idx !== index));
+    }
   };
 
   return (
@@ -121,7 +135,7 @@ export default function ProductForm() {
                 <ImageUploader
                   images={images}
                   onAdd={handleAddImage}
-                  onRemove={(i) => setImages(images.filter((_, idx) => idx !== i))}
+                  onRemove={handleRemoveImage}
                   readonly={status !== 'draft' && status !== ''}
                 />
               </div>

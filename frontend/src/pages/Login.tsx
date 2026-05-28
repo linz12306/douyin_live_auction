@@ -18,7 +18,7 @@ export default function Login() {
     try {
       const res = await login(username, password);
       setAuth(res.user, res.access_token, res.refresh_token);
-      navigate('/profile');
+      navigate(res.user.role === 'merchant' ? '/merchant/products' : '/profile');
     } catch (err: any) {
       setError(err.response?.data?.message || '登录失败');
     } finally {
