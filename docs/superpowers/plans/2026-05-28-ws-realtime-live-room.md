@@ -67,7 +67,7 @@ E2E create/modify:
 - Modify: `backend/go.mod`
 - Modify: `backend/go.sum`
 
-- [ ] **Step 1: Run baseline validation**
+- [x] **Step 1: Run baseline validation**
 
 Run:
 
@@ -85,7 +85,7 @@ Expected:
 - Go tests pass.
 - Frontend build exits 0.
 
-- [ ] **Step 2: Add WebSocket dependency if missing**
+- [x] **Step 2: Add WebSocket dependency if missing**
 
 Run:
 
@@ -100,7 +100,7 @@ Expected:
 - `backend/go.mod` contains `github.com/gorilla/websocket`.
 - `backend/go.sum` is updated.
 
-- [ ] **Step 3: Verify dependency setup**
+- [x] **Step 3: Verify dependency setup**
 
 Run:
 
@@ -111,7 +111,7 @@ cd /Users/vivix/Documents/Codex/douyin_live_auction/backend
 
 Expected: all packages pass.
 
-- [ ] **Step 4: Commit baseline dependency slice**
+- [x] **Step 4: Commit baseline dependency slice**
 
 Run:
 
@@ -122,6 +122,8 @@ git commit -m "chore(realtime): add websocket dependency"
 ```
 
 Skip the commit if `go.mod` and `go.sum` did not change.
+
+Result: completed in commit `689ecc9 chore(realtime): add websocket dependency`. Spec compliance and code quality reviews approved the slice; note that `go mod tidy` may remove `github.com/gorilla/websocket` until Task 4 imports it.
 
 ## Task 2: Backend Message And Event Contracts
 

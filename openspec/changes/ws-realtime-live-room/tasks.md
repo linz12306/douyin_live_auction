@@ -1,8 +1,9 @@
 # Tasks: ws-realtime-live-room
 
-- [ ] 1. Preflight and baseline verification
+- [x] 1. Preflight and baseline verification
   - Review `requirements-v3.md`, `openspec/specs/auction-engine/spec.md`, current frontend routes, current auction service, and existing tests.
   - Confirm branch is `ws-realtime-live-room` and no unrelated files are dirty.
+  - Current status: baseline validation passed; `github.com/gorilla/websocket v1.5.3` added in commit `689ecc9`.
   - Verification: `npx -y @fission-ai/openspec@latest validate ws-realtime-live-room --strict --no-interactive`, `/Users/vivix/.local/go/bin/go test ./...`, and `cd frontend && npm run build`.
 
 - [ ] 2. Backend realtime message and event contracts
