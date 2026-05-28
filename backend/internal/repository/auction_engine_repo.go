@@ -16,6 +16,33 @@ type AuctionEngineRepo struct {
 	db *sql.DB
 }
 
+type AuctionSnapshotRow struct {
+	ID                 int64
+	ProductID          int64
+	MerchantID         int64
+	StartPrice         float64
+	BidIncrementType   string
+	BidIncrementValue  float64
+	CeilingPrice       *float64
+	DurationSeconds    int
+	AutoExtendSeconds  int
+	MaxExtendCount     int
+	CurrentExtendCount int
+	Status             string
+	CurrentPrice       float64
+	HighestBidderID    *int64
+	CancelReason       string
+	Version            int64
+	StartedAt          *time.Time
+	EndedAt            *time.Time
+	CancelledAt        *time.Time
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	ProductTitle       string
+	ProductDescription string
+	ImageURLs          []string
+}
+
 func NewAuctionEngineRepo(db *sql.DB) *AuctionEngineRepo {
 	return &AuctionEngineRepo{db: db}
 }
@@ -83,6 +110,92 @@ func (r *AuctionEngineRepo) FindAuctionForUpdate(ctx context.Context, tx *sql.Tx
 		a.CancelledAt = &value
 	}
 	return a, nil
+}
+
+func (r *AuctionEngineRepo) FindAuctionSnapshot(ctx context.Context, auctionID int64) (*AuctionSnapshotRow, error) {
+	row := &AuctionSnapshotRow{}
+	var ceilingPrice sql.NullFloat64
+	var highestBidderID sql.NullInt64
+	var cancelReason sql.NullString
+	var startedAt sql.NullTime
+	var endedAt sql.NullTime
+	var cancelledAt sql.NullTime
+	var productDescription sql.NullString
+
+	err := r.db.QueryRowContext(ctx,
+		`SELECT a.id, a.product_id, a.merchant_id, a.start_price, a.bid_increment_type, a.bid_increment_value,
+                a.ceiling_price, a.duration_seconds, a.auto_extend_seconds, a.max_extend_count, a.current_extend_count,
+                a.status, a.current_price, a.highest_bidder_id, a.cancel_reason, a.version,
+                a.started_at, a.ended_at, a.cancelled_at, a.created_at, a.updated_at,
+                p.title, p.description
+         FROM auctions a
+         JOIN products p ON p.id = a.product_id
+         WHERE a.id = ?`, auctionID,
+	).Scan(&row.ID, &row.ProductID, &row.MerchantID, &row.StartPrice, &row.BidIncrementType, &row.BidIncrementValue,
+		&ceilingPrice, &row.DurationSeconds, &row.AutoExtendSeconds, &row.MaxExtendCount, &row.CurrentExtendCount,
+		&row.Status, &row.CurrentPrice, &highestBidderID, &cancelReason, &row.Version,
+		&startedAt, &endedAt, &cancelledAt, &row.CreatedAt, &row.UpdatedAt,
+		&row.ProductTitle, &productDescription)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if ceilingPrice.Valid {
+		value := ceilingPrice.Float64
+		row.CeilingPrice = &value
+	}
+	if highestBidderID.Valid {
+		value := highestBidderID.Int64
+		row.HighestBidderID = &value
+	}
+	if cancelReason.Valid {
+		row.CancelReason = cancelReason.String
+	}
+	if startedAt.Valid {
+		value := startedAt.Time
+		row.StartedAt = &value
+	}
+	if endedAt.Valid {
+		value := endedAt.Time
+		row.EndedAt = &value
+	}
+	if cancelledAt.Valid {
+		value := cancelledAt.Time
+		row.CancelledAt = &value
+	}
+	if productDescription.Valid {
+		row.ProductDescription = productDescription.String
+	}
+
+	images, err := r.findAuctionSnapshotImages(ctx, row.ProductID)
+	if err != nil {
+		return nil, err
+	}
+	row.ImageURLs = images
+	return row, nil
+}
+
+func (r *AuctionEngineRepo) findAuctionSnapshotImages(ctx context.Context, productID int64) ([]string, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT image_url FROM product_images WHERE product_id = ? ORDER BY sort_order, id`, productID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var imageURLs []string
+	for rows.Next() {
+		var imageURL string
+		if err := rows.Scan(&imageURL); err != nil {
+			return nil, err
+		}
+		imageURLs = append(imageURLs, imageURL)
+	}
+	return imageURLs, rows.Err()
 }
 
 func (r *AuctionEngineRepo) ListExpiredActiveAuctionIDs(ctx context.Context, tx *sql.Tx, now time.Time) ([]int64, error) {

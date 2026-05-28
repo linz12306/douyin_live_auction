@@ -14,6 +14,7 @@ import (
 	"douyin-live/backend/internal/config"
 	"douyin-live/backend/internal/handler"
 	"douyin-live/backend/internal/middleware"
+	"douyin-live/backend/internal/realtime"
 	"douyin-live/backend/internal/repository"
 	"douyin-live/backend/internal/service"
 
@@ -454,6 +455,69 @@ func TestOutbidUnfreezesPreviousBidAndRanksByAmount(t *testing.T) {
 	top := items[0].(map[string]interface{})
 	if int64(top["user_id"].(float64)) != secondUserID || top["status"].(string) != "active" {
 		t.Fatalf("expected second user active bid first in rankings, got %#v", top)
+	}
+}
+
+func TestSnapshotProviderReturnsAuctionStateAndRankings(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	firstToken, firstUserID := registerAuctionUser(t, ts)
+	secondToken, secondUserID := registerAuctionUser(t, ts)
+	productID, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	placeBid(t, ts, auctionID, firstToken, 10)
+	placeBid(t, ts, auctionID, secondToken, 20)
+
+	var currentPrice float64
+	var version int64
+	if err := db.QueryRow("SELECT current_price, version FROM auctions WHERE id = ?", auctionID).Scan(&currentPrice, &version); err != nil {
+		t.Fatalf("query auction state: %v", err)
+	}
+
+	provider := realtime.NewSnapshotProvider(repository.NewAuctionEngineRepo(db))
+	envelope, err := provider.Snapshot(context.Background(), auctionID)
+	if err != nil {
+		t.Fatalf("snapshot provider failed: %v", err)
+	}
+
+	if envelope.Type != realtime.MessageSnapshot {
+		t.Fatalf("expected snapshot message type, got %s", envelope.Type)
+	}
+	if envelope.AuctionID != auctionID {
+		t.Fatalf("expected auction id %d, got %d", auctionID, envelope.AuctionID)
+	}
+	if envelope.Version != version {
+		t.Fatalf("expected version %d, got %d", version, envelope.Version)
+	}
+
+	payload, ok := envelope.Payload.(realtime.SnapshotPayload)
+	if !ok {
+		t.Fatalf("expected SnapshotPayload, got %T", envelope.Payload)
+	}
+	if payload.Product.ID != productID {
+		t.Fatalf("expected product id %d, got %d", productID, payload.Product.ID)
+	}
+	if payload.Product.Title != "Cancelable Product" {
+		t.Fatalf("expected product title, got %q", payload.Product.Title)
+	}
+	if payload.CurrentPrice != currentPrice {
+		t.Fatalf("expected current price %.2f, got %.2f", currentPrice, payload.CurrentPrice)
+	}
+	if payload.NextBidAmount != currentPrice+10 {
+		t.Fatalf("expected next bid amount %.2f, got %.2f", currentPrice+10, payload.NextBidAmount)
+	}
+	if len(payload.Rankings) != 2 {
+		t.Fatalf("expected two rankings, got %d", len(payload.Rankings))
+	}
+	if payload.Rankings[0].UserID != secondUserID || payload.Rankings[0].Amount != 20 {
+		t.Fatalf("expected second user first with amount 20, got %#v", payload.Rankings[0])
+	}
+	if payload.Rankings[1].UserID != firstUserID || payload.Rankings[1].Amount != 10 {
+		t.Fatalf("expected first user second with amount 10, got %#v", payload.Rankings[1])
 	}
 }
 
