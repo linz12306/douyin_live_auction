@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listProducts } from '../../api/product';
@@ -48,6 +48,8 @@ describe('ProductList', () => {
     );
 
     expect(await screen.findByText('复古夹克')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '待开拍' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '进行中' })).toBeInTheDocument();
 
     await act(async () => {
       document.dispatchEvent(new Event('visibilitychange'));
@@ -58,5 +60,23 @@ describe('ProductList', () => {
     expect(screen.getAllByText('进行中').length).toBeGreaterThan(1);
     expect(mockedListProducts).toHaveBeenCalledTimes(2);
     visibilitySpy.mockRestore();
+  });
+
+  it('uses separate filters for pending and active products', async () => {
+    mockedListProducts.mockResolvedValue({ items: [], total: 0, page: 1, size: 20 });
+
+    render(
+      <MemoryRouter>
+        <ProductList />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(mockedListProducts).toHaveBeenCalledWith(undefined));
+
+    fireEvent.click(screen.getByRole('button', { name: '待开拍' }));
+    await waitFor(() => expect(mockedListProducts).toHaveBeenLastCalledWith('pending'));
+
+    fireEvent.click(screen.getByRole('button', { name: '进行中' }));
+    await waitFor(() => expect(mockedListProducts).toHaveBeenLastCalledWith('active'));
   });
 });

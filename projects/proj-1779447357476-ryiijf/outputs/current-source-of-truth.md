@@ -30,12 +30,15 @@
 - `openspec/specs/auction-engine/spec.md`
 - `openspec/specs/realtime-live-room/spec.md`
 - `openspec/specs/order-system/spec.md`
+- `openspec/specs/observability-health/spec.md`
 - `openspec/changes/archive/2026-05-28-auction-engine-mvp/`
 - `openspec/changes/archive/2026-05-28-ws-realtime-live-room/`
 - `openspec/changes/archive/2026-05-29-order-system/`
+- `openspec/changes/archive/2026-05-29-observability-health/`
 - `docs/superpowers/plans/2026-05-27-auction-engine-mvp.md`
 - `docs/superpowers/plans/2026-05-28-ws-realtime-live-room.md`
 - `docs/superpowers/plans/2026-05-29-order-system.md`
+- `docs/superpowers/plans/2026-05-29-observability-health.md`
 
 ## 下一步
 
@@ -44,5 +47,6 @@
 1. 已完成并归档：`auction-engine-mvp`。
 2. 已完成并归档：`ws-realtime-live-room`，打通 WebSocket 实时竞价和前端用户体验。
 3. 已完成并归档：`order-system`，做中标确认、模拟支付、超时处理、用户/商家订单展示。
-4. 建议下一步：`merchant-admin` / 运营增强，规划商家实时看板、订单运营增强或数据看板。
-5. 仍需保持 Superpowers + OpenSpec 五段式流程，并在每个可验证切片提交。
+4. 已完成并归档：`observability-health`，提供 `/healthz` 和 DB/Redis/auction_engine 健康状态。
+5. 建议下一步：`merchant-admin-lite` / 商家运营看板，规划商家实时看板、订单运营增强或数据看板。
+6. 仍需保持 Superpowers + OpenSpec 五段式流程，并在每个可验证切片提交。

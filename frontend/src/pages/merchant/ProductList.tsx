@@ -8,8 +8,10 @@ import type { Product, ProductStatus } from '../../types/product';
 const TABS: { key: ProductStatus | ''; label: string }[] = [
   { key: '', label: '全部' },
   { key: 'draft', label: '草稿' },
-  { key: 'pending', label: '进行中' },
-  { key: 'ended_sold', label: '已结束' },
+  { key: 'pending', label: '待开拍' },
+  { key: 'active', label: '进行中' },
+  { key: 'ended_sold', label: '已成交' },
+  { key: 'ended_no_bid', label: '流拍' },
   { key: 'cancelled', label: '已取消' },
 ];
 
