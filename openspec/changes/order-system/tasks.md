@@ -67,7 +67,7 @@
   - Current status: merchant order list/detail pages, routes, and product-page entry are implemented.
   - Verification: `cd frontend && npm test -- src/pages/merchant/OrderList.test.tsx src/pages/merchant/OrderDetail.test.tsx vite.config.test.ts && npm run build` passed.
 
-- [ ] 7. End-to-end order workflow
+- [x] 7. End-to-end order workflow
   - Add or extend Playwright coverage for:
     - merchant creates, publishes, and activates an auction
     - buyer wins
@@ -76,7 +76,8 @@
     - buyer pays
     - final UI shows `paid`
   - Keep existing realtime E2E intact.
-  - Verification: `PLAYWRIGHT_BASE_URL=<local-url> npx playwright test tests/e2e/order-system.spec.ts`.
+  - Current status: Playwright order happy path is implemented.
+  - Verification: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/order-system.spec.ts` passed against backend `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` and Vite `VITE_BACKEND_TARGET=http://localhost:18080`.
 
 - [ ] 8. Final verification, docs, and memory
   - Run relevant OpenSpec, backend, frontend, E2E, and whitespace verification.

@@ -491,7 +491,7 @@ npm run build
 
 Result: PASS with `cd frontend && npm test -- src/pages/merchant/OrderList.test.tsx src/pages/merchant/OrderDetail.test.tsx vite.config.test.ts && npm run build`.
 
-- [ ] **Step 4: Commit merchant frontend slice**
+- [x] **Step 4: Commit merchant frontend slice**
 
 Run:
 
@@ -500,13 +500,15 @@ git add frontend/src/pages/merchant/OrderList.tsx frontend/src/pages/merchant/Or
 git commit -m "feat(order): add merchant order views"
 ```
 
+Result: committed as `6fb4c14 feat(order): add merchant order views`.
+
 ## Task 6: End-to-End Workflow
 
 **Files:**
 - Create: `tests/e2e/order-system.spec.ts`
 - Modify: `playwright.config.ts` only if current setup requires a timeout or route adjustment.
 
-- [ ] **Step 1: Write Playwright E2E**
+- [x] **Step 1: Write Playwright E2E**
 
 Create a test that:
 
@@ -521,7 +523,7 @@ Create a test that:
 9. buyer pays
 10. final detail shows paid status
 
-- [ ] **Step 2: Run E2E**
+- [x] **Step 2: Run E2E**
 
 Run with the same style used by realtime tests:
 
@@ -529,7 +531,7 @@ Run with the same style used by realtime tests:
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/order-system.spec.ts
 ```
 
-Expected: PASS against a running current backend/frontend pair.
+Result: PASS with `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/order-system.spec.ts` against backend `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` and Vite `VITE_BACKEND_TARGET=http://localhost:18080`.
 
 - [ ] **Step 3: Commit E2E slice**
 
