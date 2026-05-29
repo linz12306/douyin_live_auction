@@ -745,7 +745,7 @@ Update `openspec/changes/observability-health/tasks.md` so completed implementat
 
 Update this plan's checkboxes for the steps actually completed.
 
-- [ ] **Step 7: Commit verified implementation slice**
+- [x] **Step 7: Commit verified implementation slice**
 
 Run:
 
@@ -763,7 +763,7 @@ Expected: commit succeeds.
 - Update: `projects/proj-1779447357476-ryiijf/memory/2026-05-29.md`
 - Update: `projects/proj-1779447357476-ryiijf/memory/long-term.md`
 
-- [ ] **Step 1: Update memory**
+- [x] **Step 1: Update memory**
 
 Record:
 
@@ -774,7 +774,7 @@ Record:
 - commit hash
 - push result
 
-- [ ] **Step 2: Run final verification after memory update**
+- [x] **Step 2: Run final verification after memory update**
 
 Run:
 
@@ -787,7 +787,7 @@ git diff --check
 
 Expected: all commands PASS.
 
-- [ ] **Step 3: Commit memory/docs slice if memory changed after implementation commit**
+- [x] **Step 3: Commit memory/docs slice if memory changed after implementation commit**
 
 Run:
 

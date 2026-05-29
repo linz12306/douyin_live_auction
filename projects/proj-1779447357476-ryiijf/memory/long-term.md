@@ -43,6 +43,18 @@
   - 持久规范：`openspec/specs/order-system/spec.md`
   - 覆盖：用户订单列表/详情、商家订单列表/详情、确认订单、模拟支付、确认超时/取消退款。
 
+## 当前进行中
+
+- `observability-health`
+  - 分支/worktree：`/Users/vivix/Documents/Codex/douyin_live_auction_worktrees/observability-health`，`codex/observability-health`
+  - Active OpenSpec：`openspec/changes/observability-health/`
+  - Superpowers exploration：`docs/superpowers/specs/2026-05-29-observability-health-exploration.md`
+  - Superpowers plan：`docs/superpowers/plans/2026-05-29-observability-health.md`
+  - 已实现：`GET /healthz`，返回 DB、Redis、竞拍引擎/realtime runtime 健康状态。
+  - 响应规则：全部健康返回 HTTP 200 + `status: "ok"`；任一必需组件降级返回 HTTP 503 + `status: "degraded"`。
+  - 范围控制：未引入 Prometheus/OpenTelemetry/外部日志系统，未改动出价、订单、钱包或 WebSocket 业务语义。
+  - 当前状态：实现 commit 已完成，OpenSpec strict、后端测试和 `/healthz` 接口验证通过；等待最终 memory/docs commit 和 push。
+
 ## 关键业务决策
 
 - 竞拍成交生成 `pending_confirm` 订单时，auction engine 已经扣减中标冻结金额。
@@ -50,10 +62,11 @@
 - 买家确认前取消或确认超时只退款一次，由订单服务在锁定 `pending_confirm` 订单后处理。
 - 订单取消/超时不改写 `auctions` 和 `products` 的 `ended_sold` 历史状态。
 - 用户端实时竞拍页以 WebSocket 为实时真理源，REST 只做初始化或动作提交。
+- `/healthz` 只暴露短消息和轻量 runtime stats，不返回原始 DB/Redis 错误、DSN、密码或堆栈。
 
 ## 下一阶段建议
 
 1. Bugfix/体验补齐：页面返回按钮、商家更新后用户端可见性、入口与状态刷新一致性。
 2. `merchant-admin` / 运营增强：商家实时看板、成交趋势、出价分布、用户活跃度。
-3. 可观测性：`/healthz`、结构化日志、竞拍引擎指标、WebSocket/锁竞争指标。
+3. 可观测性后续增强：结构化日志、竞拍引擎指标、WebSocket/锁竞争指标。
 4. 演示打磨：移动端动画、提示文案、完整演示路径 E2E。
