@@ -79,13 +79,13 @@
   - Current status: Playwright order happy path is implemented.
   - Verification: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/order-system.spec.ts` passed against backend `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` and Vite `VITE_BACKEND_TARGET=http://localhost:18080`.
 
-- [ ] 8. Final verification, docs, and memory
+- [x] 8. Final verification, docs, and memory
   - Run relevant OpenSpec, backend, frontend, E2E, and whitespace verification.
   - Update this tasks file with actual results.
   - Update `docs/superpowers/plans/2026-05-29-order-system.md`.
   - Update project memory files after verified implementation.
   - Archive the OpenSpec change after acceptance.
-  - Current status: final verification passed and project memory is being updated; OpenSpec archive remains pending user acceptance.
+  - Current status: final verification passed, project memory updated, and OpenSpec archived to `openspec/changes/archive/2026-05-29-order-system/`.
   - Verification:
     - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/order-system.spec.ts` passed.
     - `npx -y @fission-ai/openspec@latest validate order-system --strict --no-interactive` passed.

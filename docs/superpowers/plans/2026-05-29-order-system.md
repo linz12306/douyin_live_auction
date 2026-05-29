@@ -593,7 +593,7 @@ git add openspec/changes/order-system/tasks.md docs/superpowers/plans/2026-05-29
 git commit -m "docs(order): record implementation status"
 ```
 
-Result: committed as `44354b7 docs(order): record implementation status`; this checkbox follow-up records that commit.
+Result: committed as `44354b7 docs(order): record implementation status`; this checkbox follow-up records that commit. After user acceptance, OpenSpec was archived to `openspec/changes/archive/2026-05-29-order-system/` and persistent capability spec was created at `openspec/specs/order-system/spec.md`.
 
 ## Self-Review
 

@@ -261,7 +261,7 @@
 
 ## 2026-05-29 order-system
 
-- `order-system` 已在分支 `codex/order-system` 完成实现和验证，OpenSpec change 位于 `openspec/changes/order-system/`；归档等待用户验收后执行。
+- `order-system` 已在分支 `codex/order-system` 完成实现、验证并归档，OpenSpec archive 位于 `openspec/changes/archive/2026-05-29-order-system/`，持久规范位于 `openspec/specs/order-system/spec.md`。
 - 订单 API 已接入：`GET /api/v1/orders`、`GET /api/v1/orders/:id`、`POST /api/v1/orders/:id/confirm`、`POST /api/v1/orders/:id/pay`、`POST /api/v1/orders/:id/cancel`。
 - 用户端新增 `/app/orders`、`/app/orders/:id`；商家端新增 `/merchant/orders`、`/merchant/orders/:id`。
 - 关键业务决策：auction-engine 创建 `pending_confirm` 订单时已经扣减中标冻结金额，所以模拟支付不二次扣款；确认前取消或确认超时通过订单服务补偿退款一次。
