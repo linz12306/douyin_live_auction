@@ -28,7 +28,7 @@
 - Create: `backend/internal/service/health_service.go`
 - Create: `backend/internal/service/health_service_test.go`
 
-- [ ] **Step 1: Write failing service tests**
+- [x] **Step 1: Write failing service tests**
 
 Create `backend/internal/service/health_service_test.go`:
 
@@ -212,7 +212,7 @@ func TestHealthServiceReportsMissingEngineRuntime(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 
@@ -222,7 +222,7 @@ cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./internal/service -ru
 
 Expected: FAIL because `HealthService`, `DBChecker`, `RedisChecker`, `EngineStatsProvider`, `EngineStats`, and health constants do not exist yet.
 
-- [ ] **Step 3: Implement health service**
+- [x] **Step 3: Implement health service**
 
 Create `backend/internal/service/health_service.go`:
 
@@ -405,7 +405,7 @@ func (c redisClientChecker) Ping(ctx context.Context) error {
 }
 ```
 
-- [ ] **Step 4: Run service tests to verify they pass**
+- [x] **Step 4: Run service tests to verify they pass**
 
 Run:
 
@@ -421,7 +421,7 @@ Expected: PASS.
 - Modify: `backend/internal/realtime/hub.go`
 - Modify: `backend/internal/realtime/hub_test.go`
 
-- [ ] **Step 1: Write failing hub stats test**
+- [x] **Step 1: Write failing hub stats test**
 
 Append to `backend/internal/realtime/hub_test.go`:
 
@@ -447,7 +447,7 @@ func TestHubStatsCountsRoomsAndClients(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run realtime tests to verify they fail**
+- [x] **Step 2: Run realtime tests to verify they fail**
 
 Run:
 
@@ -457,7 +457,7 @@ cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./internal/realtime -r
 
 Expected: FAIL because `Hub.Stats` does not exist.
 
-- [ ] **Step 3: Implement hub stats**
+- [x] **Step 3: Implement hub stats**
 
 Add to `backend/internal/realtime/hub.go` after `hubClient`:
 
@@ -483,7 +483,7 @@ func (h *Hub) Stats() HubStats {
 }
 ```
 
-- [ ] **Step 4: Run realtime stats tests**
+- [x] **Step 4: Run realtime stats tests**
 
 Run:
 
@@ -500,7 +500,7 @@ Expected: PASS.
 - Create: `backend/internal/handler/health_handler_test.go`
 - Modify: `backend/cmd/server/main.go`
 
-- [ ] **Step 1: Write failing handler tests**
+- [x] **Step 1: Write failing handler tests**
 
 Create `backend/internal/handler/health_handler_test.go`:
 
@@ -601,7 +601,7 @@ func (c handlerRedisChecker) Ping(ctx context.Context) error {
 }
 ```
 
-- [ ] **Step 2: Run handler tests to verify they fail**
+- [x] **Step 2: Run handler tests to verify they fail**
 
 Run:
 
@@ -611,7 +611,7 @@ cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./internal/handler -ru
 
 Expected: FAIL because `NewHealthHandler` and `Healthz` do not exist.
 
-- [ ] **Step 3: Implement health handler**
+- [x] **Step 3: Implement health handler**
 
 Create `backend/internal/handler/health_handler.go`:
 
@@ -644,7 +644,7 @@ func (h *HealthHandler) Healthz(c *gin.Context) {
 }
 ```
 
-- [ ] **Step 4: Wire route in server main**
+- [x] **Step 4: Wire route in server main**
 
 Modify `backend/cmd/server/main.go` after realtime/auction construction:
 
@@ -666,7 +666,7 @@ Modify router setup after `r := gin.Default()`:
 	r.GET("/healthz", healthH.Healthz)
 ```
 
-- [ ] **Step 5: Run handler tests**
+- [x] **Step 5: Run handler tests**
 
 Run:
 
@@ -682,7 +682,7 @@ Expected: PASS.
 - Update: `openspec/changes/observability-health/tasks.md`
 - Update: `docs/superpowers/plans/2026-05-29-observability-health.md`
 
-- [ ] **Step 1: Run focused package tests**
+- [x] **Step 1: Run focused package tests**
 
 Run:
 
@@ -692,7 +692,7 @@ cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./internal/service ./i
 
 Expected: PASS.
 
-- [ ] **Step 2: Run backend full test suite**
+- [x] **Step 2: Run backend full test suite**
 
 Run:
 
@@ -702,7 +702,7 @@ cd backend && /Users/vivix/.local/go/bin/go test ./...
 
 Expected: PASS.
 
-- [ ] **Step 3: Run OpenSpec strict validation**
+- [x] **Step 3: Run OpenSpec strict validation**
 
 Run:
 
@@ -713,7 +713,7 @@ npx -y @fission-ai/openspec@latest validate --specs --strict --no-interactive
 
 Expected: both commands PASS.
 
-- [ ] **Step 4: Run diff whitespace check**
+- [x] **Step 4: Run diff whitespace check**
 
 Run:
 
@@ -723,7 +723,7 @@ git diff --check
 
 Expected: no output and exit code 0.
 
-- [ ] **Step 5: Run `/healthz` interface validation**
+- [x] **Step 5: Run `/healthz` interface validation**
 
 Start backend on a spare port:
 
@@ -739,7 +739,7 @@ curl -s -i http://127.0.0.1:18080/healthz
 
 Expected: HTTP 200 with JSON containing `status`, `checked_at`, `components.db`, `components.redis`, and `components.auction_engine`.
 
-- [ ] **Step 6: Update task and plan checkboxes**
+- [x] **Step 6: Update task and plan checkboxes**
 
 Update `openspec/changes/observability-health/tasks.md` so completed implementation tasks are checked and verification commands/results are recorded.
 

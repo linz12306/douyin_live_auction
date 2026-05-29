@@ -18,6 +18,11 @@ type hubClient struct {
 	send   chan<- Envelope
 }
 
+type HubStats struct {
+	ActiveRooms      int
+	ConnectedClients int
+}
+
 type snapshotReader interface {
 	Snapshot(ctx context.Context, auctionID int64) (*Envelope, error)
 }
@@ -50,6 +55,17 @@ func (h *Hub) Run(ctx context.Context) {
 			h.handleEvent(event)
 		}
 	}
+}
+
+func (h *Hub) Stats() HubStats {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	stats := HubStats{ActiveRooms: len(h.rooms)}
+	for _, clients := range h.rooms {
+		stats.ConnectedClients += len(clients)
+	}
+	return stats
 }
 
 func (h *Hub) Register(auctionID int64, userID int64, send chan<- Envelope) func() {

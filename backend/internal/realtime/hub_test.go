@@ -121,6 +121,26 @@ func TestHubUnregisterRemovesClient(t *testing.T) {
 	assertNoEnvelope(t, send)
 }
 
+func TestHubStatsCountsRoomsAndClients(t *testing.T) {
+	hub := NewHub(nil, nil)
+
+	unregisterFirst := hub.Register(1, 101, make(chan Envelope, 1))
+	defer unregisterFirst()
+	unregisterSecond := hub.Register(1, 102, make(chan Envelope, 1))
+	defer unregisterSecond()
+	unregisterThird := hub.Register(2, 201, make(chan Envelope, 1))
+	defer unregisterThird()
+
+	stats := hub.Stats()
+
+	if stats.ActiveRooms != 2 {
+		t.Fatalf("active rooms = %d, want 2", stats.ActiveRooms)
+	}
+	if stats.ConnectedClients != 3 {
+		t.Fatalf("connected clients = %d, want 3", stats.ConnectedClients)
+	}
+}
+
 type fakeSnapshotProvider struct {
 	envelope Envelope
 	err      error

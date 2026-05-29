@@ -57,6 +57,15 @@ func main() {
 	auctionSvc := service.NewAuctionServiceWithEvents(auctionEngineRepo, rdb, eventBus)
 	auctionH := handler.NewAuctionHandler(auctionSvc)
 	realtimeH := handler.NewRealtimeHandler(realtimeHub, snapshotProvider, cfg)
+	healthSvc := service.NewHealthService(db, rdb, service.EngineStatsProviderFunc(func() service.EngineStats {
+		hubStats := realtimeHub.Stats()
+		return service.EngineStats{
+			ActiveRooms:      hubStats.ActiveRooms,
+			ConnectedClients: hubStats.ConnectedClients,
+			DroppedEvents:    eventBus.DroppedEvents(),
+		}
+	}))
+	healthH := handler.NewHealthHandler(healthSvc)
 	startAuctionSettlementWorker(auctionSvc)
 	orderRepo := repository.NewOrderRepo(db)
 	orderSvc := service.NewOrderService(orderRepo)
@@ -65,6 +74,8 @@ func main() {
 
 	// Router
 	r := gin.Default()
+
+	r.GET("/healthz", healthH.Healthz)
 
 	// Static file serving for avatars
 	r.Static("/static/avatars", cfg.AvatarDir)
