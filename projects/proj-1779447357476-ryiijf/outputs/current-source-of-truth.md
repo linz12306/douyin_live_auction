@@ -8,12 +8,7 @@
 
 - `projects/proj-1779447357476-ryiijf/outputs/requirements-v3.md`
 
-历史版本仅作参考：
-
-- `projects/proj-1779447357476-ryiijf/outputs/requirements-v1.md`：历史初版
-- `projects/proj-1779447357476-ryiijf/outputs/requirements-v2.md`：历史中间版
-
-如旧文档或记忆中出现“requirements-v2 是当前版本”等表述，一律视为过期。后续规划、OpenSpec 变更和实现验收都必须以 `requirements-v3.md` 为准。
+旧版 `requirements-v1.md` / `requirements-v2.md` 已在仓库整理中移除。如旧文档、旧记忆或历史聊天中出现“requirements-v2 是当前版本”等表述，一律视为过期。后续规划、OpenSpec 变更和实现验收都必须以 `requirements-v3.md` 为准。
 
 ## 当前状态报告
 
@@ -22,6 +17,8 @@
 - `projects/proj-1779447357476-ryiijf/outputs/progress-report-v3.md`
 
 该报告已按当前 `order-system`、`AGENTS.md`、`requirements-v3.md`、`project.md`、已归档的 `auction-engine-mvp`、已归档的 `ws-realtime-live-room` 和已归档的 `order-system` 重新盘点。
+
+旧版 `progress-report-v1.md` / `progress-report-v2.md` 已移除。如需追溯历史，请查看 Git 历史。
 
 ## 当前执行规范
 
