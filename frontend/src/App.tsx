@@ -7,8 +7,12 @@ import Profile from './pages/Profile';
 import ProductList from './pages/merchant/ProductList';
 import ProductForm from './pages/merchant/ProductForm';
 import ProductDetail from './pages/merchant/ProductDetail';
+import MerchantOrderList from './pages/merchant/OrderList';
+import MerchantOrderDetail from './pages/merchant/OrderDetail';
 import AuctionLobby from './pages/app/AuctionLobby';
 import LiveAuctionRoom from './pages/app/LiveAuctionRoom';
+import AppOrderList from './pages/app/OrderList';
+import AppOrderDetail from './pages/app/OrderDetail';
 import { useAuthStore } from './store/authStore';
 import type { Role } from './types/user';
 
@@ -73,10 +77,14 @@ export default function App() {
         />
         <Route path="/app/auctions" element={<ProtectedRoute requiredRole="user" fallbackPath="/merchant/products"><AuctionLobby /></ProtectedRoute>} />
         <Route path="/app/auctions/:id" element={<ProtectedRoute requiredRole="user" fallbackPath="/merchant/products"><LiveAuctionRoom /></ProtectedRoute>} />
+        <Route path="/app/orders" element={<ProtectedRoute requiredRole="user" fallbackPath="/merchant/products"><AppOrderList /></ProtectedRoute>} />
+        <Route path="/app/orders/:id" element={<ProtectedRoute requiredRole="user" fallbackPath="/merchant/products"><AppOrderDetail /></ProtectedRoute>} />
         <Route path="/merchant/products" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><ProductList /></ProtectedRoute>} />
         <Route path="/merchant/products/new" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><ProductForm /></ProtectedRoute>} />
         <Route path="/merchant/products/:id" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><ProductDetail /></ProtectedRoute>} />
         <Route path="/merchant/products/:id/edit" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><ProductForm /></ProtectedRoute>} />
+        <Route path="/merchant/orders" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><MerchantOrderList /></ProtectedRoute>} />
+        <Route path="/merchant/orders/:id" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><MerchantOrderDetail /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

@@ -123,6 +123,12 @@ export default function AuctionLobby() {
               {refreshing ? '刷新中...' : '刷新'}
             </button>
             <Link
+              to="/app/orders"
+              className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white"
+            >
+              订单
+            </Link>
+            <Link
               to="/profile"
               className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white"
             >

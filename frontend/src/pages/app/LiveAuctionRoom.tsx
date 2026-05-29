@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { placeBid } from '../../api/auction';
 import PageBackButton from '../../components/PageBackButton';
 import { useAuthStore } from '../../store/authStore';
@@ -208,6 +208,14 @@ export default function LiveAuctionRoom() {
               <div className="mt-3 rounded border border-white/15 bg-white/10 px-3 py-2 text-sm text-white/85">
                 {roomTerminalMessage}
               </div>
+            ) : null}
+            {roomStatus === 'ended_sold' ? (
+              <Link
+                to="/app/orders"
+                className="mt-3 inline-flex rounded-lg bg-emerald-300 px-3 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-200"
+              >
+                查看中标订单
+              </Link>
             ) : null}
           </section>
 

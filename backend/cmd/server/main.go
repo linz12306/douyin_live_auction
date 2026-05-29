@@ -58,6 +58,10 @@ func main() {
 	auctionH := handler.NewAuctionHandler(auctionSvc)
 	realtimeH := handler.NewRealtimeHandler(realtimeHub, snapshotProvider, cfg)
 	startAuctionSettlementWorker(auctionSvc)
+	orderRepo := repository.NewOrderRepo(db)
+	orderSvc := service.NewOrderService(orderRepo)
+	orderH := handler.NewOrderHandler(orderSvc)
+	startOrderTimeoutWorker(orderSvc)
 
 	// Router
 	r := gin.Default()
@@ -117,6 +121,17 @@ func main() {
 			auctions.POST("/:id/activate", middleware.RoleGuard("merchant"), auctionH.Activate)
 			auctions.DELETE("/:id", middleware.RoleGuard("merchant"), auctionH.Cancel)
 		}
+
+		// Order routes
+		orders := api.Group("/orders")
+		orders.Use(middleware.JWTAuth(cfg))
+		{
+			orders.GET("", orderH.List)
+			orders.GET("/:id", orderH.Get)
+			orders.POST("/:id/confirm", middleware.RoleGuard("user"), orderH.Confirm)
+			orders.POST("/:id/pay", middleware.RoleGuard("user"), orderH.Pay)
+			orders.POST("/:id/cancel", middleware.RoleGuard("user"), orderH.Cancel)
+		}
 	}
 
 	r.GET("/ws/auctions/:id", realtimeH.AuctionRoom)
@@ -134,6 +149,17 @@ func startAuctionSettlementWorker(auctionSvc *service.AuctionService) {
 		for range ticker.C {
 			if _, err := auctionSvc.SettleExpired(context.Background()); err != nil {
 				log.Printf("auction settlement worker failed: %v", err)
+			}
+		}
+	}()
+}
+
+func startOrderTimeoutWorker(orderSvc *service.OrderService) {
+	ticker := time.NewTicker(time.Minute)
+	go func() {
+		for range ticker.C {
+			if _, err := orderSvc.ExpirePendingConfirmOrders(context.Background(), time.Now()); err != nil {
+				log.Printf("order timeout worker failed: %v", err)
 			}
 		}
 	}()
