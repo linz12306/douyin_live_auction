@@ -444,7 +444,7 @@ npm run build
 
 Result: PASS with `cd frontend && npm test -- src/pages/app/OrderList.test.tsx src/pages/app/OrderDetail.test.tsx vite.config.test.ts && npm run build`.
 
-- [ ] **Step 6: Commit user frontend slice**
+- [x] **Step 6: Commit user frontend slice**
 
 Run:
 
@@ -452,6 +452,8 @@ Run:
 git add frontend/src/types/order.ts frontend/src/api/order.ts frontend/src/pages/app/OrderList.tsx frontend/src/pages/app/OrderDetail.tsx frontend/src/pages/app/OrderList.test.tsx frontend/src/pages/app/OrderDetail.test.tsx frontend/src/App.tsx frontend/src/pages/app/AuctionLobby.tsx frontend/src/pages/app/LiveAuctionRoom.tsx
 git commit -m "feat(order): add user order pages"
 ```
+
+Result: committed as `df10912 feat(order): add user order pages`.
 
 ## Task 5: Merchant Frontend Orders
 
@@ -461,7 +463,7 @@ git commit -m "feat(order): add user order pages"
 - Modify: `frontend/src/App.tsx`
 - Modify: `frontend/src/pages/merchant/ProductList.tsx`
 
-- [ ] **Step 1: Write merchant frontend tests**
+- [x] **Step 1: Write merchant frontend tests**
 
 Add tests:
 
@@ -473,11 +475,11 @@ it('renders merchant orders with buyer and amount', async () => {})
 it('renders merchant order detail without buyer-only actions', async () => {})
 ```
 
-- [ ] **Step 2: Add merchant pages and routes**
+- [x] **Step 2: Add merchant pages and routes**
 
 Create `/merchant/orders` and `/merchant/orders/:id`. Reuse order API, show buyer display name/avatar, product title/image, amount, status, cancel reason, and timestamps. Do not show confirm/pay/cancel buttons.
 
-- [ ] **Step 3: Verify merchant frontend**
+- [x] **Step 3: Verify merchant frontend**
 
 Run:
 
@@ -487,7 +489,7 @@ npm test -- src/pages/merchant/OrderList.test.tsx src/pages/merchant/OrderDetail
 npm run build
 ```
 
-Expected: PASS.
+Result: PASS with `cd frontend && npm test -- src/pages/merchant/OrderList.test.tsx src/pages/merchant/OrderDetail.test.tsx vite.config.test.ts && npm run build`.
 
 - [ ] **Step 4: Commit merchant frontend slice**
 

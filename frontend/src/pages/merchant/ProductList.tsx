@@ -42,9 +42,14 @@ export default function ProductList() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-white">商品管理</h1>
-          <Link to="/merchant/products/new" className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:opacity-90">
-            + 新建竞拍
-          </Link>
+          <div className="flex gap-2">
+            <Link to="/merchant/orders" className="px-4 py-2 border border-white/20 text-white rounded-lg hover:border-white/40">
+              订单管理
+            </Link>
+            <Link to="/merchant/products/new" className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:opacity-90">
+              + 新建竞拍
+            </Link>
+          </div>
         </div>
 
         <div className="flex gap-2 mb-6">

@@ -59,12 +59,13 @@
   - Current status: user order types, API helpers, list/detail pages, routes, and entry points are implemented.
   - Verification: `cd frontend && npm test -- src/pages/app/OrderList.test.tsx src/pages/app/OrderDetail.test.tsx vite.config.test.ts && npm run build` passed.
 
-- [ ] 6. Merchant frontend order list and detail
+- [x] 6. Merchant frontend order list and detail
   - Create `frontend/src/pages/merchant/OrderList.tsx`.
   - Create `frontend/src/pages/merchant/OrderDetail.tsx`.
   - Add protected merchant routes `/merchant/orders` and `/merchant/orders/:id` in `frontend/src/App.tsx`.
   - Add merchant entry from the product management page.
-  - Verification: frontend tests cover merchant list/detail scoping UI and `cd frontend && npm run build`.
+  - Current status: merchant order list/detail pages, routes, and product-page entry are implemented.
+  - Verification: `cd frontend && npm test -- src/pages/merchant/OrderList.test.tsx src/pages/merchant/OrderDetail.test.tsx vite.config.test.ts && npm run build` passed.
 
 - [ ] 7. End-to-end order workflow
   - Add or extend Playwright coverage for:

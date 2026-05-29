@@ -7,6 +7,8 @@ import Profile from './pages/Profile';
 import ProductList from './pages/merchant/ProductList';
 import ProductForm from './pages/merchant/ProductForm';
 import ProductDetail from './pages/merchant/ProductDetail';
+import MerchantOrderList from './pages/merchant/OrderList';
+import MerchantOrderDetail from './pages/merchant/OrderDetail';
 import AuctionLobby from './pages/app/AuctionLobby';
 import LiveAuctionRoom from './pages/app/LiveAuctionRoom';
 import AppOrderList from './pages/app/OrderList';
@@ -81,6 +83,8 @@ export default function App() {
         <Route path="/merchant/products/new" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><ProductForm /></ProtectedRoute>} />
         <Route path="/merchant/products/:id" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><ProductDetail /></ProtectedRoute>} />
         <Route path="/merchant/products/:id/edit" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><ProductForm /></ProtectedRoute>} />
+        <Route path="/merchant/orders" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><MerchantOrderList /></ProtectedRoute>} />
+        <Route path="/merchant/orders/:id" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><MerchantOrderDetail /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
