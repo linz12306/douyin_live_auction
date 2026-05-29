@@ -49,14 +49,15 @@
   - Current status: order handler, routes, timeout worker, API tests, and integration test route wiring are implemented.
   - Verification: `cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./tests/integration -run 'TestOrder|TestAuctionEngineEndToEndFlow' && /Users/vivix/.local/go/bin/go test -count=1 ./...`; OpenSpec strict validation and `git diff --check` passed.
 
-- [ ] 5. User frontend order list and detail
+- [x] 5. User frontend order list and detail
   - Create `frontend/src/types/order.ts`.
   - Create `frontend/src/api/order.ts`.
   - Create `frontend/src/pages/app/OrderList.tsx`.
   - Create `frontend/src/pages/app/OrderDetail.tsx`.
   - Add protected user routes `/app/orders` and `/app/orders/:id` in `frontend/src/App.tsx`.
   - Add user entry points from `/app/auctions` and terminal sold state in `/app/auctions/:id`.
-  - Verification: frontend tests cover rendering states and confirm/cancel/pay actions; `cd frontend && npm run build`.
+  - Current status: user order types, API helpers, list/detail pages, routes, and entry points are implemented.
+  - Verification: `cd frontend && npm test -- src/pages/app/OrderList.test.tsx src/pages/app/OrderDetail.test.tsx vite.config.test.ts && npm run build` passed.
 
 - [ ] 6. Merchant frontend order list and detail
   - Create `frontend/src/pages/merchant/OrderList.tsx`.

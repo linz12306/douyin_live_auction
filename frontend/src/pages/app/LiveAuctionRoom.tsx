@@ -210,6 +210,14 @@ export default function LiveAuctionRoom() {
                 {roomTerminalMessage}
               </div>
             ) : null}
+            {roomStatus === 'ended_sold' ? (
+              <Link
+                to="/app/orders"
+                className="mt-3 inline-flex rounded-lg bg-emerald-300 px-3 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-200"
+              >
+                查看中标订单
+              </Link>
+            ) : null}
           </section>
 
           <section className="rounded-lg border border-white/12 bg-white/10 p-4 shadow-xl shadow-black/20 backdrop-blur">

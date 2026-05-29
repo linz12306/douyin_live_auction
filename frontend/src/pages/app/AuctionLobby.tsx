@@ -82,12 +82,20 @@ export default function AuctionLobby() {
             <h1 className="text-2xl font-bold text-white">竞拍大厅</h1>
             <p className="mt-1 text-sm text-white/55">正在直播的竞拍商品</p>
           </div>
-          <Link
-            to="/profile"
-            className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white"
-          >
-            我的
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              to="/app/orders"
+              className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white"
+            >
+              订单
+            </Link>
+            <Link
+              to="/profile"
+              className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white"
+            >
+              我的
+            </Link>
+          </div>
         </header>
 
         {loading ? (

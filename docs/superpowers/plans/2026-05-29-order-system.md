@@ -339,7 +339,7 @@ cd backend
 
 Result: PASS. Verification also covered full backend `go test -count=1 ./...`, OpenSpec strict validation, and `git diff --check`.
 
-- [ ] **Step 6: Commit route slice**
+- [x] **Step 6: Commit route slice**
 
 Run:
 
@@ -347,6 +347,8 @@ Run:
 git add backend/internal/handler/order_handler.go backend/cmd/server/main.go backend/tests/integration/order_system_test.go
 git commit -m "feat(order): expose order APIs"
 ```
+
+Result: committed as `cbd4110 feat(order): expose order APIs`.
 
 ## Task 4: User Frontend Orders
 
@@ -359,7 +361,7 @@ git commit -m "feat(order): expose order APIs"
 - Modify: `frontend/src/pages/app/AuctionLobby.tsx`
 - Modify: `frontend/src/pages/app/LiveAuctionRoom.tsx`
 
-- [ ] **Step 1: Write frontend tests**
+- [x] **Step 1: Write frontend tests**
 
 Add tests near the pages:
 
@@ -373,7 +375,7 @@ it('shows pay for pending_payment orders', async () => {})
 it('hides mutation actions for paid and cancelled orders', async () => {})
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 
@@ -382,9 +384,9 @@ cd frontend
 npm test -- src/pages/app/OrderList.test.tsx src/pages/app/OrderDetail.test.tsx vite.config.test.ts
 ```
 
-Expected: FAIL because pages/API do not exist.
+Result: failed as expected because `../../api/order` did not exist.
 
-- [ ] **Step 3: Add frontend types and API**
+- [x] **Step 3: Add frontend types and API**
 
 Create `frontend/src/types/order.ts` with:
 
@@ -426,11 +428,11 @@ export interface OrderDetail extends OrderListItem {
 
 Create `frontend/src/api/order.ts` with `listOrders`, `getOrder`, `confirmOrder`, `payOrder`, `cancelOrder`.
 
-- [ ] **Step 4: Add user pages and routes**
+- [x] **Step 4: Add user pages and routes**
 
 Build `/app/orders` and `/app/orders/:id` with existing visual conventions. Show status badges, price, product image, confirm deadline, and role-appropriate action buttons.
 
-- [ ] **Step 5: Verify user frontend**
+- [x] **Step 5: Verify user frontend**
 
 Run:
 
@@ -440,7 +442,7 @@ npm test -- src/pages/app/OrderList.test.tsx src/pages/app/OrderDetail.test.tsx 
 npm run build
 ```
 
-Expected: PASS.
+Result: PASS with `cd frontend && npm test -- src/pages/app/OrderList.test.tsx src/pages/app/OrderDetail.test.tsx vite.config.test.ts && npm run build`.
 
 - [ ] **Step 6: Commit user frontend slice**
 
