@@ -584,7 +584,7 @@ Record:
 - verification commands and results
 - push status
 
-- [ ] **Step 4: Commit final docs slice**
+- [x] **Step 4: Commit final docs slice**
 
 Run:
 
@@ -592,6 +592,8 @@ Run:
 git add openspec/changes/order-system/tasks.md docs/superpowers/plans/2026-05-29-order-system.md projects/proj-1779447357476-ryiijf/memory/2026-05-29.md projects/proj-1779447357476-ryiijf/memory/long-term.md
 git commit -m "docs(order): record implementation status"
 ```
+
+Result: committed as `44354b7 docs(order): record implementation status`; this checkbox follow-up records that commit.
 
 ## Self-Review
 
