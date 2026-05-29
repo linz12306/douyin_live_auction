@@ -95,7 +95,7 @@ git commit -m "docs(order): add implementation plan"
 - Create: `backend/internal/service/order_service.go`
 - Create: `backend/tests/integration/order_system_test.go`
 
-- [ ] **Step 1: Write integration tests for buyer transitions**
+- [x] **Step 1: Write integration tests for buyer transitions**
 
 Create `backend/tests/integration/order_system_test.go` with tests:
 
@@ -108,7 +108,7 @@ func TestOrderRejectsWrongBuyerAndWrongStatusTransitions(t *testing.T)
 
 Use existing helpers from `auction_engine_test.go` to register merchant/user accounts, publish and activate an auction, place a ceiling bid or settle an expired auction, then query the created order.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 
@@ -117,9 +117,9 @@ cd backend
 /Users/vivix/.local/go/bin/go test -count=1 ./tests/integration -run 'TestOrder'
 ```
 
-Expected: FAIL because order service/repo/handler do not exist yet.
+Result: failed as expected because `service.NewOrderService`, `repository.NewOrderRepo`, and order service errors did not exist.
 
-- [ ] **Step 3: Add order DTOs**
+- [x] **Step 3: Add order DTOs**
 
 Create `backend/internal/dto/order.go` with these public types:
 
@@ -179,7 +179,7 @@ type OrderListResponse struct {
 }
 ```
 
-- [ ] **Step 4: Add repository**
+- [x] **Step 4: Add repository**
 
 Create `backend/internal/repository/order_repo.go` with `OrderRow`, `OrderRepo`, and methods:
 
@@ -199,7 +199,7 @@ func (r *OrderRepo) ListExpiredPendingConfirmIDs(ctx context.Context, tx *sql.Tx
 
 Use joins against `products`, `users`, and first `product_images` to populate list/detail rows. Use `SELECT ... FOR UPDATE` for mutating paths.
 
-- [ ] **Step 5: Add service**
+- [x] **Step 5: Add service**
 
 Create `backend/internal/service/order_service.go` with errors and methods:
 
@@ -230,7 +230,7 @@ Rules:
 - cancel/timeout require `pending_confirm`, update order to `cancelled`, and refund `amount` once.
 - confirm and pay never update `users.balance` or `users.frozen_amount`.
 
-- [ ] **Step 6: Run focused backend tests**
+- [x] **Step 6: Run focused backend tests**
 
 Run:
 
@@ -239,7 +239,7 @@ cd backend
 /Users/vivix/.local/go/bin/go test -count=1 ./tests/integration -run 'TestOrder'
 ```
 
-Expected: PASS.
+Result: PASS. Additional verification passed with `cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./internal/service ./internal/repository ./tests/integration -run 'TestOrder|TestAuctionEngineEndToEndFlow'` and `git diff --check`.
 
 - [ ] **Step 7: Commit backend core slice**
 

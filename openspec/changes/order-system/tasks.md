@@ -15,7 +15,7 @@
   - Current status: execution plan created with backend, frontend, E2E, verification, and commit slices.
   - Verification: plan self-review confirms every OpenSpec requirement maps to at least one implementation task.
 
-- [ ] 3. Backend order DTOs, repository, and service
+- [x] 3. Backend order DTOs, repository, and service
   - Create `backend/internal/dto/order.go` with list query, list item, detail, action response, and cancel request types.
   - Create `backend/internal/repository/order_repo.go` with transaction helpers for:
     - finding an order by id with product/buyer summary
@@ -32,7 +32,8 @@
     - `ExpirePendingConfirmOrders`
   - Ensure confirm and pay do not change wallet fields.
   - Ensure cancellation refunds exactly once by updating only locked `pending_confirm` rows.
-  - Verification: focused backend tests cover status transitions, owner checks, and wallet assertions.
+  - Current status: DTO, repo, service, and service-level integration tests are implemented.
+  - Verification: `cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./internal/service ./internal/repository ./tests/integration -run 'TestOrder|TestAuctionEngineEndToEndFlow'` passed.
 
 - [ ] 4. Backend handlers, routes, and timeout worker
   - Create `backend/internal/handler/order_handler.go`.
