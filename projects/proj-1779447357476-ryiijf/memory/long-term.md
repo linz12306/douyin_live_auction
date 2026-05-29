@@ -43,17 +43,14 @@
   - 持久规范：`openspec/specs/order-system/spec.md`
   - 覆盖：用户订单列表/详情、商家订单列表/详情、确认订单、模拟支付、确认超时/取消退款。
 
+- `observability-health`
+  - 归档：`openspec/changes/archive/2026-05-29-observability-health/`
+  - 持久规范：`openspec/specs/observability-health/spec.md`
+  - 覆盖：`GET /healthz`，DB/Redis/竞拍引擎健康状态，realtime runtime 轻量 stats，HTTP 200/503 健康映射，敏感错误脱敏。
+
 ## 当前进行中
 
-- `observability-health`
-  - 分支/worktree：`/Users/vivix/Documents/Codex/douyin_live_auction_worktrees/observability-health`，`codex/observability-health`
-  - Active OpenSpec：`openspec/changes/observability-health/`
-  - Superpowers exploration：`docs/superpowers/specs/2026-05-29-observability-health-exploration.md`
-  - Superpowers plan：`docs/superpowers/plans/2026-05-29-observability-health.md`
-  - 已实现：`GET /healthz`，返回 DB、Redis、竞拍引擎/realtime runtime 健康状态。
-  - 响应规则：全部健康返回 HTTP 200 + `status: "ok"`；任一必需组件降级返回 HTTP 503 + `status: "degraded"`。
-  - 范围控制：未引入 Prometheus/OpenTelemetry/外部日志系统，未改动出价、订单、钱包或 WebSocket 业务语义。
-  - 当前状态：实现和 memory/docs commit 已完成，OpenSpec strict、后端测试和 `/healthz` 接口验证通过；push 被本机全局 pre-push hook 阻止，生成了 `/tmp/douyin_live_auction_push_forbidden`。
+- 暂无已开启但未完成的 OpenSpec change。
 
 ## 关键业务决策
 

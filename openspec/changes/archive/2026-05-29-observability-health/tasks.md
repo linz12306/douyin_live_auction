@@ -40,7 +40,7 @@
   - Current status: handler and unauthenticated top-level route are wired in `cmd/server/main.go`.
   - Verification: `cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./internal/handler -run TestHealth`.
 
-- [ ] 6. Interface and full verification
+- [x] 6. Interface and full verification
   - Run backend full test suite.
   - Run strict OpenSpec change validation.
   - Run strict persistent spec validation.
