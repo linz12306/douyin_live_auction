@@ -3,7 +3,10 @@ package integration
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -145,6 +148,146 @@ func TestOrderRejectsWrongBuyerAndWrongStatusTransitions(t *testing.T) {
 	}
 }
 
+func TestOrderAPIBuyerListsConfirmsPaysOrder(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, userID := registerAuctionUser(t, ts)
+	orderID := createSettledOrderViaCeilingBid(t, db, ts, merchantToken, userToken, 20)
+	balanceBefore, frozenBefore := readUserWallet(t, db, userID)
+
+	listResp, err := makeRequest("GET", ts.URL+"/api/v1/orders?status=pending_confirm&page=1&size=20", userToken, nil)
+	if err != nil {
+		t.Fatalf("list buyer orders: %v", err)
+	}
+	defer listResp.Body.Close()
+	if listResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected buyer order list 200, got %d", listResp.StatusCode)
+	}
+	listData := decodeAPIData(t, listResp)
+	if !apiItemsContainOrderID(listData, orderID) {
+		t.Fatalf("expected buyer list to include order %d, got %#v", orderID, listData)
+	}
+
+	detailResp, err := makeRequest("GET", ts.URL+fmt.Sprintf("/api/v1/orders/%d", orderID), userToken, nil)
+	if err != nil {
+		t.Fatalf("get buyer order detail: %v", err)
+	}
+	defer detailResp.Body.Close()
+	if detailResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected buyer order detail 200, got %d", detailResp.StatusCode)
+	}
+
+	confirmResp, err := makeRequest("POST", ts.URL+fmt.Sprintf("/api/v1/orders/%d/confirm", orderID), userToken, nil)
+	if err != nil {
+		t.Fatalf("confirm order request: %v", err)
+	}
+	defer confirmResp.Body.Close()
+	if confirmResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected confirm 200, got %d", confirmResp.StatusCode)
+	}
+	confirmData := decodeAPIData(t, confirmResp)
+	if confirmData["status"] != "pending_payment" {
+		t.Fatalf("expected pending_payment after confirm, got %#v", confirmData)
+	}
+	assertWallet(t, db, userID, balanceBefore, frozenBefore)
+
+	payResp, err := makeRequest("POST", ts.URL+fmt.Sprintf("/api/v1/orders/%d/pay", orderID), userToken, nil)
+	if err != nil {
+		t.Fatalf("pay order request: %v", err)
+	}
+	defer payResp.Body.Close()
+	if payResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected pay 200, got %d", payResp.StatusCode)
+	}
+	payData := decodeAPIData(t, payResp)
+	if payData["status"] != "paid" {
+		t.Fatalf("expected paid after pay, got %#v", payData)
+	}
+	assertWallet(t, db, userID, balanceBefore, frozenBefore)
+}
+
+func TestOrderAPIMerchantListsAndViewsOwnOrders(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, _ := registerAuctionUser(t, ts)
+	orderID := createSettledOrderViaCeilingBid(t, db, ts, merchantToken, userToken, 20)
+
+	listResp, err := makeRequest("GET", ts.URL+"/api/v1/orders?page=1&size=20", merchantToken, nil)
+	if err != nil {
+		t.Fatalf("list merchant orders: %v", err)
+	}
+	defer listResp.Body.Close()
+	if listResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected merchant order list 200, got %d", listResp.StatusCode)
+	}
+	listData := decodeAPIData(t, listResp)
+	if !apiItemsContainOrderID(listData, orderID) {
+		t.Fatalf("expected merchant list to include order %d, got %#v", orderID, listData)
+	}
+
+	detailResp, err := makeRequest("GET", ts.URL+fmt.Sprintf("/api/v1/orders/%d", orderID), merchantToken, nil)
+	if err != nil {
+		t.Fatalf("get merchant order detail: %v", err)
+	}
+	defer detailResp.Body.Close()
+	if detailResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected merchant detail 200, got %d", detailResp.StatusCode)
+	}
+	detailData := decodeAPIData(t, detailResp)
+	actions, ok := detailData["actions"].(map[string]interface{})
+	if !ok || actions["can_confirm"] != false || actions["can_pay"] != false || actions["can_cancel"] != false {
+		t.Fatalf("expected merchant detail without buyer actions, got %#v", detailData)
+	}
+}
+
+func TestOrderAPIScopesOrdersByRole(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, _ := registerAuctionUser(t, ts)
+	otherUserToken, _ := registerAuctionUser(t, ts)
+	otherMerchantToken := registerAuctionMerchant(t, ts)
+	orderID := createSettledOrderViaCeilingBid(t, db, ts, merchantToken, userToken, 20)
+
+	wrongBuyerResp, err := makeRequest("GET", ts.URL+fmt.Sprintf("/api/v1/orders/%d", orderID), otherUserToken, nil)
+	if err != nil {
+		t.Fatalf("wrong buyer detail request: %v", err)
+	}
+	defer wrongBuyerResp.Body.Close()
+	if wrongBuyerResp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected wrong buyer 403, got %d", wrongBuyerResp.StatusCode)
+	}
+
+	wrongBuyerListResp, err := makeRequest("GET", ts.URL+"/api/v1/orders?page=1&size=20", otherUserToken, nil)
+	if err != nil {
+		t.Fatalf("wrong buyer list request: %v", err)
+	}
+	defer wrongBuyerListResp.Body.Close()
+	if wrongBuyerListResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected wrong buyer list 200, got %d", wrongBuyerListResp.StatusCode)
+	}
+	if apiItemsContainOrderID(decodeAPIData(t, wrongBuyerListResp), orderID) {
+		t.Fatalf("wrong buyer list should not include order %d", orderID)
+	}
+
+	wrongMerchantResp, err := makeRequest("GET", ts.URL+fmt.Sprintf("/api/v1/orders/%d", orderID), otherMerchantToken, nil)
+	if err != nil {
+		t.Fatalf("wrong merchant detail request: %v", err)
+	}
+	defer wrongMerchantResp.Body.Close()
+	if wrongMerchantResp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected wrong merchant 403, got %d", wrongMerchantResp.StatusCode)
+	}
+}
+
 func createSettledOrderViaCeilingBid(t *testing.T, db *sql.DB, ts *httptest.Server, merchantToken, userToken string, amount float64) int64 {
 	t.Helper()
 
@@ -177,4 +320,35 @@ func assertWallet(t *testing.T, db *sql.DB, userID int64, wantBalance, wantFroze
 	if balance != wantBalance || frozen != wantFrozen {
 		t.Fatalf("expected wallet %.2f/%.2f, got %.2f/%.2f", wantBalance, wantFrozen, balance, frozen)
 	}
+}
+
+func decodeAPIData(t *testing.T, resp *http.Response) map[string]interface{} {
+	t.Helper()
+
+	var envelope map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatalf("decode API response: %v", err)
+	}
+	data, ok := envelope["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected response data object, got %#v", envelope)
+	}
+	return data
+}
+
+func apiItemsContainOrderID(data map[string]interface{}, orderID int64) bool {
+	items, ok := data["items"].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, raw := range items {
+		item, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if int64(item["id"].(float64)) == orderID {
+			return true
+		}
+	}
+	return false
 }

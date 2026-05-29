@@ -46,15 +46,18 @@ func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realti
 	productRepo := repository.NewProductRepo(db)
 	auctionRepo := repository.NewAuctionRepo(db)
 	auctionEngineRepo := repository.NewAuctionEngineRepo(db)
+	orderRepo := repository.NewOrderRepo(db)
 
 	authSvc := service.NewAuthService(userRepo, rdb, cfg)
 	productSvc := service.NewProductService(productRepo, auctionRepo)
 	eventBus := realtime.NewInMemoryAuctionEventBus()
 	auctionSvc := service.NewAuctionServiceWithEvents(auctionEngineRepo, rdb, eventBus)
+	orderSvc := service.NewOrderService(orderRepo)
 
 	authH := handler.NewAuthHandler(authSvc)
 	productH := handler.NewProductHandler(productSvc, cfg.ImageDir)
 	auctionH := handler.NewAuctionHandler(auctionSvc)
+	orderH := handler.NewOrderHandler(orderSvc)
 
 	r := gin.New()
 	auth := r.Group("/api/v1/auth")
@@ -77,6 +80,16 @@ func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realti
 		auctions.GET("/:id/rankings", auctionH.Rankings)
 		auctions.POST("/:id/activate", middleware.RoleGuard("merchant"), auctionH.Activate)
 		auctions.DELETE("/:id", middleware.RoleGuard("merchant"), auctionH.Cancel)
+	}
+
+	orders := r.Group("/api/v1/orders")
+	orders.Use(middleware.JWTAuth(cfg))
+	{
+		orders.GET("", orderH.List)
+		orders.GET("/:id", orderH.Get)
+		orders.POST("/:id/confirm", middleware.RoleGuard("user"), orderH.Confirm)
+		orders.POST("/:id/pay", middleware.RoleGuard("user"), orderH.Pay)
+		orders.POST("/:id/cancel", middleware.RoleGuard("user"), orderH.Cancel)
 	}
 
 	return r, db, eventBus
@@ -232,6 +245,17 @@ func activateAuctionViaAPI(t *testing.T, ts *httptest.Server, merchantToken stri
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected activate 200, got %d", resp.StatusCode)
+	}
+}
+
+func expireOnlyAuctionForSettlement(t *testing.T, db *sql.DB, auctionID int64) {
+	t.Helper()
+
+	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE status = 'active'"); err != nil {
+		t.Fatalf("normalize active auctions: %v", err)
+	}
+	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_SUB(NOW(), INTERVAL 1 SECOND) WHERE id = ?", auctionID); err != nil {
+		t.Fatalf("expire auction: %v", err)
 	}
 }
 
@@ -948,9 +972,7 @@ func TestSettleExpiredAuctionWithoutBidsMarksNoBid(t *testing.T) {
 	merchantToken := registerAuctionMerchant(t, ts)
 	productID, auctionID := publishPendingAuction(t, ts, merchantToken)
 	activateAuctionViaAPI(t, ts, merchantToken, auctionID)
-	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_SUB(NOW(), INTERVAL 1 SECOND) WHERE id = ?", auctionID); err != nil {
-		t.Fatalf("expire auction: %v", err)
-	}
+	expireOnlyAuctionForSettlement(t, db, auctionID)
 
 	auctionSvc := service.NewAuctionService(repository.NewAuctionEngineRepo(db), nil)
 	settled, err := auctionSvc.SettleExpired(context.Background())
@@ -986,9 +1008,7 @@ func TestSettleExpiredAuctionWithoutBidsPublishesEndedNoBidEvent(t *testing.T) {
 	merchantToken := registerAuctionMerchant(t, ts)
 	_, auctionID := publishPendingAuction(t, ts, merchantToken)
 	activateAuctionViaAPI(t, ts, merchantToken, auctionID)
-	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_SUB(NOW(), INTERVAL 1 SECOND) WHERE id = ?", auctionID); err != nil {
-		t.Fatalf("expire auction: %v", err)
-	}
+	expireOnlyAuctionForSettlement(t, db, auctionID)
 
 	auctionSvc := service.NewAuctionServiceWithEvents(repository.NewAuctionEngineRepo(db), nil, eventBus)
 	settled, err := auctionSvc.SettleExpired(context.Background())
@@ -1023,9 +1043,7 @@ func TestSettleExpiredAuctionWithBidCreatesOrder(t *testing.T) {
 	_, auctionID := publishPendingAuction(t, ts, merchantToken)
 	activateAuctionViaAPI(t, ts, merchantToken, auctionID)
 	placeBid(t, ts, auctionID, userToken, 10)
-	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_SUB(NOW(), INTERVAL 1 SECOND) WHERE id = ?", auctionID); err != nil {
-		t.Fatalf("expire auction: %v", err)
-	}
+	expireOnlyAuctionForSettlement(t, db, auctionID)
 
 	auctionSvc := service.NewAuctionService(repository.NewAuctionEngineRepo(db), nil)
 	settled, err := auctionSvc.SettleExpired(context.Background())
@@ -1075,9 +1093,7 @@ func TestSettleExpiredAuctionWithBidPublishesEndedSoldEvent(t *testing.T) {
 	_, auctionID := publishPendingAuction(t, ts, merchantToken)
 	activateAuctionViaAPI(t, ts, merchantToken, auctionID)
 	placeBid(t, ts, auctionID, userToken, 10)
-	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_SUB(NOW(), INTERVAL 1 SECOND) WHERE id = ?", auctionID); err != nil {
-		t.Fatalf("expire auction: %v", err)
-	}
+	expireOnlyAuctionForSettlement(t, db, auctionID)
 
 	events, unsubscribe := eventBus.Subscribe()
 	defer unsubscribe()
@@ -1118,9 +1134,7 @@ func TestAuctionEngineEndToEndFlow(t *testing.T) {
 	placeBid(t, ts, auctionID, firstToken, 10)
 	placeBid(t, ts, auctionID, secondToken, 20)
 
-	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_SUB(NOW(), INTERVAL 1 SECOND) WHERE id = ?", auctionID); err != nil {
-		t.Fatalf("expire auction: %v", err)
-	}
+	expireOnlyAuctionForSettlement(t, db, auctionID)
 	auctionSvc := service.NewAuctionService(repository.NewAuctionEngineRepo(db), nil)
 	settled, err := auctionSvc.SettleExpired(context.Background())
 	if err != nil {

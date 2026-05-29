@@ -241,7 +241,7 @@ cd backend
 
 Result: PASS. Additional verification passed with `cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./internal/service ./internal/repository ./tests/integration -run 'TestOrder|TestAuctionEngineEndToEndFlow'` and `git diff --check`.
 
-- [ ] **Step 7: Commit backend core slice**
+- [x] **Step 7: Commit backend core slice**
 
 Run:
 
@@ -250,6 +250,8 @@ git add backend/internal/dto/order.go backend/internal/repository/order_repo.go 
 git commit -m "feat(order): add order state service"
 ```
 
+Result: committed as `1b946da feat(order): add order state service`.
+
 ## Task 3: Backend Handler, Routes, And Timeout Worker
 
 **Files:**
@@ -257,7 +259,7 @@ git commit -m "feat(order): add order state service"
 - Modify: `backend/cmd/server/main.go`
 - Modify: `backend/tests/integration/order_system_test.go`
 
-- [ ] **Step 1: Write API integration tests**
+- [x] **Step 1: Write API integration tests**
 
 Add tests:
 
@@ -269,7 +271,7 @@ func TestOrderAPIScopesOrdersByRole(t *testing.T)
 
 Assert REST endpoints return role-scoped data and reject unauthorized access.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 
@@ -278,9 +280,9 @@ cd backend
 /Users/vivix/.local/go/bin/go test -count=1 ./tests/integration -run 'TestOrderAPI'
 ```
 
-Expected: FAIL because routes are not wired.
+Result: failed as expected with 404 responses for `/api/v1/orders`.
 
-- [ ] **Step 3: Add handler**
+- [x] **Step 3: Add handler**
 
 Create `backend/internal/handler/order_handler.go` with methods:
 
@@ -300,7 +302,7 @@ Map service errors to:
 - `ErrOrderInvalidStatus` -> 400
 - default -> 500
 
-- [ ] **Step 4: Wire routes and worker**
+- [x] **Step 4: Wire routes and worker**
 
 Modify `backend/cmd/server/main.go`:
 
@@ -325,7 +327,7 @@ func startOrderTimeoutWorker(orderSvc *service.OrderService) {
 }
 ```
 
-- [ ] **Step 5: Verify backend routes**
+- [x] **Step 5: Verify backend routes**
 
 Run:
 
@@ -335,7 +337,7 @@ cd backend
 /Users/vivix/.local/go/bin/go test -count=1 ./...
 ```
 
-Expected: PASS.
+Result: PASS. Verification also covered full backend `go test -count=1 ./...`, OpenSpec strict validation, and `git diff --check`.
 
 - [ ] **Step 6: Commit route slice**
 

@@ -35,7 +35,7 @@
   - Current status: DTO, repo, service, and service-level integration tests are implemented.
   - Verification: `cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./internal/service ./internal/repository ./tests/integration -run 'TestOrder|TestAuctionEngineEndToEndFlow'` passed.
 
-- [ ] 4. Backend handlers, routes, and timeout worker
+- [x] 4. Backend handlers, routes, and timeout worker
   - Create `backend/internal/handler/order_handler.go`.
   - Wire `OrderRepo`, `OrderService`, and `OrderHandler` in `backend/cmd/server/main.go`.
   - Add authenticated routes:
@@ -46,7 +46,8 @@
     - `POST /api/v1/orders/:id/cancel`
   - Start an order confirmation-timeout worker that calls `ExpirePendingConfirmOrders` about once per minute.
   - Extend integration server setup in `backend/tests/integration/auction_engine_test.go` or create `backend/tests/integration/order_system_test.go`.
-  - Verification: `/Users/vivix/.local/go/bin/go test -count=1 ./tests/integration -run 'TestOrder|TestAuctionEngineEndToEndFlow'`.
+  - Current status: order handler, routes, timeout worker, API tests, and integration test route wiring are implemented.
+  - Verification: `cd backend && /Users/vivix/.local/go/bin/go test -count=1 ./tests/integration -run 'TestOrder|TestAuctionEngineEndToEndFlow' && /Users/vivix/.local/go/bin/go test -count=1 ./...`; OpenSpec strict validation and `git diff --check` passed.
 
 - [ ] 5. User frontend order list and detail
   - Create `frontend/src/types/order.ts`.
