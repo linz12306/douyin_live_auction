@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getProduct, deleteProduct } from '../../api/product';
+import { activateAuction } from '../../api/auction';
 import type { ProductDetail as PD } from '../../types/product';
 
 const STATUS_TEXT: Record<string, string> = {
@@ -13,15 +14,48 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const [detail, setDetail] = useState<PD | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activating, setActivating] = useState(false);
+  const [error, setError] = useState('');
+
+  const productId = parseInt(id!, 10);
 
   useEffect(() => {
-    getProduct(parseInt(id!)).then(setDetail).finally(() => setLoading(false));
-  }, [id]);
+    let ignore = false;
+
+    getProduct(productId)
+      .then((nextDetail) => {
+        if (!ignore) setDetail(nextDetail);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [productId]);
 
   const handleDelete = async () => {
     if (!confirm('确定删除？')) return;
-    await deleteProduct(parseInt(id!));
+    await deleteProduct(productId);
     navigate('/merchant/products');
+  };
+
+  const handleActivate = async () => {
+    if (!detail?.auction) return;
+
+    setError('');
+    setActivating(true);
+    try {
+      await activateAuction(detail.auction.id);
+      const nextDetail = await getProduct(productId);
+      setDetail(nextDetail);
+    } catch (activateError) {
+      const message = getApiErrorMessage(activateError);
+      setError(message);
+    } finally {
+      setActivating(false);
+    }
   };
 
   if (loading) return <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 flex items-center justify-center"><p className="text-white/60">加载中...</p></div>;
@@ -30,6 +64,7 @@ export default function ProductDetail() {
   const { product, images, auction } = detail;
   const canEdit = product.status === 'draft' || product.status === 'pending';
   const canDelete = product.status === 'draft';
+  const canActivate = Boolean(auction && (product.status === 'pending' || auction.status === 'pending'));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
@@ -72,12 +107,26 @@ export default function ProductDetail() {
           </div>
         )}
 
-        {canEdit && (
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-400/50 bg-red-500/20 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
+        )}
+
+        {(canEdit || canActivate) && (
           <div className="flex gap-3">
-            <Link to={`/merchant/products/${product.id}/edit`}
-              className="flex-1 py-3 bg-purple-500 text-white text-center rounded-lg hover:opacity-90">
-              编辑
-            </Link>
+            {canActivate && (
+              <button onClick={handleActivate} disabled={activating}
+                className="flex-1 py-3 bg-emerald-500 text-white rounded-lg hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+                {activating ? '开拍中...' : '开拍'}
+              </button>
+            )}
+            {canEdit && (
+              <Link to={`/merchant/products/${product.id}/edit`}
+                className="flex-1 py-3 bg-purple-500 text-white text-center rounded-lg hover:opacity-90">
+                编辑
+              </Link>
+            )}
             {canDelete && (
               <button onClick={handleDelete}
                 className="flex-1 py-3 bg-red-500 text-white rounded-lg hover:opacity-90">
@@ -89,4 +138,12 @@ export default function ProductDetail() {
       </div>
     </div>
   );
+}
+
+function getApiErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = (error as { response?: { data?: { message?: unknown } } }).response;
+    if (typeof response?.data?.message === 'string') return response.data.message;
+  }
+  return '开拍失败，请稍后重试';
 }

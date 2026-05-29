@@ -46,3 +46,7 @@ export async function listAuctionLobby(): Promise<AuctionLobbyItem[]> {
 export async function placeBid(auctionId: number, amount: number): Promise<void> {
   await client.post(`/auctions/${auctionId}/bid`, { amount });
 }
+
+export async function activateAuction(auctionId: number): Promise<void> {
+  await client.post(`/auctions/${auctionId}/activate`);
+}
