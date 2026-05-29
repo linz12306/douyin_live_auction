@@ -7,8 +7,12 @@ const pageFiles = [
   'merchant/ProductList.tsx',
   'merchant/ProductForm.tsx',
   'merchant/ProductDetail.tsx',
+  'merchant/OrderList.tsx',
+  'merchant/OrderDetail.tsx',
   'app/AuctionLobby.tsx',
   'app/LiveAuctionRoom.tsx',
+  'app/OrderList.tsx',
+  'app/OrderDetail.tsx',
 ];
 const pageSources = import.meta.glob('./**/*.tsx', {
   eager: true,

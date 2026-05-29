@@ -184,6 +184,46 @@ describe('LiveAuctionRoom', () => {
     expect(screen.getByRole('button', { name: '出价 ¥150.00' })).toBeEnabled();
   });
 
+  it('refreshes the room snapshot on demand after merchant-side updates', async () => {
+    renderRoom();
+
+    fireEvent.click(screen.getByRole('button', { name: '刷新状态' }));
+
+    expect(FakeWebSocket.instances).toHaveLength(2);
+
+    act(() => {
+      FakeWebSocket.instances[1].onmessage?.(new MessageEvent('message', {
+        data: JSON.stringify({
+          type: 'snapshot',
+          auction_id: 7,
+          version: 5,
+          server_time: '2026-05-28T10:00:02.000Z',
+          payload: {
+            product: {
+              id: 22,
+              title: '更新后的复古牛仔夹克',
+              description: '商家刚更新的介绍',
+              image_urls: ['https://img.test/jacket-updated.jpg'],
+            },
+            status: 'active',
+            current_price: 120,
+            highest_bidder_id: 3,
+            started_at: '2026-05-28T09:00:00.000Z',
+            ended_at: '2026-05-28T10:10:00.000Z',
+            current_extend_count: 0,
+            bid_increment_type: 'fixed',
+            bid_increment_value: 10,
+            next_bid_amount: 130,
+            rankings: [],
+          },
+        }),
+      }));
+    });
+
+    expect(screen.getByRole('heading', { name: '更新后的复古牛仔夹克' })).toBeInTheDocument();
+    expect(screen.getByText('商家刚更新的介绍')).toBeInTheDocument();
+  });
+
   it('submits a custom amount through REST', async () => {
     renderRoom();
 

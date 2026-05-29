@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { listProducts } from '../../api/product';
 import PageBackButton from '../../components/PageBackButton';
+import { usePageRefresh } from '../../hooks/usePageRefresh';
 import type { Product, ProductStatus } from '../../types/product';
 
 const TABS: { key: ProductStatus | ''; label: string }[] = [
@@ -30,6 +31,23 @@ export default function ProductList() {
   const [activeTab, setActiveTab] = useState<typeof TABS[number]['key']>('');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+
+  const loadProducts = useCallback(async () => {
+    setRefreshing(true);
+    setError('');
+
+    try {
+      const res = await listProducts(activeTab || undefined);
+      setProducts(res.items);
+    } catch {
+      setError('商品列表加载失败');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     let mounted = true;
@@ -37,6 +55,9 @@ export default function ProductList() {
     listProducts(activeTab || undefined)
       .then((res) => {
         if (mounted) setProducts(res.items);
+      })
+      .catch(() => {
+        if (mounted) setError('商品列表加载失败');
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -47,6 +68,8 @@ export default function ProductList() {
     };
   }, [activeTab]);
 
+  usePageRefresh(loadProducts);
+
   return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
         <div className="max-w-4xl mx-auto px-4 py-8">
@@ -56,6 +79,14 @@ export default function ProductList() {
             <h1 className="text-2xl font-bold text-white">商品管理</h1>
           </div>
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void loadProducts()}
+              disabled={refreshing}
+              className="px-4 py-2 border border-white/20 text-white rounded-lg hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {refreshing ? '刷新中...' : '刷新'}
+            </button>
             <Link to="/merchant/orders" className="px-4 py-2 border border-white/20 text-white rounded-lg hover:border-white/40">
               订单管理
             </Link>
@@ -86,6 +117,10 @@ export default function ProductList() {
 
         {loading ? (
           <p className="text-white/60 text-center py-12">加载中...</p>
+        ) : error ? (
+          <div className="rounded-lg border border-red-400/50 bg-red-500/20 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
         ) : products.length === 0 ? (
           <p className="text-white/60 text-center py-12">暂无商品</p>
         ) : (

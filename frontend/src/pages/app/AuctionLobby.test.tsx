@@ -62,4 +62,27 @@ describe('AuctionLobby', () => {
     expect(mocks.listAuctionLobby).toHaveBeenCalledTimes(2);
     expect(screen.getByText('刚开拍的复古夹克')).toBeInTheDocument();
   });
+
+  it('refreshes immediately when the page becomes visible again', async () => {
+    mocks.listAuctionLobby
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([activeItem]);
+
+    const visibilitySpy = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    renderLobby();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText('暂无可参与竞拍')).toBeInTheDocument();
+
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      await Promise.resolve();
+    });
+
+    expect(mocks.listAuctionLobby).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('刚开拍的复古夹克')).toBeInTheDocument();
+    visibilitySpy.mockRestore();
+  });
 });
