@@ -3,7 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { createProduct, getProduct, updateProduct, uploadProductImage, publishProduct } from '../../api/product';
 import ImageUploader from '../../components/ImageUploader';
 import AuctionRuleForm from '../../components/AuctionRuleForm';
+import PageBackButton from '../../components/PageBackButton';
 import type { PublishRequest } from '../../types/product';
+
+function getApiErrorMessage(err: unknown, fallback: string) {
+  if (typeof err === 'object' && err !== null && 'response' in err) {
+    const response = (err as { response?: { data?: { message?: unknown } } }).response;
+    if (typeof response?.data?.message === 'string') return response.data.message;
+  }
+  return fallback;
+}
 
 export default function ProductForm() {
   const { id } = useParams<{ id: string }>();
@@ -42,7 +51,7 @@ export default function ProductForm() {
         }
       });
     }
-  }, [id]);
+  }, [id, isEdit]);
 
   const handleSave = async () => {
     setError('');
@@ -62,8 +71,8 @@ export default function ProductForm() {
         await publishProduct(result.product.id, rules);
       }
       navigate('/merchant/products');
-    } catch (err: any) {
-      setError(err.response?.data?.message || '保存失败');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '保存失败'));
     } finally {
       setLoading(false);
     }
@@ -76,8 +85,8 @@ export default function ProductForm() {
     try {
       await publishProduct(parseInt(id), rules);
       navigate(`/merchant/products/${id}`);
-    } catch (err: any) {
-      setError(err.response?.data?.message || '发布失败');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, '发布失败'));
     } finally {
       setLoading(false);
     }
@@ -109,6 +118,7 @@ export default function ProductForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
       <div className="max-w-2xl mx-auto px-4 py-8">
+        <PageBackButton fallback="/merchant/products" className="mb-4" />
         <h1 className="text-2xl font-bold text-white mb-6">{isEdit ? '编辑商品' : '新建竞拍'}</h1>
 
         {error && (

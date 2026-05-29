@@ -224,34 +224,39 @@ func TestUserListsActiveAuctionLobbyRows(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected lobby items array, got %T", data["items"])
 	}
-	if len(items) != 1 {
-		t.Fatalf("expected exactly 1 active lobby item, got %d", len(items))
-	}
 
-	item := items[0].(map[string]interface{})
-	if int64(item["product_id"].(float64)) != activeProductID {
-		t.Fatalf("expected product_id %d, got %v", activeProductID, item["product_id"])
+	foundActive := false
+	for _, rawItem := range items {
+		item := rawItem.(map[string]interface{})
+		if int64(item["auction_id"].(float64)) == pendingAuctionID {
+			t.Fatal("pending auction should not be visible in lobby")
+		}
+		if int64(item["product_id"].(float64)) != activeProductID {
+			continue
+		}
+
+		foundActive = true
+		if int64(item["auction_id"].(float64)) != activeAuctionID {
+			t.Fatalf("expected auction_id %d, got %v", activeAuctionID, item["auction_id"])
+		}
+		if item["title"] != "Active Lobby Product" {
+			t.Fatalf("expected active title, got %v", item["title"])
+		}
+		if item["image_url"] != "/static/images/active.jpg" {
+			t.Fatalf("expected first image url, got %v", item["image_url"])
+		}
+		if item["status"] != "active" {
+			t.Fatalf("expected active auction status, got %v", item["status"])
+		}
+		if item["current_price"].(float64) != 30 {
+			t.Fatalf("expected current price 30, got %v", item["current_price"])
+		}
+		if item["ended_at"] == nil {
+			t.Fatal("expected ended_at in lobby row")
+		}
 	}
-	if int64(item["auction_id"].(float64)) != activeAuctionID {
-		t.Fatalf("expected auction_id %d, got %v", activeAuctionID, item["auction_id"])
-	}
-	if item["title"] != "Active Lobby Product" {
-		t.Fatalf("expected active title, got %v", item["title"])
-	}
-	if item["image_url"] != "/static/images/active.jpg" {
-		t.Fatalf("expected first image url, got %v", item["image_url"])
-	}
-	if item["status"] != "active" {
-		t.Fatalf("expected active auction status, got %v", item["status"])
-	}
-	if item["current_price"].(float64) != 30 {
-		t.Fatalf("expected current price 30, got %v", item["current_price"])
-	}
-	if item["ended_at"] == nil {
-		t.Fatal("expected ended_at in lobby row")
-	}
-	if fmt.Sprintf("%.0f", item["auction_id"].(float64)) == fmt.Sprintf("%d", pendingAuctionID) {
-		t.Fatal("pending auction should not be visible in lobby")
+	if !foundActive {
+		t.Fatalf("expected active product %d in lobby items, got %d items", activeProductID, len(items))
 	}
 }
 

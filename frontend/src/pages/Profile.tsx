@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { getMe, updateProfile, changePassword, uploadAvatar } from '../api/user';
 import { logout as apiLogout } from '../api/auth';
 import AvatarUpload from '../components/AvatarUpload';
+import PageBackButton from '../components/PageBackButton';
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (typeof err === 'object' && err !== null && 'response' in err) {
@@ -112,7 +113,10 @@ export default function Profile() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
       <div className="max-w-lg mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-white">个人中心</h1>
+          <div>
+            <PageBackButton fallback={user.role === 'merchant' ? '/merchant/products' : '/app/auctions'} className="mb-3" />
+            <h1 className="text-2xl font-bold text-white">个人中心</h1>
+          </div>
           <div className="flex gap-2">
             {user.role === 'merchant' && (
               <Link

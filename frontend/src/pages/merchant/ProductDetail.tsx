@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getProduct, deleteProduct } from '../../api/product';
 import { activateAuction } from '../../api/auction';
+import PageBackButton from '../../components/PageBackButton';
 import type { ProductDetail as PD } from '../../types/product';
 
 const STATUS_TEXT: Record<string, string> = {
@@ -70,7 +71,7 @@ export default function ProductDetail() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-6">
-          <Link to="/merchant/products" className="text-white/60 hover:text-white">&larr; 返回</Link>
+          <PageBackButton fallback="/merchant/products" />
           <h1 className="text-2xl font-bold text-white">{product.title}</h1>
           <span className="px-2 py-1 rounded text-xs border border-purple-400 bg-purple-500/20 text-purple-300">
             {STATUS_TEXT[product.status]}

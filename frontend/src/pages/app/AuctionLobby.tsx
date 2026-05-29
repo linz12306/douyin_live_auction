@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listAuctionLobby } from '../../api/auction';
+import PageBackButton from '../../components/PageBackButton';
 import type { AuctionLobbyItem, AuctionStatus } from '../../types/auction';
 
 const STATUS_TEXT: Record<AuctionStatus, string> = {
@@ -20,6 +21,7 @@ const STATUS_BADGE: Record<AuctionStatus, string> = {
 };
 
 const DEFAULT_STATUS_BADGE = 'border-white/30 bg-white/10 text-white/70';
+const LOBBY_REFRESH_MS = 10000;
 
 const isAuctionStatus = (status: unknown): status is AuctionStatus => (
   typeof status === 'string' && status in STATUS_TEXT
@@ -53,41 +55,80 @@ const formatEndTime = (endedAt?: string) => {
 export default function AuctionLobby() {
   const [items, setItems] = useState<AuctionLobbyItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+
+  const loadLobby = useCallback(async () => {
+    setRefreshing(true);
+    setError('');
+
+    try {
+      setItems(await listAuctionLobby());
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
-    listAuctionLobby()
-      .then((nextItems) => {
+    const loadInitialLobby = async () => {
+      try {
+        const nextItems = await listAuctionLobby();
         if (mounted) setItems(nextItems);
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (mounted) setError(getErrorMessage(err));
-      })
-      .finally(() => {
+      } finally {
         if (mounted) setLoading(false);
-      });
+      }
+    };
+
+    void loadInitialLobby();
+
+    const intervalID = window.setInterval(() => {
+      void loadLobby();
+    }, LOBBY_REFRESH_MS);
+
+    const handleFocus = () => {
+      void loadLobby();
+    };
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       mounted = false;
+      window.clearInterval(intervalID);
+      window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [loadLobby]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-zinc-950">
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         <header className="mb-6 flex items-center justify-between">
           <div>
+            <PageBackButton fallback="/profile" className="mb-3" />
             <h1 className="text-2xl font-bold text-white">竞拍大厅</h1>
             <p className="mt-1 text-sm text-white/55">正在直播的竞拍商品</p>
           </div>
-          <Link
-            to="/profile"
-            className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white"
-          >
-            我的
-          </Link>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void loadLobby()}
+              disabled={refreshing}
+              className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {refreshing ? '刷新中...' : '刷新'}
+            </button>
+            <Link
+              to="/profile"
+              className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white"
+            >
+              我的
+            </Link>
+          </div>
         </header>
 
         {loading ? (

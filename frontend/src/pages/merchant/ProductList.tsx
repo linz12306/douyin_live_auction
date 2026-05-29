@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { listProducts } from '../../api/product';
+import PageBackButton from '../../components/PageBackButton';
 import type { Product, ProductStatus } from '../../types/product';
 
 const TABS: { key: ProductStatus | ''; label: string }[] = [
@@ -31,17 +32,29 @@ export default function ProductList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    let mounted = true;
+
     listProducts(activeTab || undefined)
-      .then((res) => setProducts(res.items))
-      .finally(() => setLoading(false));
+      .then((res) => {
+        if (mounted) setProducts(res.items);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-white">商品管理</h1>
+          <div>
+            <PageBackButton fallback="/profile" className="mb-3" />
+            <h1 className="text-2xl font-bold text-white">商品管理</h1>
+          </div>
           <Link to="/merchant/products/new" className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:opacity-90">
             + 新建竞拍
           </Link>
@@ -51,7 +64,10 @@ export default function ProductList() {
           {TABS.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                if (activeTab !== tab.key) setLoading(true);
+                setActiveTab(tab.key);
+              }}
               className={`px-4 py-2 rounded-lg text-sm border transition ${
                 activeTab === tab.key
                   ? 'border-purple-400 bg-purple-500/20 text-white'

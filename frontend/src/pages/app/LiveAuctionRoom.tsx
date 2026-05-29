@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { placeBid } from '../../api/auction';
+import PageBackButton from '../../components/PageBackButton';
 import { useAuthStore } from '../../store/authStore';
 import { useLiveRoomStore } from '../../store/liveRoomStore';
 import type { AuctionStatus, RankingItem } from '../../types/auction';
@@ -175,9 +176,7 @@ export default function LiveAuctionRoom() {
               </span>
             </div>
             <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-              <Link to="/app/auctions" className="mb-3 inline-flex text-sm text-white/70 hover:text-white">
-                返回大厅
-              </Link>
+              <PageBackButton fallback="/app/auctions" className="mb-3 bg-black/25" />
               <h1 className="break-words text-2xl font-bold leading-tight sm:text-3xl">
                 {roomProduct?.title || '直播竞拍间'}
               </h1>

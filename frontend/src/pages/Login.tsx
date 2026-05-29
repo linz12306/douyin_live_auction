@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
+import PageBackButton from '../components/PageBackButton';
 import { useAuthStore } from '../store/authStore';
 
 function getErrorMessage(err: unknown, fallback: string) {
@@ -37,6 +38,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
       <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-white/20">
+        <PageBackButton fallback="/login" className="mb-5 bg-white/5" />
         <h1 className="text-3xl font-bold text-white text-center mb-2">实时竞拍大师</h1>
         <p className="text-white/60 text-center mb-8">登录你的账号</p>
 
