@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getProduct: vi.fn(),
   deleteProduct: vi.fn(),
   activateAuction: vi.fn(),
+  cancelAuction: vi.fn(),
 }));
 
 vi.mock('../../api/product', () => ({
@@ -19,6 +20,7 @@ vi.mock('../../api/product', () => ({
 
 vi.mock('../../api/auction', () => ({
   activateAuction: mocks.activateAuction,
+  cancelAuction: mocks.cancelAuction,
 }));
 
 const pendingDetail: PD = {
@@ -65,6 +67,20 @@ const activeDetail: PD = {
   },
 };
 
+const cancelledDetail: PD = {
+  ...pendingDetail,
+  product: {
+    ...pendingDetail.product,
+    status: 'cancelled',
+    updated_at: '2026-05-29T10:02:00.000Z',
+  },
+  auction: {
+    ...pendingDetail.auction!,
+    status: 'cancelled',
+    version: 2,
+  },
+};
+
 function renderDetail() {
   return render(
     <MemoryRouter initialEntries={['/merchant/products/12']}>
@@ -80,6 +96,7 @@ describe('ProductDetail', () => {
     mocks.getProduct.mockReset();
     mocks.deleteProduct.mockReset();
     mocks.activateAuction.mockReset();
+    mocks.cancelAuction.mockReset();
   });
 
   afterEach(() => {
@@ -97,5 +114,48 @@ describe('ProductDetail', () => {
     await waitFor(() => expect(mocks.activateAuction).toHaveBeenCalledWith(9));
     await waitFor(() => expect(mocks.getProduct).toHaveBeenCalledTimes(2));
     expect(await screen.findByText('进行中')).toBeInTheDocument();
+  });
+
+  it('cancels a pending auction with a reason and refreshes the detail state', async () => {
+    mocks.getProduct.mockResolvedValueOnce(pendingDetail).mockResolvedValueOnce(cancelledDetail);
+    mocks.cancelAuction.mockResolvedValueOnce(undefined);
+
+    renderDetail();
+
+    fireEvent.click(await screen.findByRole('button', { name: '取消竞拍' }));
+    fireEvent.change(screen.getByLabelText('取消原因'), { target: { value: '库存不足' } });
+    fireEvent.click(screen.getByRole('button', { name: '确认取消' }));
+
+    await waitFor(() => expect(mocks.cancelAuction).toHaveBeenCalledWith(9, '库存不足'));
+    await waitFor(() => expect(mocks.getProduct).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('已取消')).toBeInTheDocument();
+  });
+
+  it('requires a cancellation reason before calling the API', async () => {
+    mocks.getProduct.mockResolvedValueOnce(pendingDetail);
+
+    renderDetail();
+
+    fireEvent.click(await screen.findByRole('button', { name: '取消竞拍' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认取消' }));
+
+    expect(mocks.cancelAuction).not.toHaveBeenCalled();
+    expect(screen.getByText('请输入取消原因')).toBeInTheDocument();
+  });
+
+  it('shows the backend cancellation error when active auction cancellation is blocked', async () => {
+    mocks.getProduct.mockResolvedValueOnce(activeDetail);
+    mocks.cancelAuction.mockRejectedValueOnce({
+      response: { data: { message: '最后出价后30秒内不可取消' } },
+    });
+
+    renderDetail();
+
+    fireEvent.click(await screen.findByRole('button', { name: '取消竞拍' }));
+    fireEvent.change(screen.getByLabelText('取消原因'), { target: { value: '价格异常' } });
+    fireEvent.click(screen.getByRole('button', { name: '确认取消' }));
+
+    await waitFor(() => expect(mocks.cancelAuction).toHaveBeenCalledWith(9, '价格异常'));
+    expect(await screen.findByText('最后出价后30秒内不可取消')).toBeInTheDocument();
   });
 });

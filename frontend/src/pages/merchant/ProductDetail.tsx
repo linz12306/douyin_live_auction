@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getProduct, deleteProduct } from '../../api/product';
-import { activateAuction } from '../../api/auction';
+import { activateAuction, cancelAuction } from '../../api/auction';
 import PageBackButton from '../../components/PageBackButton';
 import type { ProductDetail as PD } from '../../types/product';
 
@@ -16,6 +16,9 @@ export default function ProductDetail() {
   const [detail, setDetail] = useState<PD | null>(null);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [error, setError] = useState('');
 
   const productId = parseInt(id!, 10);
@@ -52,10 +55,34 @@ export default function ProductDetail() {
       const nextDetail = await getProduct(productId);
       setDetail(nextDetail);
     } catch (activateError) {
-      const message = getApiErrorMessage(activateError);
+      const message = getApiErrorMessage(activateError, '开拍失败，请稍后重试');
       setError(message);
     } finally {
       setActivating(false);
+    }
+  };
+
+  const handleCancelAuction = async () => {
+    if (!detail?.auction) return;
+
+    const reason = cancelReason.trim();
+    if (!reason) {
+      setError('请输入取消原因');
+      return;
+    }
+
+    setError('');
+    setCancelling(true);
+    try {
+      await cancelAuction(detail.auction.id, reason);
+      const nextDetail = await getProduct(productId);
+      setDetail(nextDetail);
+      setShowCancelForm(false);
+      setCancelReason('');
+    } catch (cancelError) {
+      setError(getApiErrorMessage(cancelError, '取消失败，请稍后重试'));
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -66,6 +93,7 @@ export default function ProductDetail() {
   const canEdit = product.status === 'draft' || product.status === 'pending';
   const canDelete = product.status === 'draft';
   const canActivate = Boolean(auction && (product.status === 'pending' || auction.status === 'pending'));
+  const canCancel = Boolean(auction && (product.status === 'pending' || product.status === 'active'));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
@@ -114,7 +142,46 @@ export default function ProductDetail() {
           </div>
         )}
 
-        {(canEdit || canActivate) && (
+        {showCancelForm && canCancel && (
+          <div className="mb-4 rounded-xl border border-red-300/35 bg-red-500/12 p-4">
+            <label htmlFor="cancel-reason" className="mb-2 block text-sm font-medium text-red-100">
+              取消原因
+            </label>
+            <textarea
+              id="cancel-reason"
+              aria-label="取消原因"
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="例如：库存异常、直播中断、商品信息有误"
+              className="w-full resize-none rounded-lg border border-white/20 bg-white/8 px-3 py-2 text-sm text-white outline-none placeholder:text-white/35 focus:border-red-200"
+            />
+            <div className="mt-3 flex gap-3">
+              <button
+                type="button"
+                onClick={handleCancelAuction}
+                disabled={cancelling}
+                className="flex-1 rounded-lg bg-red-500 py-3 text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {cancelling ? '取消中...' : '确认取消'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCancelForm(false);
+                  setCancelReason('');
+                }}
+                disabled={cancelling}
+                className="flex-1 rounded-lg border border-white/20 bg-white/8 py-3 text-white/75 transition hover:border-white/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                放弃取消
+              </button>
+            </div>
+          </div>
+        )}
+
+        {(canEdit || canActivate || canCancel) && (
           <div className="flex gap-3">
             {canActivate && (
               <button onClick={handleActivate} disabled={activating}
@@ -134,6 +201,18 @@ export default function ProductDetail() {
                 删除
               </button>
             )}
+            {canCancel && !showCancelForm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setShowCancelForm(true);
+                }}
+                className="flex-1 py-3 bg-red-500 text-white rounded-lg hover:opacity-90"
+              >
+                取消竞拍
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -141,10 +220,10 @@ export default function ProductDetail() {
   );
 }
 
-function getApiErrorMessage(error: unknown): string {
+function getApiErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === 'object' && error !== null && 'response' in error) {
     const response = (error as { response?: { data?: { message?: unknown } } }).response;
     if (typeof response?.data?.message === 'string') return response.data.message;
   }
-  return '开拍失败，请稍后重试';
+  return fallback;
 }

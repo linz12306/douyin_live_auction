@@ -50,3 +50,7 @@ export async function placeBid(auctionId: number, amount: number): Promise<void>
 export async function activateAuction(auctionId: number): Promise<void> {
   await client.post(`/auctions/${auctionId}/activate`);
 }
+
+export async function cancelAuction(auctionId: number, reason: string): Promise<void> {
+  await client.delete(`/auctions/${auctionId}`, { data: { reason } });
+}
