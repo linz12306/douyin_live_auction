@@ -85,9 +85,11 @@
   - Update `docs/superpowers/plans/2026-05-29-order-system.md`.
   - Update project memory files after verified implementation.
   - Archive the OpenSpec change after acceptance.
+  - Current status: final verification passed and project memory is being updated; OpenSpec archive remains pending user acceptance.
   - Verification:
-    - `npx -y @fission-ai/openspec@latest validate order-system --strict --no-interactive`
-    - `npx -y @fission-ai/openspec@latest validate --specs --strict --no-interactive`
-    - `cd backend && /Users/vivix/.local/go/bin/go test ./...`
-    - `cd frontend && npm run build`
-    - `git diff --check`
+    - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/order-system.spec.ts` passed.
+    - `npx -y @fission-ai/openspec@latest validate order-system --strict --no-interactive` passed.
+    - `npx -y @fission-ai/openspec@latest validate --specs --strict --no-interactive` passed.
+    - `cd backend && /Users/vivix/.local/go/bin/go test ./...` passed.
+    - `cd frontend && npm run build` passed.
+    - `git diff --check` passed.

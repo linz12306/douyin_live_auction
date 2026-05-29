@@ -258,6 +258,15 @@
 ## 2026-05-28 ws-realtime-live-room
 
 - 当前本地仓库迁移到 `/Users/vivix/Documents/Codex/douyin_live_auction`；Go 命令使用 `/Users/vivix/.local/go/bin/go`；本机 MySQL 默认 `127.0.0.1:3307`，Redis 默认 `127.0.0.1:16379`。
+
+## 2026-05-29 order-system
+
+- `order-system` 已在分支 `codex/order-system` 完成实现和验证，OpenSpec change 位于 `openspec/changes/order-system/`；归档等待用户验收后执行。
+- 订单 API 已接入：`GET /api/v1/orders`、`GET /api/v1/orders/:id`、`POST /api/v1/orders/:id/confirm`、`POST /api/v1/orders/:id/pay`、`POST /api/v1/orders/:id/cancel`。
+- 用户端新增 `/app/orders`、`/app/orders/:id`；商家端新增 `/merchant/orders`、`/merchant/orders/:id`。
+- 关键业务决策：auction-engine 创建 `pending_confirm` 订单时已经扣减中标冻结金额，所以模拟支付不二次扣款；确认前取消或确认超时通过订单服务补偿退款一次。
+- 订单取消/超时不改写 `auctions` 和 `products` 的 `ended_sold` 历史状态。
+- 推送当前仍被本机全局 pre-push/DLP hook 拦截，需要用户侧放行或手动处理。
 - `ws-realtime-live-room` 已完成用户端实时房间主链路：WebSocket `/ws/auctions/:id` 快照/广播/私有 outbid，用户大厅 `/app/auctions`，直播间 `/app/auctions/:id`，REST 出价后由 WebSocket 驱动当前价与排行榜更新。
 - Task 9 E2E 约定：用 API setup 注册/登录商家和用户、创建商品、发布并激活竞拍；用户 A 必须从 `/app/auctions` 进入房间；用户 A 应看到 snapshot 倒计时；用户 B 使用第二浏览器上下文出更高价；用户 A 应看到私有 `您已被超过` 通知以及当前价/排行榜更新；用户 A 再封顶出价触发真实 `auction_end`，并断言终态消息/状态和禁用出价控件。
 - 为避免误用旧服务，Playwright 支持 `PLAYWRIGHT_BASE_URL`，Vite dev proxy 支持 `VITE_BACKEND_TARGET`，后端支持显式测试开关 `DISABLE_RATE_LIMIT=1`。已有 `localhost:8080` 不一定是当前后端代码时，优先用 `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` 起当前后端到备用端口并让前端代理过去验证 `/ws`。

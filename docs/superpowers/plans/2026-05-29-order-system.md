@@ -533,7 +533,7 @@ PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/order-s
 
 Result: PASS with `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/order-system.spec.ts` against backend `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` and Vite `VITE_BACKEND_TARGET=http://localhost:18080`.
 
-- [ ] **Step 3: Commit E2E slice**
+- [x] **Step 3: Commit E2E slice**
 
 Run:
 
@@ -544,6 +544,8 @@ git commit -m "test(order): cover paid order workflow"
 
 Skip `playwright.config.ts` if unchanged.
 
+Result: committed as `745fbfc test(order): cover paid order workflow`; `playwright.config.ts` was unchanged.
+
 ## Task 7: Final Verification, Docs, And Memory
 
 **Files:**
@@ -552,7 +554,7 @@ Skip `playwright.config.ts` if unchanged.
 - Modify: `projects/proj-1779447357476-ryiijf/memory/2026-05-29.md`
 - Modify: `projects/proj-1779447357476-ryiijf/memory/long-term.md`
 
-- [ ] **Step 1: Run final verification**
+- [x] **Step 1: Run final verification**
 
 Run:
 
@@ -567,11 +569,13 @@ git diff --check
 
 Expected: all commands pass.
 
-- [ ] **Step 2: Sync task checkboxes**
+Result: all commands passed. E2E had already passed with `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/order-system.spec.ts`.
 
-Update OpenSpec and this plan so only truly verified work is checked.
+- [x] **Step 2: Sync task checkboxes**
 
-- [ ] **Step 3: Update memory**
+Update OpenSpec and this plan so only truly verified work is checked. OpenSpec archive remains pending user acceptance.
+
+- [x] **Step 3: Update memory**
 
 Record:
 
