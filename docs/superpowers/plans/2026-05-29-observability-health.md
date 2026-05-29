@@ -808,3 +808,5 @@ git push origin codex/observability-health
 ```
 
 Expected: branch pushes unless blocked by the local pre-push/DLP hook. If blocked, report the exact hook result and leave commits local.
+
+Result: attempted twice with `git push origin codex/observability-health` and `git push --porcelain origin codex/observability-health`. Both failed with `error: failed to push some refs to 'github.com:linz12306/douyin_live_auction.git'`. The local global hook created `/tmp/douyin_live_auction_push_forbidden`, so the branch remains local and ahead of origin.

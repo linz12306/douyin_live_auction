@@ -53,7 +53,7 @@
   - 已实现：`GET /healthz`，返回 DB、Redis、竞拍引擎/realtime runtime 健康状态。
   - 响应规则：全部健康返回 HTTP 200 + `status: "ok"`；任一必需组件降级返回 HTTP 503 + `status: "degraded"`。
   - 范围控制：未引入 Prometheus/OpenTelemetry/外部日志系统，未改动出价、订单、钱包或 WebSocket 业务语义。
-  - 当前状态：实现 commit 已完成，OpenSpec strict、后端测试和 `/healthz` 接口验证通过；等待最终 memory/docs commit 和 push。
+  - 当前状态：实现和 memory/docs commit 已完成，OpenSpec strict、后端测试和 `/healthz` 接口验证通过；push 被本机全局 pre-push hook 阻止，生成了 `/tmp/douyin_live_auction_push_forbidden`。
 
 ## 关键业务决策
 
