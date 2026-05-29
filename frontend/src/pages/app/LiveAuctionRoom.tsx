@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { placeBid } from '../../api/auction';
 import PageBackButton from '../../components/PageBackButton';
+import { usePageRefresh } from '../../hooks/usePageRefresh';
 import { useAuthStore } from '../../store/authStore';
 import { useLiveRoomStore } from '../../store/liveRoomStore';
 import type { AuctionStatus, RankingItem } from '../../types/auction';
@@ -133,11 +134,17 @@ export default function LiveAuctionRoom() {
     return `出价 ${formatPrice(roomNextBidAmount)}`;
   }, [active, roomNextBidAmount, roomStatus, submitState, terminal]);
 
-  useEffect(() => {
+  const refreshRoom = useCallback(() => {
     if (!isValidAuctionId || !accessToken) return;
     connect(auctionId, accessToken);
+  }, [accessToken, auctionId, connect, isValidAuctionId]);
+
+  usePageRefresh(refreshRoom, { disabled: !isValidAuctionId || !accessToken });
+
+  useEffect(() => {
+    refreshRoom();
     return () => disconnect();
-  }, [accessToken, auctionId, connect, disconnect, isValidAuctionId]);
+  }, [disconnect, refreshRoom]);
 
   async function submitBid(amount: number) {
     if (bidDisabled || !Number.isFinite(amount) || amount <= 0) return;
@@ -176,7 +183,17 @@ export default function LiveAuctionRoom() {
               </span>
             </div>
             <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-              <PageBackButton fallback="/app/auctions" className="mb-3 bg-black/25" />
+              <div className="mb-3 flex flex-wrap gap-2">
+                <PageBackButton fallback="/app/auctions" className="bg-black/25" />
+                <button
+                  type="button"
+                  onClick={refreshRoom}
+                  disabled={!isValidAuctionId || !accessToken}
+                  className="inline-flex items-center rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  刷新状态
+                </button>
+              </div>
               <h1 className="break-words text-2xl font-bold leading-tight sm:text-3xl">
                 {roomProduct?.title || '直播竞拍间'}
               </h1>

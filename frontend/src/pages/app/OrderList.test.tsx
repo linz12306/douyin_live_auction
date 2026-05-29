@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listOrders } from '../../api/order';
@@ -12,27 +12,27 @@ vi.mock('../../api/order', () => ({
 
 const mockedListOrders = vi.mocked(listOrders);
 
+const pendingOrder = {
+  id: 9,
+  auction_id: 7,
+  product_id: 3,
+  merchant_id: 2,
+  buyer_id: 4,
+  product_title: '复古牛仔夹克',
+  product_image_url: 'https://img.test/jacket.jpg',
+  amount: 220,
+  status: 'pending_confirm' as const,
+  confirm_deadline: '2026-05-29T10:30:00.000Z',
+  created_at: '2026-05-29T10:00:00.000Z',
+  updated_at: '2026-05-29T10:00:00.000Z',
+  actions: { can_confirm: true, can_pay: false, can_cancel: true },
+};
+
 describe('App OrderList', () => {
   beforeEach(() => {
     mockedListOrders.mockReset();
     mockedListOrders.mockResolvedValue({
-      items: [
-        {
-          id: 9,
-          auction_id: 7,
-          product_id: 3,
-          merchant_id: 2,
-          buyer_id: 4,
-          product_title: '复古牛仔夹克',
-          product_image_url: 'https://img.test/jacket.jpg',
-          amount: 220,
-          status: 'pending_confirm',
-          confirm_deadline: '2026-05-29T10:30:00.000Z',
-          created_at: '2026-05-29T10:00:00.000Z',
-          updated_at: '2026-05-29T10:00:00.000Z',
-          actions: { can_confirm: true, can_pay: false, can_cancel: true },
-        },
-      ],
+      items: [pendingOrder],
       total: 1,
       page: 1,
       size: 20,
@@ -56,5 +56,34 @@ describe('App OrderList', () => {
     expect(screen.getByText('¥220.00')).toBeInTheDocument();
     await waitFor(() => expect(mockedListOrders).toHaveBeenCalledWith());
     expect(screen.getByRole('link', { name: '查看详情' })).toHaveAttribute('href', '/app/orders/9');
+  });
+
+  it('refreshes when the order page becomes visible again', async () => {
+    mockedListOrders
+      .mockResolvedValueOnce({ items: [pendingOrder], total: 1, page: 1, size: 20 })
+      .mockResolvedValueOnce({
+        items: [{ ...pendingOrder, status: 'paid', paid_at: '2026-05-29T10:15:00.000Z' }],
+        total: 1,
+        page: 1,
+        size: 20,
+      });
+    const visibilitySpy = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+
+    render(
+      <MemoryRouter>
+        <OrderList />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('待确认')).toBeInTheDocument();
+
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText('已支付')).toBeInTheDocument();
+    expect(mockedListOrders).toHaveBeenCalledTimes(2);
+    visibilitySpy.mockRestore();
   });
 });

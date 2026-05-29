@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listAuctionLobby } from '../../api/auction';
 import PageBackButton from '../../components/PageBackButton';
+import { usePageRefresh } from '../../hooks/usePageRefresh';
 import type { AuctionLobbyItem, AuctionStatus } from '../../types/auction';
 
 const STATUS_TEXT: Record<AuctionStatus, string> = {
@@ -72,6 +73,8 @@ export default function AuctionLobby() {
     }
   }, []);
 
+  usePageRefresh(loadLobby, { intervalMs: LOBBY_REFRESH_MS });
+
   useEffect(() => {
     let mounted = true;
 
@@ -88,21 +91,10 @@ export default function AuctionLobby() {
 
     void loadInitialLobby();
 
-    const intervalID = window.setInterval(() => {
-      void loadLobby();
-    }, LOBBY_REFRESH_MS);
-
-    const handleFocus = () => {
-      void loadLobby();
-    };
-    window.addEventListener('focus', handleFocus);
-
     return () => {
       mounted = false;
-      window.clearInterval(intervalID);
-      window.removeEventListener('focus', handleFocus);
     };
-  }, [loadLobby]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-zinc-950">

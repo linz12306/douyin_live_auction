@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listOrders } from '../../api/order';
+import PageBackButton from '../../components/PageBackButton';
+import { usePageRefresh } from '../../hooks/usePageRefresh';
 import type { OrderListItem, OrderStatus } from '../../types/order';
 
 const STATUS_TEXT: Record<OrderStatus, string> = {
@@ -32,7 +34,23 @@ function statusBadge(status: string) {
 export default function OrderList() {
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+
+  const loadOrders = useCallback(async () => {
+    setRefreshing(true);
+    setError('');
+
+    try {
+      const result = await listOrders();
+      setOrders(result.items);
+    } catch {
+      setError('订单列表加载失败');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -51,17 +69,30 @@ export default function OrderList() {
     };
   }, []);
 
+  usePageRefresh(loadOrders);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
       <main className="mx-auto max-w-5xl px-4 py-8">
         <header className="mb-6 flex items-center justify-between gap-3">
           <div>
+            <PageBackButton fallback="/merchant/products" className="mb-3" />
             <h1 className="text-2xl font-bold text-white">订单管理</h1>
             <p className="mt-1 text-sm text-white/55">查看成交订单与买家信息</p>
           </div>
-          <Link to="/merchant/products" className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/75 hover:border-white/40">
-            商品管理
-          </Link>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void loadOrders()}
+              disabled={refreshing}
+              className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/75 hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {refreshing ? '刷新中...' : '刷新'}
+            </button>
+            <Link to="/merchant/products" className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/75 hover:border-white/40">
+              商品管理
+            </Link>
+          </div>
         </header>
 
         {loading ? (

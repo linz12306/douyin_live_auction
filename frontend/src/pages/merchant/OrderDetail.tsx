@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { getOrder } from '../../api/order';
+import PageBackButton from '../../components/PageBackButton';
+import { usePageRefresh } from '../../hooks/usePageRefresh';
 import type { OrderDetail as OrderDetailType, OrderStatus } from '../../types/order';
 
 const STATUS_TEXT: Record<OrderStatus, string> = {
@@ -33,7 +35,28 @@ export default function OrderDetail() {
   const orderId = Number(id);
   const [order, setOrder] = useState<OrderDetailType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+
+  const loadOrder = useCallback(async () => {
+    if (!Number.isFinite(orderId) || orderId <= 0) {
+      setError('订单不存在');
+      setLoading(false);
+      return;
+    }
+
+    setRefreshing(true);
+    setError('');
+
+    try {
+      setOrder(await getOrder(orderId));
+    } catch {
+      setError('订单详情加载失败');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [orderId]);
 
   useEffect(() => {
     if (!Number.isFinite(orderId) || orderId <= 0) return;
@@ -53,6 +76,8 @@ export default function OrderDetail() {
     };
   }, [orderId]);
 
+  usePageRefresh(loadOrder, { disabled: !Number.isFinite(orderId) || orderId <= 0 });
+
   if (loading) {
     return <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 px-4 py-10 text-center text-white/60">加载中...</div>;
   }
@@ -63,9 +88,17 @@ export default function OrderDetail() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
       <main className="mx-auto max-w-4xl px-4 py-8">
-        <Link to="/merchant/orders" className="mb-4 inline-flex text-sm text-white/65 hover:text-white">
-          返回订单
-        </Link>
+        <div className="mb-4 flex flex-wrap gap-2">
+          <PageBackButton fallback="/merchant/orders" />
+          <button
+            type="button"
+            onClick={() => void loadOrder()}
+            disabled={refreshing}
+            className="rounded-lg border border-white/20 bg-white/8 px-3 py-2 text-sm text-white/75 hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {refreshing ? '刷新中...' : '刷新状态'}
+          </button>
+        </div>
 
         <section className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur-lg">
           <div className="flex items-start gap-5">

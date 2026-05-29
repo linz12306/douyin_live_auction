@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getProduct, deleteProduct } from '../../api/product';
 import { activateAuction, cancelAuction } from '../../api/auction';
 import PageBackButton from '../../components/PageBackButton';
+import { usePageRefresh } from '../../hooks/usePageRefresh';
 import type { ProductDetail as PD } from '../../types/product';
 
 const STATUS_TEXT: Record<string, string> = {
@@ -15,6 +16,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const [detail, setDetail] = useState<PD | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activating, setActivating] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelForm, setShowCancelForm] = useState(false);
@@ -23,12 +25,35 @@ export default function ProductDetail() {
 
   const productId = parseInt(id!, 10);
 
+  const loadDetail = useCallback(async () => {
+    if (!Number.isFinite(productId) || productId <= 0) {
+      setError('商品不存在');
+      setLoading(false);
+      return;
+    }
+
+    setRefreshing(true);
+    setError('');
+
+    try {
+      setDetail(await getProduct(productId));
+    } catch {
+      setError('商品详情加载失败');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [productId]);
+
   useEffect(() => {
     let ignore = false;
 
     getProduct(productId)
       .then((nextDetail) => {
         if (!ignore) setDetail(nextDetail);
+      })
+      .catch(() => {
+        if (!ignore) setError('商品详情加载失败');
       })
       .finally(() => {
         if (!ignore) setLoading(false);
@@ -38,6 +63,8 @@ export default function ProductDetail() {
       ignore = true;
     };
   }, [productId]);
+
+  usePageRefresh(loadDetail, { disabled: !Number.isFinite(productId) || productId <= 0 });
 
   const handleDelete = async () => {
     if (!confirm('确定删除？')) return;
@@ -52,8 +79,7 @@ export default function ProductDetail() {
     setActivating(true);
     try {
       await activateAuction(detail.auction.id);
-      const nextDetail = await getProduct(productId);
-      setDetail(nextDetail);
+      await loadDetail();
     } catch (activateError) {
       const message = getApiErrorMessage(activateError, '开拍失败，请稍后重试');
       setError(message);
@@ -75,8 +101,7 @@ export default function ProductDetail() {
     setCancelling(true);
     try {
       await cancelAuction(detail.auction.id, reason);
-      const nextDetail = await getProduct(productId);
-      setDetail(nextDetail);
+      await loadDetail();
       setShowCancelForm(false);
       setCancelReason('');
     } catch (cancelError) {
@@ -100,6 +125,14 @@ export default function ProductDetail() {
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-6">
           <PageBackButton fallback="/merchant/products" />
+          <button
+            type="button"
+            onClick={() => void loadDetail()}
+            disabled={refreshing || activating || cancelling}
+            className="rounded-lg border border-white/20 bg-white/8 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {refreshing ? '刷新中...' : '刷新状态'}
+          </button>
           <h1 className="text-2xl font-bold text-white">{product.title}</h1>
           <span className="px-2 py-1 rounded text-xs border border-purple-400 bg-purple-500/20 text-purple-300">
             {STATUS_TEXT[product.status]}
