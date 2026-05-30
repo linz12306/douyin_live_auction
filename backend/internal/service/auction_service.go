@@ -167,7 +167,7 @@ func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string
 			Amount:     req.Amount,
 			OccurredAt: now,
 		})
-		if previousBid != nil {
+		if previousBid != nil && previousBid.UserID != userID {
 			previousUserID := previousBid.UserID
 			events = append(events, realtime.AuctionEvent{
 				Type:           realtime.EventBidOutbid,

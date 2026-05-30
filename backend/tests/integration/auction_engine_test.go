@@ -642,6 +642,35 @@ func TestOutbidPublishesRealtimeEvent(t *testing.T) {
 	}
 }
 
+func TestSameUserRebidDoesNotPublishOutbidEvent(t *testing.T) {
+	r, db, eventBus := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, userID := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+	placeBid(t, ts, auctionID, userToken, 10)
+
+	events, unsubscribe := eventBus.Subscribe()
+	defer unsubscribe()
+	placeBid(t, ts, auctionID, userToken, 20)
+
+	event := requireNextAuctionEvent(t, events, realtime.EventBidAccepted)
+	var version int64
+	if err := db.QueryRow("SELECT version FROM auctions WHERE id = ?", auctionID).Scan(&version); err != nil {
+		t.Fatalf("query auction version: %v", err)
+	}
+	if event.AuctionID != auctionID || event.UserID != userID || event.Amount != 20 || event.Version != version {
+		t.Fatalf("unexpected accepted event: %+v, want auction=%d user=%d amount=20 version=%d", event, auctionID, userID, version)
+	}
+	if event.PreviousUserID != nil || event.PreviousAmount != 0 {
+		t.Fatalf("same-user accepted event should not include previous bidder data: %+v", event)
+	}
+	assertNoAuctionEvent(t, events)
+}
+
 func TestSnapshotProviderReturnsAuctionStateAndRankings(t *testing.T) {
 	r, db := setupAuctionServer(t)
 	ts := httptest.NewServer(r)

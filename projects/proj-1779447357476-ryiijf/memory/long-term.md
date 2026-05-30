@@ -78,3 +78,9 @@
 2. `merchant-admin` / 运营增强：商家实时看板、成交趋势、出价分布、用户活跃度。
 3. 可观测性后续增强：结构化日志、竞拍引擎指标、WebSocket/锁竞争指标。
 4. 演示打磨：移动端动画、提示文案、完整演示路径 E2E。
+## 2026-05-30 Fix Notes
+
+- Active bugfix branch: `codex/fix-self-outbid-notification`.
+- Current active OpenSpec change: `fix-self-outbid-notification`; do not archive until user accepts the live-room retest.
+- Decision: self-rebids must still broadcast accepted bid updates, but must not emit private `outbid` events because the previous active bid was not replaced by a different user.
+- Verification passed for focused integration, related backend packages, OpenSpec strict validation, and diff whitespace check.
