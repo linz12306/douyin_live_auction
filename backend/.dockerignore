@@ -1,0 +1,6 @@
+.env
+*.log
+*.test
+coverage.out
+static/avatars/*
+static/images/*

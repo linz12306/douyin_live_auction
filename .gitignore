@@ -2,6 +2,7 @@ node_modules/
 .worktrees/
 *.exe
 .superpowers/
+backend/.env
 backend/static/avatars/*
 !backend/static/avatars/.gitkeep
 backend/static/images/*

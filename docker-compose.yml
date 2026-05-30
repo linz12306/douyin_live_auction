@@ -1,0 +1,63 @@
+name: douyin-live
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: auction123
+      MYSQL_DATABASE: auction_db
+      TZ: Asia/Shanghai
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    container_name: douyin-live-redis
+    image: redis:7-alpine
+    ports:
+      - "16380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    profiles:
+      - app
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DB_DSN: root:auction123@tcp(mysql:3306)/auction_db?parseTime=true&loc=Local&charset=utf8mb4
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      JWT_SECRET: dev-secret-change-me
+      SERVER_PORT: "8080"
+      AVATAR_DIR: /app/static/avatars
+      IMAGE_DIR: /app/static/images
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend_avatars:/app/static/avatars
+      - backend_images:/app/static/images
+
+volumes:
+  mysql_data:
+  redis_data:
+  backend_avatars:
+  backend_images:

@@ -21,7 +21,7 @@ func Load() *Config {
 
 	return &Config{
 		DBDSN:      getEnv("DB_DSN", "root:auction123@tcp(127.0.0.1:3307)/auction_db?parseTime=true&loc=Local&charset=utf8mb4"),
-		RedisAddr:  getEnv("REDIS_ADDR", "127.0.0.1:16379"),
+		RedisAddr:  getEnv("REDIS_ADDR", "127.0.0.1:16380"),
 		RedisPass:  getEnv("REDIS_PASSWORD", ""),
 		JWTSecret:  getEnv("JWT_SECRET", "dev-secret-change-me"),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
