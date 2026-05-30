@@ -34,6 +34,7 @@ func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realti
 	if err != nil {
 		t.Fatalf("Failed to connect to MySQL: %v", err)
 	}
+	acquireMySQLTestLock(t, db)
 
 	cleanupAuctionTestData(t, db)
 
@@ -98,21 +99,23 @@ func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realti
 func cleanupAuctionTestData(t *testing.T, db *sql.DB) {
 	t.Helper()
 
-	_, _ = db.Exec("DELETE FROM orders WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'auc_mer_%'))")
-	_, _ = db.Exec("DELETE FROM auction_logs WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'auc_mer_%'))")
-	_, _ = db.Exec("DELETE FROM bids WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'auc_mer_%'))")
-	_, _ = db.Exec("DELETE FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'auc_mer_%')")
-	_, _ = db.Exec("DELETE FROM product_images WHERE product_id IN (SELECT id FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'auc_mer_%'))")
-	_, _ = db.Exec("DELETE FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'auc_mer_%')")
-	_, _ = db.Exec("DELETE FROM users WHERE username LIKE 'auc_mer_%'")
-	_, _ = db.Exec("DELETE FROM users WHERE username LIKE 'auc_usr_%'")
+	merchantLike := auctionMerchantPrefix(t) + "%"
+	userLike := auctionUserPrefix(t) + "%"
+	_, _ = db.Exec("DELETE FROM orders WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?))", merchantLike)
+	_, _ = db.Exec("DELETE FROM auction_logs WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?))", merchantLike)
+	_, _ = db.Exec("DELETE FROM bids WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?))", merchantLike)
+	_, _ = db.Exec("DELETE FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?)", merchantLike)
+	_, _ = db.Exec("DELETE FROM product_images WHERE product_id IN (SELECT id FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?))", merchantLike)
+	_, _ = db.Exec("DELETE FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?)", merchantLike)
+	_, _ = db.Exec("DELETE FROM users WHERE username LIKE ?", merchantLike)
+	_, _ = db.Exec("DELETE FROM users WHERE username LIKE ?", userLike)
 }
 
 func registerAuctionMerchant(t *testing.T, ts *httptest.Server) string {
 	t.Helper()
 
 	body, _ := json.Marshal(map[string]string{
-		"username":     "auc_mer_" + randomSuffix(),
+		"username":     auctionMerchantPrefix(t) + randomSuffix(),
 		"password":     "test123",
 		"role":         "merchant",
 		"display_name": "Auction Merchant",
@@ -137,7 +140,7 @@ func registerAuctionMerchant(t *testing.T, ts *httptest.Server) string {
 func registerAuctionUser(t *testing.T, ts *httptest.Server) (string, int64) {
 	t.Helper()
 
-	username := "auc_usr_" + randomSuffix()
+	username := auctionUserPrefix(t) + randomSuffix()
 	body, _ := json.Marshal(map[string]string{
 		"username":     username,
 		"password":     "test123",
@@ -224,11 +227,12 @@ func publishAuction(t *testing.T, ts *httptest.Server, merchantToken string, cei
 func activateAuction(t *testing.T, db *sql.DB, auctionID int64) {
 	t.Helper()
 
+	now := time.Now()
 	_, err := db.Exec(
 		`UPDATE auctions
-         SET status = 'active', started_at = NOW(), ended_at = DATE_ADD(NOW(), INTERVAL 5 MINUTE)
+         SET status = 'active', started_at = ?, ended_at = ?
          WHERE id = ?`,
-		auctionID,
+		now, now.Add(5*time.Minute), auctionID,
 	)
 	if err != nil {
 		t.Fatalf("activate auction: %v", err)
@@ -251,10 +255,11 @@ func activateAuctionViaAPI(t *testing.T, ts *httptest.Server, merchantToken stri
 func expireOnlyAuctionForSettlement(t *testing.T, db *sql.DB, auctionID int64) {
 	t.Helper()
 
-	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE status = 'active'"); err != nil {
+	now := time.Now()
+	if _, err := db.Exec("UPDATE auctions SET ended_at = ? WHERE status = 'active'", now.Add(5*time.Minute)); err != nil {
 		t.Fatalf("normalize active auctions: %v", err)
 	}
-	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_SUB(NOW(), INTERVAL 1 SECOND) WHERE id = ?", auctionID); err != nil {
+	if _, err := db.Exec("UPDATE auctions SET ended_at = ? WHERE id = ?", now.Add(-time.Second), auctionID); err != nil {
 		t.Fatalf("expire auction: %v", err)
 	}
 }
@@ -466,7 +471,7 @@ func TestMerchantCancelActiveAuctionUnfreezesActiveBid(t *testing.T) {
 	activateAuction(t, db, auctionID)
 	placeBid(t, ts, auctionID, userToken, 10)
 
-	_, err := db.Exec("UPDATE bids SET created_at = DATE_SUB(NOW(), INTERVAL 31 SECOND) WHERE auction_id = ?", auctionID)
+	_, err := db.Exec("UPDATE bids SET created_at = ? WHERE auction_id = ?", time.Now().Add(-31*time.Second), auctionID)
 	if err != nil {
 		t.Fatalf("age bid: %v", err)
 	}
@@ -825,7 +830,7 @@ func TestCeilingBidNearEndDoesNotPublishAuctionExtendedEvent(t *testing.T) {
 	ceiling := 20.0
 	_, auctionID := publishAuction(t, ts, merchantToken, &ceiling)
 	activateAuction(t, db, auctionID)
-	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_ADD(NOW(), INTERVAL 10 SECOND), current_extend_count = 0 WHERE id = ?", auctionID); err != nil {
+	if _, err := db.Exec("UPDATE auctions SET ended_at = ?, current_extend_count = 0 WHERE id = ?", time.Now().Add(10*time.Second), auctionID); err != nil {
 		t.Fatalf("set auction near end: %v", err)
 	}
 
@@ -885,20 +890,21 @@ func TestBidNearEndTriggersSoftClose(t *testing.T) {
 	userToken, _ := registerAuctionUser(t, ts)
 	_, auctionID := publishPendingAuction(t, ts, merchantToken)
 	activateAuction(t, db, auctionID)
-	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_ADD(NOW(), INTERVAL 10 SECOND), current_extend_count = 0 WHERE id = ?", auctionID); err != nil {
+	if _, err := db.Exec("UPDATE auctions SET ended_at = ?, current_extend_count = 0 WHERE id = ?", time.Now().Add(10*time.Second), auctionID); err != nil {
 		t.Fatalf("set auction near end: %v", err)
 	}
 
 	placeBid(t, ts, auctionID, userToken, 10)
 
 	var extendCount int
-	var remainingSeconds int
-	if err := db.QueryRow("SELECT current_extend_count, TIMESTAMPDIFF(SECOND, NOW(), ended_at) FROM auctions WHERE id = ?", auctionID).Scan(&extendCount, &remainingSeconds); err != nil {
+	var endedAt time.Time
+	if err := db.QueryRow("SELECT current_extend_count, ended_at FROM auctions WHERE id = ?", auctionID).Scan(&extendCount, &endedAt); err != nil {
 		t.Fatalf("query extension state: %v", err)
 	}
 	if extendCount != 1 {
 		t.Fatalf("expected one soft-close extension, got %d", extendCount)
 	}
+	remainingSeconds := int(time.Until(endedAt).Seconds())
 	if remainingSeconds < 12 || remainingSeconds > 16 {
 		t.Fatalf("expected countdown reset near 15 seconds, got %d", remainingSeconds)
 	}
@@ -915,7 +921,7 @@ func TestSoftCloseBidPublishesAuctionExtendedEvent(t *testing.T) {
 	userToken, _ := registerAuctionUser(t, ts)
 	_, auctionID := publishPendingAuction(t, ts, merchantToken)
 	activateAuction(t, db, auctionID)
-	if _, err := db.Exec("UPDATE auctions SET ended_at = DATE_ADD(NOW(), INTERVAL 10 SECOND), current_extend_count = 0 WHERE id = ?", auctionID); err != nil {
+	if _, err := db.Exec("UPDATE auctions SET ended_at = ?, current_extend_count = 0 WHERE id = ?", time.Now().Add(10*time.Second), auctionID); err != nil {
 		t.Fatalf("set auction near end: %v", err)
 	}
 

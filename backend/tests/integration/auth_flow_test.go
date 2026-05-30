@@ -22,6 +22,7 @@ func setupTestServer(t *testing.T) *gin.Engine {
 	if err != nil {
 		t.Fatalf("Failed to connect to MySQL: %v", err)
 	}
+	acquireMySQLTestLock(t, db)
 
 	rdb, err := config.NewRedis(cfg.RedisAddr, cfg.RedisPass)
 	if err != nil {

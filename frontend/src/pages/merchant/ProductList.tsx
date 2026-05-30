@@ -128,10 +128,9 @@ export default function ProductList() {
         ) : (
           <div className="space-y-3">
             {products.map((p) => (
-              <Link
+              <article
                 key={p.id}
-                to={`/merchant/products/${p.id}`}
-                className="block bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20 hover:border-purple-400 transition"
+                className="rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-lg transition hover:border-purple-400"
               >
                 <div className="flex justify-between items-start">
                   <div>
@@ -142,7 +141,23 @@ export default function ProductList() {
                     {STATUS_TEXT[p.status]}
                   </span>
                 </div>
-              </Link>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    to={`/merchant/products/${p.id}`}
+                    className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white"
+                  >
+                    查看详情
+                  </Link>
+                  {p.auction_id ? (
+                    <Link
+                      to={`/merchant/auctions/${p.auction_id}/monitor`}
+                      className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+                    >
+                      实时监控
+                    </Link>
+                  ) : null}
+                </div>
+              </article>
             ))}
           </div>
         )}

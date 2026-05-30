@@ -379,8 +379,8 @@ func (r *AuctionEngineRepo) CancelAllBids(ctx context.Context, tx *sql.Tx, aucti
 
 func (r *AuctionEngineRepo) CreateBid(ctx context.Context, tx *sql.Tx, bid *model.Bid) error {
 	result, err := tx.ExecContext(ctx,
-		`INSERT INTO bids (auction_id, user_id, amount, status) VALUES (?, ?, ?, ?)`,
-		bid.AuctionID, bid.UserID, bid.Amount, bid.Status,
+		`INSERT INTO bids (auction_id, user_id, amount, status, created_at) VALUES (?, ?, ?, ?, ?)`,
+		bid.AuctionID, bid.UserID, bid.Amount, bid.Status, bid.CreatedAt,
 	)
 	if err != nil {
 		return err
@@ -458,9 +458,9 @@ func (r *AuctionEngineRepo) SetAuctionNoBid(ctx context.Context, tx *sql.Tx, auc
 
 func (r *AuctionEngineRepo) CreateOrder(ctx context.Context, tx *sql.Tx, order *model.Order) error {
 	result, err := tx.ExecContext(ctx,
-		`INSERT INTO orders (auction_id, product_id, merchant_id, buyer_id, amount, status)
-         VALUES (?, ?, ?, ?, ?, 'pending_confirm')`,
-		order.AuctionID, order.ProductID, order.MerchantID, order.BuyerID, order.Amount,
+		`INSERT INTO orders (auction_id, product_id, merchant_id, buyer_id, amount, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'pending_confirm', ?, ?)`,
+		order.AuctionID, order.ProductID, order.MerchantID, order.BuyerID, order.Amount, order.CreatedAt, order.UpdatedAt,
 	)
 	if err != nil {
 		return err

@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"douyin-live/backend/internal/config"
@@ -19,8 +19,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var suffixCounter int64
+
 func randomSuffix() string {
-	return fmt.Sprintf("%d", rand.Intn(99999))
+	return fmt.Sprintf("%05d", atomic.AddInt64(&suffixCounter, 1)%100000)
 }
 
 func setupProductServer(t *testing.T) (*gin.Engine, *sql.DB) {
@@ -29,6 +31,7 @@ func setupProductServer(t *testing.T) (*gin.Engine, *sql.DB) {
 	if err != nil {
 		t.Fatalf("Failed to connect to MySQL: %v", err)
 	}
+	acquireMySQLTestLock(t, db)
 
 	// Clean up test data
 	db.Exec("DELETE FROM auction_logs WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'test_merchant_%'))")
@@ -258,6 +261,47 @@ func TestUserListsActiveAuctionLobbyRows(t *testing.T) {
 	if !foundActive {
 		t.Fatalf("expected active product %d in lobby items, got %d items", activeProductID, len(items))
 	}
+}
+
+func TestMerchantListsProductsWithAuctionIDs(t *testing.T) {
+	r, _ := setupProductServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerMerchant(t, ts)
+	productID, auctionID := createAndPublishProduct(t, ts, merchantToken, "Merchant Monitor Product", "/static/images/monitor.jpg")
+
+	resp, err := makeRequest("GET", ts.URL+"/api/v1/products?page=1&size=20", merchantToken, nil)
+	if err != nil {
+		t.Fatalf("list merchant products failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected merchant product list 200, got %d", resp.StatusCode)
+	}
+
+	var listResult map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&listResult); err != nil {
+		t.Fatalf("decode merchant product list response: %v", err)
+	}
+	data := listResult["data"].(map[string]interface{})
+	items := data["items"].([]interface{})
+
+	for _, rawItem := range items {
+		item := rawItem.(map[string]interface{})
+		if int64(item["id"].(float64)) != productID {
+			continue
+		}
+		rawAuctionID, ok := item["auction_id"].(float64)
+		if !ok {
+			t.Fatalf("expected auction_id on merchant list row, got %#v", item["auction_id"])
+		}
+		if int64(rawAuctionID) != auctionID {
+			t.Fatalf("expected auction_id %d, got %#v", auctionID, item["auction_id"])
+		}
+		return
+	}
+	t.Fatalf("expected product %d in merchant list", productID)
 }
 
 func TestListProductsByStatus(t *testing.T) {

@@ -248,6 +248,14 @@ export default function ProductDetail() {
             )}
           </div>
         )}
+        {auction && (
+          <Link
+            to={`/merchant/auctions/${auction.id}/monitor`}
+            className="mt-3 flex w-full justify-center rounded-lg border border-emerald-300/45 bg-emerald-300/15 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-300/25"
+          >
+            实时监控
+          </Link>
+        )}
       </div>
     </div>
   );

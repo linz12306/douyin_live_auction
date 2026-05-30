@@ -1,6 +1,6 @@
 # 项目长期记忆
 
-> 更新时间：2026-05-29
+> 更新时间：2026-05-30
 
 ## 用户偏好
 
@@ -50,7 +50,9 @@
 
 ## 当前进行中
 
-- 暂无已开启但未完成的 OpenSpec change。
+- `merchant-auction-monitor`
+  - OpenSpec change 已实现并通过验证，尚未归档，等待验收后再 archive。
+  - 分支/worktree：`codex/merchant-auction-monitor` / `D:\pythoncode\douyin-live\.worktrees\merchant-auction-monitor`
 
 ## 关键业务决策
 
@@ -59,6 +61,8 @@
 - 买家确认前取消或确认超时只退款一次，由订单服务在锁定 `pending_confirm` 订单后处理。
 - 订单取消/超时不改写 `auctions` 和 `products` 的 `ended_sold` 历史状态。
 - 用户端实时竞拍页以 WebSocket 为实时真理源，REST 只做初始化或动作提交。
+- 商家实时监控页同样复用 `/ws/auctions/:id` 作为实时真理源，只展示状态/排行/出价事件，不提供出价控件；取消竞拍仍走现有 REST 命令路径。
+- 商家商品列表可返回可选 `auction_id`，用于跳转到对应竞拍监控页；用户大厅行为保持不变。
 - `/healthz` 只暴露短消息和轻量 runtime stats，不返回原始 DB/Redis 错误、DSN、密码或堆栈。
 
 ## 下一阶段建议

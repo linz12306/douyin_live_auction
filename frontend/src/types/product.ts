@@ -11,6 +11,7 @@ export interface ProductImage {
 export interface Product {
   id: number;
   merchant_id: number;
+  auction_id?: number;
   title: string;
   description: string;
   status: ProductStatus;

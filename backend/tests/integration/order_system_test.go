@@ -83,15 +83,16 @@ func TestOrderTimeoutCancelsAndRefundsOnce(t *testing.T) {
 	userToken, userID := registerAuctionUser(t, ts)
 	orderID := createSettledOrderViaCeilingBid(t, db, ts, merchantToken, userToken, 20)
 
-	if _, err := db.Exec("UPDATE orders SET created_at = NOW() WHERE status = 'pending_confirm'"); err != nil {
+	now := time.Now()
+	if _, err := db.Exec("UPDATE orders SET created_at = ? WHERE status = 'pending_confirm'", now); err != nil {
 		t.Fatalf("normalize pending orders: %v", err)
 	}
-	if _, err := db.Exec("UPDATE orders SET created_at = DATE_SUB(NOW(), INTERVAL 31 MINUTE) WHERE id = ?", orderID); err != nil {
+	if _, err := db.Exec("UPDATE orders SET created_at = ? WHERE id = ?", now.Add(-31*time.Minute), orderID); err != nil {
 		t.Fatalf("age order: %v", err)
 	}
 
 	orderSvc := service.NewOrderService(repository.NewOrderRepo(db))
-	expired, err := orderSvc.ExpirePendingConfirmOrders(context.Background(), time.Now())
+	expired, err := orderSvc.ExpirePendingConfirmOrders(context.Background(), now)
 	if err != nil {
 		t.Fatalf("expire pending orders: %v", err)
 	}

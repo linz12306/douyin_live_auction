@@ -110,7 +110,7 @@ func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string
 			}
 		}
 
-		bid := &model.Bid{AuctionID: auctionID, UserID: userID, Amount: req.Amount, Status: "active"}
+		bid := &model.Bid{AuctionID: auctionID, UserID: userID, Amount: req.Amount, Status: "active", CreatedAt: now}
 		if err := s.repo.CreateBid(ctx, tx, bid); err != nil {
 			return err
 		}
@@ -146,6 +146,8 @@ func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string
 				MerchantID: auction.MerchantID,
 				BuyerID:    userID,
 				Amount:     req.Amount,
+				CreatedAt:  now,
+				UpdatedAt:  now,
 			}
 			if err := s.repo.CreateOrder(ctx, tx, order); err != nil {
 				return err
@@ -316,6 +318,8 @@ func (s *AuctionService) SettleExpired(ctx context.Context) (int, error) {
 				MerchantID: auction.MerchantID,
 				BuyerID:    activeBid.UserID,
 				Amount:     activeBid.Amount,
+				CreatedAt:  now,
+				UpdatedAt:  now,
 			}
 			if err := s.repo.CreateOrder(ctx, tx, order); err != nil {
 				return err

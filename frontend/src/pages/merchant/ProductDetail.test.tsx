@@ -116,6 +116,15 @@ describe('ProductDetail', () => {
     expect(await screen.findByText('进行中')).toBeInTheDocument();
   });
 
+  it('links the auction detail to the merchant realtime monitor', async () => {
+    mocks.getProduct.mockResolvedValueOnce(pendingDetail);
+
+    renderDetail();
+
+    const monitorLink = await screen.findByRole('link', { name: '实时监控' });
+    expect(monitorLink).toHaveAttribute('href', '/merchant/auctions/9/monitor');
+  });
+
   it('cancels a pending auction with a reason and refreshes the detail state', async () => {
     mocks.getProduct.mockResolvedValueOnce(pendingDetail).mockResolvedValueOnce(cancelledDetail);
     mocks.cancelAuction.mockResolvedValueOnce(undefined);

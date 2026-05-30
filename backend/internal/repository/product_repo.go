@@ -80,17 +80,22 @@ func (r *ProductRepo) FindImages(productID int64) ([]model.ProductImage, error) 
 func (r *ProductRepo) ListByMerchant(merchantID int64, status string, page, size int) ([]model.Product, int, error) {
 	var total int
 	args := []interface{}{merchantID}
-	where := "WHERE merchant_id = ?"
+	where := "WHERE p.merchant_id = ?"
 	if status != "" {
-		where += " AND status = ?"
+		where += " AND p.status = ?"
 		args = append(args, status)
 	}
 
-	r.db.QueryRow("SELECT COUNT(*) FROM products "+where, args...).Scan(&total)
+	r.db.QueryRow("SELECT COUNT(*) FROM products p "+where, args...).Scan(&total)
 
 	offset := (page - 1) * size
 	rows, err := r.db.Query(
-		"SELECT id, merchant_id, title, description, status, created_at, updated_at FROM products "+where+" ORDER BY created_at DESC LIMIT ? OFFSET ?",
+		`SELECT p.id, p.merchant_id, p.title, p.description, p.status, p.created_at, p.updated_at, a.id
+         FROM products p
+         LEFT JOIN auctions a ON a.product_id = p.id
+         `+where+`
+         ORDER BY p.created_at DESC
+         LIMIT ? OFFSET ?`,
 		append(args, size, offset)...,
 	)
 	if err != nil {
@@ -101,8 +106,12 @@ func (r *ProductRepo) ListByMerchant(merchantID int64, status string, page, size
 	var products []model.Product
 	for rows.Next() {
 		var p model.Product
-		if err := rows.Scan(&p.ID, &p.MerchantID, &p.Title, &p.Description, &p.Status, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		var auctionID sql.NullInt64
+		if err := rows.Scan(&p.ID, &p.MerchantID, &p.Title, &p.Description, &p.Status, &p.CreatedAt, &p.UpdatedAt, &auctionID); err != nil {
 			return nil, 0, err
+		}
+		if auctionID.Valid {
+			p.AuctionID = &auctionID.Int64
 		}
 		products = append(products, p)
 	}

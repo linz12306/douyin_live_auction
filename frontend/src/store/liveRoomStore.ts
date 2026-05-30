@@ -14,7 +14,7 @@ import type {
 
 export type LiveRoomConnectionState = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed' | 'error';
 export type BidSubmitState = 'idle' | 'submitting' | 'error';
-export type LiveRoomNotificationType = 'outbid' | 'error' | 'status';
+export type LiveRoomNotificationType = 'bid' | 'outbid' | 'error' | 'status';
 
 export interface LiveRoomNotification {
   id: string;
@@ -110,6 +110,10 @@ function asPayload<T>(message: RealtimeEnvelope): T {
 
 function normalizeRankings(rankings: RankingItem[] | null): RankingItem[] {
   return rankings ?? [];
+}
+
+function formatPrice(value: number): string {
+  return `¥${value.toFixed(2)}`;
 }
 
 function calculateNextBidAmount(currentPrice: number, incrementType: string | undefined, incrementValue: number): number {
@@ -283,15 +287,20 @@ export const useLiveRoomStore = create<LiveRoomState>((set, get) => ({
       }
       case 'price_update': {
         const payload = asPayload<PriceUpdatePayload>(message);
-        set({
+        const rankings = normalizeRankings(payload.rankings);
+        const topBid = rankings.find((item) => item.user_id === payload.highest_bidder_id) ?? rankings[0];
+        const bidder = topBid?.display_name?.trim() || (topBid ? `用户 ${topBid.user_id}` : '新出价');
+        const item = notification('bid', `${bidder} 出价 ${formatPrice(payload.current_price)}`, message.server_time);
+        set((current: LiveRoomState) => ({
           currentPrice: payload.current_price,
           highestBidderId: payload.highest_bidder_id,
-          nextBidAmount: calculateNextBidAmount(payload.current_price, state.bidIncrementType, state.bidIncrementValue),
-          rankings: normalizeRankings(payload.rankings),
+          nextBidAmount: calculateNextBidAmount(payload.current_price, current.bidIncrementType, current.bidIncrementValue),
+          rankings,
           version: message.version,
           serverTimeOffsetMs,
+          notifications: withNotification(current, item),
           error: undefined,
-        });
+        }));
         return;
       }
       case 'extended': {

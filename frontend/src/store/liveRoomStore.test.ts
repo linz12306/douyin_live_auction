@@ -168,7 +168,7 @@ describe('useLiveRoomStore', () => {
       payload: {
         current_price: 140,
         highest_bidder_id: 12,
-        rankings: [{ ...snapshot().payload.rankings![0], rank: 1, user_id: 12, amount: 140 }],
+        rankings: [{ ...snapshot().payload.rankings![0], rank: 1, user_id: 12, display_name: '阿辰', amount: 140 }],
       },
     });
     const offsetAfterFreshMessage = useLiveRoomStore.getState().serverTimeOffsetMs;
@@ -185,6 +185,7 @@ describe('useLiveRoomStore', () => {
     expect(state.currentPrice).toBe(140);
     expect(state.highestBidderId).toBe(12);
     expect(state.rankings[0]?.user_id).toBe(12);
+    expect(state.notifications[0]?.message).toBe('阿辰 出价 ¥140.00');
     expect(state.serverTimeOffsetMs).toBe(offsetAfterFreshMessage);
   });
 

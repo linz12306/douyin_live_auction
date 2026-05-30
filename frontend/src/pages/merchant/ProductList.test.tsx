@@ -79,4 +79,22 @@ describe('ProductList', () => {
     fireEvent.click(screen.getByRole('button', { name: '进行中' }));
     await waitFor(() => expect(mockedListProducts).toHaveBeenLastCalledWith('active'));
   });
+
+  it('links products with auctions to the merchant realtime monitor', async () => {
+    mockedListProducts.mockResolvedValue({
+      items: [{ ...baseProduct, auction_id: 9 }],
+      total: 1,
+      page: 1,
+      size: 20,
+    });
+
+    render(
+      <MemoryRouter>
+        <ProductList />
+      </MemoryRouter>,
+    );
+
+    const monitorLink = await screen.findByRole('link', { name: '实时监控' });
+    expect(monitorLink).toHaveAttribute('href', '/merchant/auctions/9/monitor');
+  });
 });

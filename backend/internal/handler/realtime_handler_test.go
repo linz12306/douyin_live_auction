@@ -199,6 +199,7 @@ func setupRealtimeHandlerServer(t *testing.T) *realtimeHandlerSetup {
 	if err != nil {
 		t.Fatalf("connect test db: %v", err)
 	}
+	acquireMySQLTestLock(t, db)
 	cleanupRealtimeHandlerTestData(t, db)
 	t.Cleanup(func() {
 		cleanupRealtimeHandlerTestData(t, db)
