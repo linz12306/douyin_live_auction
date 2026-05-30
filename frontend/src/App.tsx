@@ -8,6 +8,7 @@ import ProductList from './pages/merchant/ProductList';
 import ProductForm from './pages/merchant/ProductForm';
 import ProductDetail from './pages/merchant/ProductDetail';
 import MerchantAuctionMonitor from './pages/merchant/AuctionMonitor';
+import MerchantDashboard from './pages/merchant/Dashboard';
 import MerchantOrderList from './pages/merchant/OrderList';
 import MerchantOrderDetail from './pages/merchant/OrderDetail';
 import AuctionLobby from './pages/app/AuctionLobby';
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="/app/auctions/:id" element={<ProtectedRoute requiredRole="user" fallbackPath="/merchant/products"><LiveAuctionRoom /></ProtectedRoute>} />
         <Route path="/app/orders" element={<ProtectedRoute requiredRole="user" fallbackPath="/merchant/products"><AppOrderList /></ProtectedRoute>} />
         <Route path="/app/orders/:id" element={<ProtectedRoute requiredRole="user" fallbackPath="/merchant/products"><AppOrderDetail /></ProtectedRoute>} />
+        <Route path="/merchant/dashboard" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><MerchantDashboard /></ProtectedRoute>} />
         <Route path="/merchant/products" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><ProductList /></ProtectedRoute>} />
         <Route path="/merchant/products/new" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><ProductForm /></ProtectedRoute>} />
         <Route path="/merchant/products/:id" element={<ProtectedRoute requiredRole="merchant" fallbackPath="/app/auctions"><ProductDetail /></ProtectedRoute>} />

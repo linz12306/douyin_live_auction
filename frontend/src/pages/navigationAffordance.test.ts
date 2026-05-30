@@ -7,6 +7,7 @@ const pageFiles = [
   'merchant/ProductList.tsx',
   'merchant/ProductForm.tsx',
   'merchant/ProductDetail.tsx',
+  'merchant/Dashboard.tsx',
   'merchant/OrderList.tsx',
   'merchant/OrderDetail.tsx',
   'app/AuctionLobby.tsx',
