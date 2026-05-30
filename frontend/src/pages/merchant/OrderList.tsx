@@ -92,6 +92,9 @@ export default function OrderList() {
             <Link to="/merchant/products" className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/75 hover:border-white/40">
               商品管理
             </Link>
+            <Link to="/merchant/dashboard" className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/75 hover:border-white/40">
+              运营看板
+            </Link>
           </div>
         </header>
 

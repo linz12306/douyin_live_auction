@@ -28,6 +28,13 @@
 
 ## 已完成并归档
 
+- `merchant-dashboard`
+  - Change in progress: `openspec/changes/merchant-dashboard/`
+  - Added merchant operations dashboard API `GET /api/v1/merchant/dashboard`.
+  - Added frontend route `/merchant/dashboard` and entry links from product management, order management, and profile.
+  - Dashboard paid metrics count only `paid` orders; pending/cancelled orders are reported in status counts and recent orders only.
+  - Local verification used Redis `127.0.0.1:16380` and isolated DB `auction_db_merchant_dashboard` because default `auction_db` was being touched by an existing local backend process/historical test state.
+
 - `auction-engine-mvp`
   - 归档：`openspec/changes/archive/2026-05-28-auction-engine-mvp/`
   - 持久规范：`openspec/specs/auction-engine/spec.md`

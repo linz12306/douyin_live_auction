@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -47,17 +48,20 @@ func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realti
 	auctionRepo := repository.NewAuctionRepo(db)
 	auctionEngineRepo := repository.NewAuctionEngineRepo(db)
 	orderRepo := repository.NewOrderRepo(db)
+	dashboardRepo := repository.NewMerchantDashboardRepo(db)
 
 	authSvc := service.NewAuthService(userRepo, rdb, cfg)
 	productSvc := service.NewProductService(productRepo, auctionRepo)
 	eventBus := realtime.NewInMemoryAuctionEventBus()
 	auctionSvc := service.NewAuctionServiceWithEvents(auctionEngineRepo, rdb, eventBus)
 	orderSvc := service.NewOrderService(orderRepo)
+	dashboardSvc := service.NewMerchantDashboardService(dashboardRepo)
 
 	authH := handler.NewAuthHandler(authSvc)
 	productH := handler.NewProductHandler(productSvc, cfg.ImageDir)
 	auctionH := handler.NewAuctionHandler(auctionSvc)
 	orderH := handler.NewOrderHandler(orderSvc)
+	dashboardH := handler.NewMerchantDashboardHandler(dashboardSvc)
 
 	r := gin.New()
 	auth := r.Group("/api/v1/auth")
@@ -90,6 +94,12 @@ func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realti
 		orders.POST("/:id/confirm", middleware.RoleGuard("user"), orderH.Confirm)
 		orders.POST("/:id/pay", middleware.RoleGuard("user"), orderH.Pay)
 		orders.POST("/:id/cancel", middleware.RoleGuard("user"), orderH.Cancel)
+	}
+
+	merchant := r.Group("/api/v1/merchant")
+	merchant.Use(middleware.JWTAuth(cfg))
+	{
+		merchant.GET("/dashboard", middleware.RoleGuard("merchant"), dashboardH.Get)
 	}
 
 	return r, db, eventBus
@@ -181,7 +191,8 @@ func publishAuction(t *testing.T, ts *httptest.Server, merchantToken string, cei
 	}
 	defer createResp.Body.Close()
 	if createResp.StatusCode != http.StatusCreated {
-		t.Fatalf("expected create product 201, got %d", createResp.StatusCode)
+		body, _ := io.ReadAll(createResp.Body)
+		t.Fatalf("expected create product 201, got %d: %s", createResp.StatusCode, string(body))
 	}
 
 	var createResult map[string]interface{}
@@ -209,7 +220,8 @@ func publishAuction(t *testing.T, ts *httptest.Server, merchantToken string, cei
 	}
 	defer publishResp.Body.Close()
 	if publishResp.StatusCode != http.StatusOK {
-		t.Fatalf("expected publish 200, got %d", publishResp.StatusCode)
+		body, _ := io.ReadAll(publishResp.Body)
+		t.Fatalf("expected publish 200, got %d: %s", publishResp.StatusCode, string(body))
 	}
 
 	var publishResult map[string]interface{}

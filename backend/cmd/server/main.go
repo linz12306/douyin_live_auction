@@ -71,6 +71,9 @@ func main() {
 	orderSvc := service.NewOrderService(orderRepo)
 	orderH := handler.NewOrderHandler(orderSvc)
 	startOrderTimeoutWorker(orderSvc)
+	dashboardRepo := repository.NewMerchantDashboardRepo(db)
+	dashboardSvc := service.NewMerchantDashboardService(dashboardRepo)
+	dashboardH := handler.NewMerchantDashboardHandler(dashboardSvc)
 
 	// Router
 	r := gin.Default()
@@ -142,6 +145,13 @@ func main() {
 			orders.POST("/:id/confirm", middleware.RoleGuard("user"), orderH.Confirm)
 			orders.POST("/:id/pay", middleware.RoleGuard("user"), orderH.Pay)
 			orders.POST("/:id/cancel", middleware.RoleGuard("user"), orderH.Cancel)
+		}
+
+		// Merchant dashboard routes
+		merchant := api.Group("/merchant")
+		merchant.Use(middleware.JWTAuth(cfg))
+		{
+			merchant.GET("/dashboard", middleware.RoleGuard("merchant"), dashboardH.Get)
 		}
 	}
 

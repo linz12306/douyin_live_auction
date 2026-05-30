@@ -92,6 +92,9 @@ export default function ProductList() {
             <Link to="/merchant/orders" className="px-4 py-2 border border-white/20 text-white rounded-lg hover:border-white/40">
               订单管理
             </Link>
+            <Link to="/merchant/dashboard" className="px-4 py-2 border border-white/20 text-white rounded-lg hover:border-white/40">
+              运营看板
+            </Link>
             <Link to="/merchant/products/new" className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:opacity-90">
               + 新建竞拍
             </Link>
