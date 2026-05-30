@@ -119,12 +119,20 @@ export default function Profile() {
           </div>
           <div className="flex gap-2">
             {user.role === 'merchant' && (
-              <Link
-                to="/merchant/products"
-                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:opacity-90 transition"
-              >
-                商品管理
-              </Link>
+              <>
+                <Link
+                  to="/merchant/dashboard"
+                  className="px-4 py-2 border border-white/20 text-white rounded-lg hover:border-white/40 transition"
+                >
+                  运营看板
+                </Link>
+                <Link
+                  to="/merchant/products"
+                  className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:opacity-90 transition"
+                >
+                  商品管理
+                </Link>
+              </>
             )}
             <button
               onClick={handleLogout}
