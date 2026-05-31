@@ -789,7 +789,7 @@ Append to `projects/proj-1779447357476-ryiijf/memory/long-term.md`:
 - Demo accounts: `demo_merchant`, `demo_buyer_a`, `demo_buyer_b`; password `test123`.
 ```
 
-- [ ] **Step 3: Commit final docs before archive**
+- [x] **Step 3: Commit final docs before archive**
 
 Run:
 
@@ -805,7 +805,7 @@ Expected:
 [codex/demo-readiness <sha>] docs(demo): record readiness verification
 ```
 
-- [ ] **Step 4: Archive accepted OpenSpec change**
+- [x] **Step 4: Archive accepted OpenSpec change**
 
 Only after user acceptance, run:
 
@@ -836,6 +836,8 @@ Task 6 verification result: completed before memory update. Passed commands:
 - `git diff --check`
 
 Note: demo E2E used isolated frontend/backend ports `13000/18080` with rate limiting disabled for repeatable local verification.
+
+Archive result: `openspec archive demo-readiness --yes` created `openspec/specs/demo-readiness/spec.md` and moved the change to `openspec/changes/archive/2026-05-31-demo-readiness/`.
 
 ## Plan Self-Review
 
