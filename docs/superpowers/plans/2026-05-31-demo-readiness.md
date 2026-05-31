@@ -725,7 +725,7 @@ Task 5 result: completed. `docs/demo-readiness.md` documents required services, 
 - Archive by command: `openspec/changes/demo-readiness/`
 - Modify by command: `openspec/specs/demo-readiness/spec.md`
 
-- [ ] **Step 1: Run final verification**
+- [x] **Step 1: Run final verification**
 
 Run:
 
@@ -754,7 +754,7 @@ Expected:
 - Demo E2E exits `0`.
 - Diff check exits `0`.
 
-- [ ] **Step 2: Update OpenSpec tasks and memory**
+- [x] **Step 2: Update OpenSpec tasks and memory**
 
 Update `openspec/changes/demo-readiness/tasks.md` checkboxes to `[x]` only for completed tasks.
 
@@ -824,6 +824,18 @@ Expected:
 Change 'demo-readiness' archived ...
 Totals: ... passed, 0 failed
 ```
+
+Task 6 verification result: completed before memory update. Passed commands:
+
+- `openspec validate demo-readiness --strict`
+- `openspec validate --specs --strict`
+- `cd backend; $env:GOPROXY='https://goproxy.cn,direct'; go test ./...`
+- `cd frontend; npm run test`
+- `cd frontend; npm run build`
+- `$env:PLAYWRIGHT_BASE_URL='http://127.0.0.1:13000'; npm run test:e2e:demo`
+- `git diff --check`
+
+Note: demo E2E used isolated frontend/backend ports `13000/18080` with rate limiting disabled for repeatable local verification.
 
 ## Plan Self-Review
 

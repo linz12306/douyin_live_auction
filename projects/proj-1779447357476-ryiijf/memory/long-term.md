@@ -84,3 +84,11 @@
 - Current active OpenSpec change: `fix-self-outbid-notification`; do not archive until user accepts the live-room retest.
 - Decision: self-rebids must still broadcast accepted bid updates, but must not emit private `outbid` events because the previous active bid was not replaced by a different user.
 - Verification passed for focused integration, related backend packages, OpenSpec strict validation, and diff whitespace check.
+
+## Demo Readiness
+
+- Local demo runbook: `docs/demo-readiness.md`.
+- Seed command: `DEMO_API_BASE_URL=http://127.0.0.1:8080 npm run demo:seed`.
+- E2E command: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run test:e2e:demo`.
+- Isolated E2E verification can use frontend `127.0.0.1:13000` and backend `127.0.0.1:18080`.
+- Demo accounts: `demo_merchant`, `demo_buyer_a`, `demo_buyer_b`; password `test123`.

@@ -29,11 +29,11 @@
   - Add focused tests for each blocker.
   - Current status: no product blocker fix was required. The observed failures were E2E harness issues: direct full-page navigation lost refreshed auth state, and price assertions assumed a stale currency glyph. The test now follows the actual SPA demo path and accepts the rendered currency symbol.
 
-- [ ] 6. Runbook and final verification
+- [x] 6. Runbook and final verification
   - Add the presenter runbook with startup, seed, accounts, path, checkpoints, and troubleshooting.
   - Run OpenSpec validation.
   - Run affected backend/frontend tests.
   - Run demo-readiness E2E.
   - Run `git diff --check`.
   - Update memory/progress and archive the accepted OpenSpec change.
-  - Current status: runbook added at `docs/demo-readiness.md` and linked from `README.md`. Final verification, memory, and archive remain to be completed in Task 6 of the execution plan.
+  - Current status: runbook added at `docs/demo-readiness.md` and linked from `README.md`. Final verification passed with OpenSpec strict validation, backend Go tests, frontend unit tests, frontend build, demo-readiness E2E on isolated local ports, and `git diff --check`. Memory was updated before archive.
