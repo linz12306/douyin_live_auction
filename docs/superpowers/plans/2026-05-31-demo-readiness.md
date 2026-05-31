@@ -334,6 +334,8 @@ Expected:
 [codex/demo-readiness <sha>] chore(demo): add local seed script
 ```
 
+Task 2 result: completed. `npm run demo:seed` first failed as expected before `scripts/demo-seed.mjs` existed. After adding the script, the first real run exposed the backend duration rule, so the demo auction duration was corrected to `300`. The verified run against `http://127.0.0.1:8080` created/logged into `demo_merchant`, `demo_buyer_a`, and `demo_buyer_b`, then created active auction `1281` for product `1476`.
+
 ## Task 3: Combined Demo-Readiness E2E
 
 **Files:**

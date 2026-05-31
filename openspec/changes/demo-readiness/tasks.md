@@ -12,10 +12,11 @@
   - Include exact files, test-first slices, seed/reset strategy, E2E commands, and commit points.
   - Current status: execution plan created at `docs/superpowers/plans/2026-05-31-demo-readiness.md`.
 
-- [ ] 3. Demo seed/reset support
+- [x] 3. Demo seed/reset support
   - Add local-only setup for demo merchant, buyer, competing bidder, auction data, and optional order/dashboard data.
   - Ensure repeated runs do not fail because of stale data.
   - Add verification for seed/reset behavior.
+  - Current status: root `npm run demo:seed` creates/logs into demo accounts and creates a uniquely titled active auction through existing HTTP APIs.
 
 - [ ] 4. Demo-readiness E2E
   - Add a Playwright journey covering merchant setup/monitoring, buyer live bidding, competing outbid, settlement, and order confirmation/payment.
