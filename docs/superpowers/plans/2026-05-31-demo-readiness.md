@@ -488,6 +488,18 @@ Expected:
 [codex/demo-readiness <sha>] test(demo): add readiness journey
 ```
 
+Task 3 result: completed. The first run with `--project=chromium` failed because this repository's Playwright config does not define named projects. The correct command is `PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/demo-readiness.spec.ts`. The next local run against the default `3000/8080` services hit registration rate limiting, so the verified run used backend `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` and frontend `VITE_BACKEND_TARGET=http://127.0.0.1:18080 npx vite --host 127.0.0.1 --port 13000`.
+
+Task 3 validation passed:
+
+```powershell
+$env:PLAYWRIGHT_BASE_URL='http://127.0.0.1:13000'
+npx playwright test tests/e2e/demo-readiness.spec.ts
+npx playwright test tests/e2e/realtime-live-room.spec.ts tests/e2e/order-system.spec.ts
+```
+
+Task 4 result: no product blocker fix was required. The E2E was corrected to follow the actual SPA navigation path from merchant product list to monitor and from ended live room to buyer orders, avoiding full-page reloads that intentionally require refresh-token hydration. Price assertions now accept the rendered `¥` currency symbol.
+
 ## Task 4: Fix Demo Blockers Only
 
 **Files:**

@@ -18,14 +18,16 @@
   - Add verification for seed/reset behavior.
   - Current status: root `npm run demo:seed` creates/logs into demo accounts and creates a uniquely titled active auction through existing HTTP APIs.
 
-- [ ] 4. Demo-readiness E2E
+- [x] 4. Demo-readiness E2E
   - Add a Playwright journey covering merchant setup/monitoring, buyer live bidding, competing outbid, settlement, and order confirmation/payment.
   - Use existing alternate-port environment conventions.
+  - Current status: `tests/e2e/demo-readiness.spec.ts` passes against frontend `127.0.0.1:13000` and backend `127.0.0.1:18080` with `DISABLE_RATE_LIMIT=1`.
 
-- [ ] 5. Demo blocker fixes
+- [x] 5. Demo blocker fixes
   - Run the demo journey and identify blocking UX or flow issues.
   - Fix only narrow blockers required for the runbook and E2E to pass.
   - Add focused tests for each blocker.
+  - Current status: no product blocker fix was required. The observed failures were E2E harness issues: direct full-page navigation lost refreshed auth state, and price assertions assumed a stale currency glyph. The test now follows the actual SPA demo path and accepts the rendered currency symbol.
 
 - [ ] 6. Runbook and final verification
   - Add the presenter runbook with startup, seed, accounts, path, checkpoints, and troubleshooting.
