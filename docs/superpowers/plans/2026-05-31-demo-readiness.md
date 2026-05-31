@@ -132,6 +132,8 @@ Expected:
 [codex/demo-readiness <sha>] docs(openspec): archive accepted merchant changes
 ```
 
+Task 1 result: completed. `demo-readiness`, `merchant-dashboard`, and `merchant-auction-monitor` strict validation passed. `merchant-dashboard` was archived as `2026-05-31-merchant-dashboard`, `merchant-auction-monitor` was archived as `2026-05-31-merchant-auction-monitor`, and `openspec validate --specs --strict` passed with six specs.
+
 ## Task 2: Demo Seed Script
 
 **Files:**

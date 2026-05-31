@@ -1,10 +1,11 @@
 # Tasks: demo-readiness
 
-- [ ] 1. Preflight and dependency cleanup
+- [x] 1. Preflight and dependency cleanup
   - Confirm branch/worktree status.
   - Review `AGENTS.md`, current source of truth, requirements v3, progress report, existing E2E specs, and active OpenSpec changes.
   - Decide whether `merchant-dashboard` and `merchant-auction-monitor` are accepted and archive or record their status before final demo completion.
   - Validate `demo-readiness` with OpenSpec strict mode.
+  - Current status: `merchant-dashboard` and `merchant-auction-monitor` were validated and archived into persistent specs. `demo-readiness` remains active.
 
 - [x] 2. Superpowers execution plan
   - Create `docs/superpowers/plans/YYYY-MM-DD-demo-readiness.md`.
