@@ -6,9 +6,10 @@
   - Decide whether `merchant-dashboard` and `merchant-auction-monitor` are accepted and archive or record their status before final demo completion.
   - Validate `demo-readiness` with OpenSpec strict mode.
 
-- [ ] 2. Superpowers execution plan
+- [x] 2. Superpowers execution plan
   - Create `docs/superpowers/plans/YYYY-MM-DD-demo-readiness.md`.
   - Include exact files, test-first slices, seed/reset strategy, E2E commands, and commit points.
+  - Current status: execution plan created at `docs/superpowers/plans/2026-05-31-demo-readiness.md`.
 
 - [ ] 3. Demo seed/reset support
   - Add local-only setup for demo merchant, buyer, competing bidder, auction data, and optional order/dashboard data.
