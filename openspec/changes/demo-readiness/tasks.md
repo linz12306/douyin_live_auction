@@ -36,3 +36,4 @@
   - Run demo-readiness E2E.
   - Run `git diff --check`.
   - Update memory/progress and archive the accepted OpenSpec change.
+  - Current status: runbook added at `docs/demo-readiness.md` and linked from `README.md`. Final verification, memory, and archive remain to be completed in Task 6 of the execution plan.

@@ -26,3 +26,7 @@ REDIS_ADDR=127.0.0.1:16380
 
 Avoid using or stopping an unrelated legacy Redis service on
 `127.0.0.1:16379`.
+
+## Demo
+
+For repeatable local presentation steps, see [docs/demo-readiness.md](docs/demo-readiness.md).

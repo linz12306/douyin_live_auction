@@ -713,6 +713,8 @@ Expected:
 [codex/demo-readiness <sha>] docs(demo): add readiness runbook
 ```
 
+Task 5 result: completed. `docs/demo-readiness.md` documents required services, startup commands, demo seed command, demo accounts, presenter path, automated E2E command, and troubleshooting. `README.md` links to the runbook. Verification passed with `rg -n "demo-readiness|demo:seed|test:e2e:demo|demo_merchant" README.md docs/demo-readiness.md package.json` and `git diff --check`.
+
 ## Task 6: Final Verification, Memory, Archive
 
 **Files:**
