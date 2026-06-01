@@ -34,6 +34,7 @@ type AuctionService struct {
 	repo     *repository.AuctionEngineRepo
 	redis    *redis.Client
 	eventBus realtime.AuctionEventBus
+	metrics  *AuctionMetrics
 }
 
 func NewAuctionService(repo *repository.AuctionEngineRepo, redis *redis.Client) *AuctionService {
@@ -41,16 +42,27 @@ func NewAuctionService(repo *repository.AuctionEngineRepo, redis *redis.Client) 
 }
 
 func NewAuctionServiceWithEvents(repo *repository.AuctionEngineRepo, redis *redis.Client, bus realtime.AuctionEventBus) *AuctionService {
+	return NewAuctionServiceWithMetrics(repo, redis, bus, NewAuctionMetrics())
+}
+
+func NewAuctionServiceWithMetrics(repo *repository.AuctionEngineRepo, redis *redis.Client, bus realtime.AuctionEventBus, metrics *AuctionMetrics) *AuctionService {
 	if bus == nil {
 		bus = realtime.NewNoopAuctionEventBus()
 	}
-	return &AuctionService{repo: repo, redis: redis, eventBus: bus}
+	if metrics == nil {
+		metrics = NewAuctionMetrics()
+	}
+	return &AuctionService{repo: repo, redis: redis, eventBus: bus, metrics: metrics}
 }
 
-func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string, auctionID int64, req *dto.PlaceBidRequest) (*dto.PlaceBidResponse, error) {
+func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string, auctionID int64, req *dto.PlaceBidRequest) (result *dto.PlaceBidResponse, err error) {
 	if role != "user" {
 		return nil, ErrMerchantCannotBid
 	}
+	start := time.Now()
+	defer func() {
+		err = s.recordBidMetrics(start, err)
+	}()
 
 	unlock, err := s.acquireBidLock(ctx, auctionID)
 	if err != nil {
@@ -59,7 +71,7 @@ func (s *AuctionService) PlaceBid(ctx context.Context, userID int64, role string
 	defer unlock()
 
 	now := time.Now()
-	result := &dto.PlaceBidResponse{AuctionID: auctionID}
+	result = &dto.PlaceBidResponse{AuctionID: auctionID}
 	var events []realtime.AuctionEvent
 
 	err = s.repo.WithTx(ctx, func(tx *sql.Tx) error {
@@ -458,9 +470,27 @@ func (s *AuctionService) acquireBidLock(ctx context.Context, auctionID int64) (f
 		return func() {}, nil
 	}
 	if !ok {
+		s.recordLockBusy(ErrAuctionLockBusy)
 		return nil, ErrAuctionLockBusy
 	}
 	return func() { _ = s.redis.Del(context.Background(), key).Err() }, nil
+}
+
+func (s *AuctionService) recordBidMetrics(start time.Time, err error) error {
+	if s.metrics == nil {
+		return err
+	}
+	s.metrics.RecordBid(err == nil, time.Since(start))
+	return err
+}
+
+func (s *AuctionService) recordLockBusy(err error) {
+	if s.metrics == nil {
+		return
+	}
+	if errors.Is(err, ErrAuctionLockBusy) {
+		s.metrics.RecordLockBusy()
+	}
 }
 
 func calculateIncrement(current float64, incrementType string, value float64) float64 {

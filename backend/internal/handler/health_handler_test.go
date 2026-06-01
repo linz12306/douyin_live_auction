@@ -19,7 +19,18 @@ func TestHealthHandlerReturnsOKWithoutAuthentication(t *testing.T) {
 		handlerDBChecker{},
 		handlerRedisChecker{},
 		service.EngineStatsProviderFunc(func() service.EngineStats {
-			return service.EngineStats{ActiveRooms: 1, ConnectedClients: 2, DroppedEvents: 3}
+			return service.EngineStats{
+				ActiveRooms:          1,
+				ConnectedClients:     2,
+				DroppedEvents:        3,
+				BidRequestsTotal:     4,
+				BidSuccessTotal:      3,
+				BidFailureTotal:      1,
+				BidSuccessRate:       0.75,
+				BidAvgLatencyMS:      9.5,
+				BidLockBusyTotal:     2,
+				WSConnectionsCurrent: 2,
+			}
 		}),
 	)
 	router := gin.New()
@@ -43,6 +54,15 @@ func TestHealthHandlerReturnsOKWithoutAuthentication(t *testing.T) {
 	}
 	if report.Components.AuctionEngine.ConnectedClients != 2 {
 		t.Fatalf("connected clients = %d", report.Components.AuctionEngine.ConnectedClients)
+	}
+	if report.Components.AuctionEngine.BidRequestsTotal != 4 {
+		t.Fatalf("bid requests total = %d", report.Components.AuctionEngine.BidRequestsTotal)
+	}
+	if report.Components.AuctionEngine.BidSuccessRate != 0.75 {
+		t.Fatalf("bid success rate = %v", report.Components.AuctionEngine.BidSuccessRate)
+	}
+	if report.Components.AuctionEngine.WSConnectionsCurrent != 2 {
+		t.Fatalf("ws connections current = %d", report.Components.AuctionEngine.WSConnectionsCurrent)
 	}
 }
 

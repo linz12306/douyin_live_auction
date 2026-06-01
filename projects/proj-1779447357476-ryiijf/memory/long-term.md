@@ -1,6 +1,6 @@
 # 项目长期记忆
 
-> 更新时间：2026-05-30
+> 更新时间：2026-06-01
 
 ## 用户偏好
 
@@ -55,11 +55,15 @@
   - 持久规范：`openspec/specs/observability-health/spec.md`
   - 覆盖：`GET /healthz`，DB/Redis/竞拍引擎健康状态，realtime runtime 轻量 stats，HTTP 200/503 健康映射，敏感错误脱敏。
 
+- `perf-observability`
+  - 归档：`openspec/changes/archive/2026-06-01-perf-observability/`
+  - 持久规范：`openspec/specs/observability-health/spec.md`
+  - 覆盖：`/healthz` auction_engine bid metrics、当前 WebSocket 连接数、本地压测脚本 `scripts/load-auction.mjs`、性能报告模板 `docs/performance-report.md`。
+  - Scope is intentionally single-process; no Redis Pub/Sub, Prometheus, or multi-instance aggregation.
+
 ## 当前进行中
 
-- `merchant-auction-monitor`
-  - OpenSpec change 已实现并通过验证，尚未归档，等待验收后再 archive。
-  - 分支/worktree：`codex/merchant-auction-monitor` / `D:\pythoncode\douyin-live\.worktrees\merchant-auction-monitor`
+- None recorded in this worktree after `perf-observability` archive.
 
 ## 关键业务决策
 
@@ -71,12 +75,13 @@
 - 商家实时监控页同样复用 `/ws/auctions/:id` 作为实时真理源，只展示状态/排行/出价事件，不提供出价控件；取消竞拍仍走现有 REST 命令路径。
 - 商家商品列表可返回可选 `auction_id`，用于跳转到对应竞拍监控页；用户大厅行为保持不变。
 - `/healthz` 只暴露短消息和轻量 runtime stats，不返回原始 DB/Redis 错误、DSN、密码或堆栈。
+- `/healthz` auction_engine metrics now include process-local bid request totals, success/failure totals, success rate, average latency, lock-busy count, and current WebSocket connections.
 
 ## 下一阶段建议
 
 1. Bugfix/体验补齐：页面返回按钮、商家更新后用户端可见性、入口与状态刷新一致性。
 2. `merchant-admin` / 运营增强：商家实时看板、成交趋势、出价分布、用户活跃度。
-3. 可观测性后续增强：结构化日志、竞拍引擎指标、WebSocket/锁竞争指标。
+3. 可观测性后续增强：结构化日志、持久化或多实例聚合指标、真实监控面板。
 4. 演示打磨：移动端动画、提示文案、完整演示路径 E2E。
 ## 2026-05-30 Fix Notes
 

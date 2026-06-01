@@ -38,9 +38,16 @@ func (f EngineStatsProviderFunc) Stats() EngineStats {
 }
 
 type EngineStats struct {
-	ActiveRooms      int
-	ConnectedClients int
-	DroppedEvents    uint64
+	ActiveRooms          int
+	ConnectedClients     int
+	DroppedEvents        uint64
+	BidRequestsTotal     uint64
+	BidSuccessTotal      uint64
+	BidFailureTotal      uint64
+	BidSuccessRate       float64
+	BidAvgLatencyMS      float64
+	BidLockBusyTotal     uint64
+	WSConnectionsCurrent int
 }
 
 type HealthReport struct {
@@ -62,11 +69,18 @@ type HealthComponent struct {
 }
 
 type AuctionEngineComponent struct {
-	Status           string `json:"status"`
-	ActiveRooms      int    `json:"active_rooms"`
-	ConnectedClients int    `json:"connected_clients"`
-	DroppedEvents    uint64 `json:"dropped_events"`
-	Message          string `json:"message,omitempty"`
+	Status               string  `json:"status"`
+	ActiveRooms          int     `json:"active_rooms"`
+	ConnectedClients     int     `json:"connected_clients"`
+	DroppedEvents        uint64  `json:"dropped_events"`
+	BidRequestsTotal     uint64  `json:"bid_requests_total"`
+	BidSuccessTotal      uint64  `json:"bid_success_total"`
+	BidFailureTotal      uint64  `json:"bid_failure_total"`
+	BidSuccessRate       float64 `json:"bid_success_rate"`
+	BidAvgLatencyMS      float64 `json:"bid_avg_latency_ms"`
+	BidLockBusyTotal     uint64  `json:"bid_lock_busy_total"`
+	WSConnectionsCurrent int     `json:"ws_connections_current"`
+	Message              string  `json:"message,omitempty"`
 }
 
 type HealthService struct {
@@ -145,10 +159,17 @@ func (s *HealthService) checkAuctionEngine() AuctionEngineComponent {
 	}
 	stats := s.engine.Stats()
 	return AuctionEngineComponent{
-		Status:           ComponentStatusOK,
-		ActiveRooms:      stats.ActiveRooms,
-		ConnectedClients: stats.ConnectedClients,
-		DroppedEvents:    stats.DroppedEvents,
+		Status:               ComponentStatusOK,
+		ActiveRooms:          stats.ActiveRooms,
+		ConnectedClients:     stats.ConnectedClients,
+		DroppedEvents:        stats.DroppedEvents,
+		BidRequestsTotal:     stats.BidRequestsTotal,
+		BidSuccessTotal:      stats.BidSuccessTotal,
+		BidFailureTotal:      stats.BidFailureTotal,
+		BidSuccessRate:       stats.BidSuccessRate,
+		BidAvgLatencyMS:      stats.BidAvgLatencyMS,
+		BidLockBusyTotal:     stats.BidLockBusyTotal,
+		WSConnectionsCurrent: stats.WSConnectionsCurrent,
 	}
 }
 

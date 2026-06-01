@@ -57,9 +57,16 @@ func TestHealthServiceReportsHealthyComponents(t *testing.T) {
 		fakeDBChecker{},
 		fakeRedisChecker{},
 		fakeEngineStatsProvider{stats: EngineStats{
-			ActiveRooms:      2,
-			ConnectedClients: 3,
-			DroppedEvents:    4,
+			ActiveRooms:          2,
+			ConnectedClients:     3,
+			DroppedEvents:        4,
+			BidRequestsTotal:     10,
+			BidSuccessTotal:      8,
+			BidFailureTotal:      2,
+			BidSuccessRate:       0.8,
+			BidAvgLatencyMS:      12.5,
+			BidLockBusyTotal:     3,
+			WSConnectionsCurrent: 3,
 		}},
 	)
 
@@ -83,6 +90,21 @@ func TestHealthServiceReportsHealthyComponents(t *testing.T) {
 	}
 	if engine.ActiveRooms != 2 || engine.ConnectedClients != 3 || engine.DroppedEvents != 4 {
 		t.Fatalf("engine stats = %+v", engine)
+	}
+	if engine.BidRequestsTotal != 10 || engine.BidSuccessTotal != 8 || engine.BidFailureTotal != 2 {
+		t.Fatalf("engine bid counts = %+v", engine)
+	}
+	if engine.BidSuccessRate != 0.8 {
+		t.Fatalf("engine success rate = %v", engine.BidSuccessRate)
+	}
+	if engine.BidAvgLatencyMS != 12.5 {
+		t.Fatalf("engine avg latency = %v", engine.BidAvgLatencyMS)
+	}
+	if engine.BidLockBusyTotal != 3 {
+		t.Fatalf("engine lock busy total = %d", engine.BidLockBusyTotal)
+	}
+	if engine.WSConnectionsCurrent != 3 {
+		t.Fatalf("engine ws connections current = %d", engine.WSConnectionsCurrent)
 	}
 }
 

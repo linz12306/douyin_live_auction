@@ -51,18 +51,27 @@ func main() {
 	// Auction engine
 	auctionEngineRepo := repository.NewAuctionEngineRepo(db)
 	eventBus := realtime.NewInMemoryAuctionEventBus()
+	auctionMetrics := service.NewAuctionMetrics()
 	snapshotProvider := realtime.NewSnapshotProvider(auctionEngineRepo)
 	realtimeHub := realtime.NewHub(eventBus, snapshotProvider)
 	go realtimeHub.Run(context.Background())
-	auctionSvc := service.NewAuctionServiceWithEvents(auctionEngineRepo, rdb, eventBus)
+	auctionSvc := service.NewAuctionServiceWithMetrics(auctionEngineRepo, rdb, eventBus, auctionMetrics)
 	auctionH := handler.NewAuctionHandler(auctionSvc)
 	realtimeH := handler.NewRealtimeHandler(realtimeHub, snapshotProvider, cfg)
 	healthSvc := service.NewHealthService(db, rdb, service.EngineStatsProviderFunc(func() service.EngineStats {
 		hubStats := realtimeHub.Stats()
+		metricsSnapshot := auctionMetrics.Snapshot()
 		return service.EngineStats{
-			ActiveRooms:      hubStats.ActiveRooms,
-			ConnectedClients: hubStats.ConnectedClients,
-			DroppedEvents:    eventBus.DroppedEvents(),
+			ActiveRooms:          hubStats.ActiveRooms,
+			ConnectedClients:     hubStats.ConnectedClients,
+			DroppedEvents:        eventBus.DroppedEvents(),
+			BidRequestsTotal:     metricsSnapshot.BidRequestsTotal,
+			BidSuccessTotal:      metricsSnapshot.BidSuccessTotal,
+			BidFailureTotal:      metricsSnapshot.BidFailureTotal,
+			BidSuccessRate:       metricsSnapshot.BidSuccessRate,
+			BidAvgLatencyMS:      metricsSnapshot.BidAvgLatencyMS,
+			BidLockBusyTotal:     metricsSnapshot.BidLockBusyTotal,
+			WSConnectionsCurrent: hubStats.ConnectedClients,
 		}
 	}))
 	healthH := handler.NewHealthHandler(healthSvc)

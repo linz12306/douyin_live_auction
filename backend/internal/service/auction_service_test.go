@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"douyin-live/backend/internal/realtime"
 )
@@ -41,5 +42,34 @@ func TestPublishAuctionEventsUsesDetachedContextAndSwallowsErrors(t *testing.T) 
 	}
 	if bus.ctxErr != nil {
 		t.Fatalf("publish context error = %v, want nil", bus.ctxErr)
+	}
+}
+
+func TestAuctionServiceRecordsBidOutcome(t *testing.T) {
+	metrics := NewAuctionMetrics()
+	svc := NewAuctionServiceWithMetrics(nil, nil, realtime.NewNoopAuctionEventBus(), metrics)
+	expectedErr := errors.New("bid failed")
+
+	got := svc.recordBidMetrics(time.Now().Add(-10*time.Millisecond), expectedErr)
+
+	if got != expectedErr {
+		t.Fatalf("returned error = %v, want %v", got, expectedErr)
+	}
+	snapshot := metrics.Snapshot()
+	if snapshot.BidRequestsTotal != 1 || snapshot.BidFailureTotal != 1 {
+		t.Fatalf("snapshot = %+v", snapshot)
+	}
+}
+
+func TestAuctionServiceRecordsLockBusy(t *testing.T) {
+	metrics := NewAuctionMetrics()
+	svc := NewAuctionServiceWithMetrics(nil, nil, realtime.NewNoopAuctionEventBus(), metrics)
+
+	svc.recordLockBusy(ErrAuctionLockBusy)
+	svc.recordLockBusy(errors.New("other error"))
+
+	snapshot := metrics.Snapshot()
+	if snapshot.BidLockBusyTotal != 1 {
+		t.Fatalf("lock busy total = %d, want 1", snapshot.BidLockBusyTotal)
 	}
 }
