@@ -1,0 +1,120 @@
+# Tasks: frontend-experience-roadmap
+
+- [x] 1. Preflight and exploration
+  - Read `AGENTS.md`.
+  - Read `projects/proj-1779447357476-ryiijf/outputs/requirements-v3.md`.
+  - Read `projects/proj-1779447357476-ryiijf/outputs/current-source-of-truth.md`.
+  - Read `openspec/specs/realtime-live-room/spec.md`.
+  - Read `openspec/specs/order-system/spec.md`.
+  - Read `openspec/specs/merchant-dashboard/spec.md`.
+  - Read `openspec/specs/merchant-auction-monitor/spec.md`.
+  - Read `docs/demo-readiness.md`.
+  - Read `frontend/src/App.tsx`.
+  - Read `frontend/src/pages/app/LiveAuctionRoom.tsx`.
+  - Read `frontend/src/pages/app/AuctionLobby.tsx`.
+  - Read `frontend/src/pages/merchant/Dashboard.tsx`.
+  - Read `frontend/src/pages/merchant/AuctionMonitor.tsx`.
+  - Confirm this is OpenSpec work rather than fast lane because it sets acceptance criteria and parallel implementation boundaries.
+  - Create `docs/superpowers/specs/2026-06-01-frontend-experience-roadmap-exploration.md`.
+  - Verification: source files and docs reviewed; no business implementation files edited.
+
+- [x] 2. OpenSpec lock for frontend roadmap
+  - Create `openspec/changes/frontend-experience-roadmap/proposal.md`.
+  - Create `openspec/changes/frontend-experience-roadmap/design.md`.
+  - Create `openspec/changes/frontend-experience-roadmap/tasks.md`.
+  - Create `openspec/changes/frontend-experience-roadmap/specs/frontend-experience-roadmap/spec.md`.
+  - Run `npx -y @fission-ai/openspec@latest validate frontend-experience-roadmap --strict --no-interactive`.
+  - Run `git diff --check`.
+  - Keep this change active after planning; do not archive.
+  - Verification:
+    - `npx -y @fission-ai/openspec@latest validate frontend-experience-roadmap --strict --no-interactive` passed.
+    - `git diff --check` passed.
+
+- [ ] 3. Package `auction-atmosphere`
+  - Scope:
+    - Enhance the H5 buyer live room atmosphere and realtime clarity.
+    - Cover leading, outbid, Soft Close extension, last-10-second urgency, price movement, terminal result, and order entry cues.
+    - Preserve WebSocket as realtime truth for price, ranking, countdown, extension, and terminal status.
+  - Likely files:
+    - `frontend/src/pages/app/LiveAuctionRoom.tsx`
+    - `frontend/src/pages/app/liveRoomUtils.ts`
+    - `frontend/src/store/liveRoomStore.ts`
+    - Focused tests under the existing frontend test structure.
+    - Relevant Playwright demo/realtime test if behavior is visible only in browser.
+  - Implementation requirements:
+    - Start with a Superpowers execution plan for this package.
+    - Add or update tests before changing behavior where practical.
+    - Keep REST bid success from directly changing visible realtime auction state.
+    - Add accessible text feedback for every animation-only cue.
+    - Verify narrow mobile viewport and desktop fallback do not overlap text, controls, ranking, or notification content.
+  - Verification:
+    - Focused frontend tests for bid button states, outbid state, terminal state, and empty notification/ranking states.
+    - Playwright coverage for two buyers where buyer A is outbid by buyer B and can see recovery feedback.
+    - `cd frontend && npm run build`.
+    - `git diff --check`.
+
+- [ ] 4. Package `merchant-analytics`
+  - Scope:
+    - Extend merchant dashboard with charted trend, bid distribution, and user activity views from `requirements-v3.md`.
+    - Preserve current dashboard summary, status buckets, active auction list, and recent order list.
+  - Likely files:
+    - `frontend/src/pages/merchant/Dashboard.tsx`
+    - `frontend/src/types/dashboard.ts`
+    - `frontend/src/api/dashboard.ts`
+    - New chart components under `frontend/src/components/` if the codebase benefits from sharing.
+    - Focused dashboard tests.
+  - Implementation requirements:
+    - Start with a Superpowers execution plan for this package.
+    - If existing `GET /api/v1/merchant/dashboard` data is insufficient, stop and create or update an OpenSpec API contract before implementation.
+    - Charts must have loading, empty, error, and zero-value states.
+    - Analytics must be scoped to the current merchant only.
+  - Verification:
+    - Focused tests for chart rendering, empty datasets, API failure, and merchant navigation.
+    - `cd frontend && npm run build`.
+    - Backend/API tests if a backend contract is added.
+    - `git diff --check`.
+
+- [ ] 5. Package `demo-materials`
+  - Scope:
+    - Make the local demonstration path presenter-ready and aligned with actual routes and UI states.
+    - Cover merchant setup/monitoring, buyer A and buyer B live bidding, private outbid, terminal result, buyer order confirmation, and simulated payment.
+  - Likely files:
+    - `docs/demo-readiness.md`
+    - Additional docs under `docs/` if needed for screenshots, checklists, or route cards.
+    - Demo readiness E2E files when the implementation package includes automated checks.
+  - Implementation requirements:
+    - Start with a Superpowers execution plan for this package.
+    - Keep demo data local-only and clearly non-production.
+    - Include exact service ports, commands, account credentials, route sequence, expected visible checkpoints, and troubleshooting checks.
+    - Do not change production behavior for presentation convenience unless an OpenSpec requirement explicitly permits it.
+  - Verification:
+    - Manual read-through of the runbook against current routes.
+    - Demo readiness E2E when included.
+    - `git diff --check`.
+
+- [ ] 6. Package `perf-observability`
+  - Scope:
+    - Define or implement read-only frontend entry points for health and auction metrics when a UI is needed.
+    - Keep operational data separate from buyer and merchant business decision flows.
+  - Likely files:
+    - OpenSpec change files if new metrics routes or response fields are needed.
+    - Optional frontend route/component after API contract lock.
+    - Tests with mocked health/metrics responses.
+  - Implementation requirements:
+    - Start with a Superpowers execution plan for this package.
+    - Use `/healthz` for service health if sufficient.
+    - If showing active auctions, bid success rate, average latency, WebSocket connections, or lock contention, define a stable API source first.
+    - Present load-test results only when tied to a documented script, fixture, or captured output.
+  - Verification:
+    - OpenSpec strict validation for any API contract change.
+    - Focused frontend tests for healthy, degraded, unavailable, and no-data states.
+    - `cd frontend && npm run build` if frontend code is added.
+    - `git diff --check`.
+
+- [ ] 7. Cross-package integration checkpoint
+  - Run after one or more implementation packages complete.
+  - Confirm buyer and merchant journeys still match this roadmap.
+  - Confirm `realtime-live-room`, `order-system`, `merchant-dashboard`, `merchant-auction-monitor`, `demo-readiness`, and this change do not contradict each other.
+  - Run relevant frontend tests, E2E checks, OpenSpec validation, and build commands.
+  - Update task checkboxes with actual results.
+  - Update memory and archive only when the implementation scope is genuinely complete.
