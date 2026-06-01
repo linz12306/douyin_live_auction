@@ -15,31 +15,30 @@ Run a repeatable local demonstration of the Douyin live auction MVP. The path sh
 
 Start project-local database services:
 
-```powershell
+```bash
+cd /Users/vivix/Documents/Codex/douyin_live_auction_worktrees/demo-materials
 docker compose up -d mysql redis
 ```
 
 Start the backend:
 
-```powershell
-cd D:\pythoncode\douyin-live\backend
-$env:REDIS_ADDR='127.0.0.1:16380'
-go run ./cmd/server
+```bash
+cd /Users/vivix/Documents/Codex/douyin_live_auction_worktrees/demo-materials/backend
+REDIS_ADDR=127.0.0.1:16380 go run ./cmd/server
 ```
 
 Start the frontend in another terminal:
 
-```powershell
-cd D:\pythoncode\douyin-live\frontend
+```bash
+cd /Users/vivix/Documents/Codex/douyin_live_auction_worktrees/demo-materials/frontend
 npm run dev -- --host 127.0.0.1 --port 3000
 ```
 
 ## Prepare Demo Data
 
-```powershell
-cd D:\pythoncode\douyin-live
-$env:DEMO_API_BASE_URL='http://127.0.0.1:8080'
-npm run demo:seed
+```bash
+cd /Users/vivix/Documents/Codex/douyin_live_auction_worktrees/demo-materials
+DEMO_API_BASE_URL=http://127.0.0.1:8080 npm run demo:seed
 ```
 
 The command prints the active auction id and the main routes for the run. It creates a new uniquely named active auction each time.
@@ -66,28 +65,23 @@ The command prints the active auction id and the main routes for the run. It cre
 
 For repeated automated checks, run a backend with rate limiting disabled and a frontend pointed at that backend:
 
-```powershell
-cd D:\pythoncode\douyin-live\backend
-$env:SERVER_PORT='18080'
-$env:DISABLE_RATE_LIMIT='1'
-$env:REDIS_ADDR='127.0.0.1:16380'
-go run ./cmd/server
+```bash
+cd /Users/vivix/Documents/Codex/douyin_live_auction_worktrees/demo-materials/backend
+SERVER_PORT=18080 DISABLE_RATE_LIMIT=1 REDIS_ADDR=127.0.0.1:16380 go run ./cmd/server
 ```
 
 In another terminal:
 
-```powershell
-cd D:\pythoncode\douyin-live\frontend
-$env:VITE_BACKEND_TARGET='http://127.0.0.1:18080'
-npx vite --host 127.0.0.1 --port 13000
+```bash
+cd /Users/vivix/Documents/Codex/douyin_live_auction_worktrees/demo-materials/frontend
+VITE_BACKEND_TARGET=http://127.0.0.1:18080 npx vite --host 127.0.0.1 --port 13000
 ```
 
 Run the demo readiness E2E:
 
-```powershell
-cd D:\pythoncode\douyin-live
-$env:PLAYWRIGHT_BASE_URL='http://127.0.0.1:13000'
-npm run test:e2e:demo
+```bash
+cd /Users/vivix/Documents/Codex/douyin_live_auction_worktrees/demo-materials
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npm run test:e2e:demo
 ```
 
 ## Troubleshooting

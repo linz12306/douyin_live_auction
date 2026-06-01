@@ -1,17 +1,17 @@
 # 实时竞拍大师 —— 当前实现状态报告 v3
 
-> 更新时间：2026-05-29
-> 当前依据：`requirements-v3.md`、`AGENTS.md`、`openspec/specs/auction-engine/spec.md`、`openspec/specs/realtime-live-room/spec.md`、`openspec/specs/order-system/spec.md`、`openspec/specs/observability-health/spec.md`、`openspec/changes/archive/2026-05-28-auction-engine-mvp/`、`openspec/changes/archive/2026-05-28-ws-realtime-live-room/`、`openspec/changes/archive/2026-05-29-order-system/`、`openspec/changes/archive/2026-05-29-observability-health/`、`docs/superpowers/plans/2026-05-27-auction-engine-mvp.md`、`docs/superpowers/plans/2026-05-28-ws-realtime-live-room.md`、`docs/superpowers/plans/2026-05-29-order-system.md`、`docs/superpowers/plans/2026-05-29-observability-health.md`
+> 更新时间：2026-06-01
+> 当前依据：`requirements-v3.md`、`AGENTS.md`、`openspec/specs/auction-engine/spec.md`、`openspec/specs/realtime-live-room/spec.md`、`openspec/specs/order-system/spec.md`、`openspec/specs/observability-health/spec.md`、`openspec/specs/merchant-dashboard/spec.md`、`openspec/specs/merchant-auction-monitor/spec.md`、`openspec/specs/demo-readiness/spec.md`、`openspec/changes/archive/2026-05-28-auction-engine-mvp/`、`openspec/changes/archive/2026-05-28-ws-realtime-live-room/`、`openspec/changes/archive/2026-05-29-order-system/`、`openspec/changes/archive/2026-05-29-observability-health/`、`openspec/changes/archive/2026-05-31-merchant-dashboard/`、`openspec/changes/archive/2026-05-31-merchant-auction-monitor/`、`openspec/changes/archive/2026-05-31-demo-readiness/`、`docs/superpowers/plans/2026-05-27-auction-engine-mvp.md`、`docs/superpowers/plans/2026-05-28-ws-realtime-live-room.md`、`docs/superpowers/plans/2026-05-29-order-system.md`、`docs/superpowers/plans/2026-05-29-observability-health.md`、`docs/superpowers/plans/2026-05-30-merchant-dashboard.md`、`docs/superpowers/plans/2026-05-30-merchant-auction-monitor.md`、`docs/superpowers/plans/2026-05-31-demo-readiness.md`
 
 ## 1. 当前流程状态
 
 当前执行 `AGENTS.md` 固化的集成流程：
 
-1. Superpowers 探索：已完成，主要产物包括 `docs/superpowers/specs/2026-05-27-auction-engine-mvp-exploration.md`、`docs/superpowers/specs/2026-05-28-ws-realtime-live-room-exploration.md`、`docs/superpowers/specs/2026-05-29-order-system-exploration.md` 和 `docs/superpowers/specs/2026-05-29-observability-health-exploration.md`。
-2. OpenSpec 锁规范：已完成；`auction-engine-mvp`、`ws-realtime-live-room`、`order-system` 和 `observability-health` 均已归档。
-3. Superpowers 执行：已完成，执行计划为 `docs/superpowers/plans/2026-05-27-auction-engine-mvp.md`、`docs/superpowers/plans/2026-05-28-ws-realtime-live-room.md`、`docs/superpowers/plans/2026-05-29-order-system.md` 和 `docs/superpowers/plans/2026-05-29-observability-health.md`。
-4. OpenSpec 校验/归档：已完成，主规范为 `openspec/specs/auction-engine/spec.md`、`openspec/specs/realtime-live-room/spec.md`、`openspec/specs/order-system/spec.md` 和 `openspec/specs/observability-health/spec.md`。
-5. Superpowers 记忆沉淀：已更新，本文件和 `memory/2026-05-29.md` 记录当前状态。
+1. Superpowers 探索：核心 change 均有对应探索记录，覆盖竞拍引擎、实时直播间、订单、健康检查、商家看板、商家竞拍监控和演示准备。
+2. OpenSpec 锁规范：已完成并归档 `auction-engine-mvp`、`ws-realtime-live-room`、`order-system`、`observability-health`、`merchant-dashboard`、`merchant-auction-monitor` 和 `demo-readiness`。
+3. Superpowers 执行：上述 change 均有执行计划和验证记录，位于 `docs/superpowers/plans/`。
+4. OpenSpec 校验/归档：持久规范已更新到 `openspec/specs/`，包括 auction engine、realtime live room、order system、observability health、merchant dashboard、merchant auction monitor 和 demo readiness。
+5. Superpowers 记忆沉淀：已更新 `memory/2026-05-29.md`、`memory/2026-05-30.md`、`memory/2026-05-31.md`、`memory/2026-06-01.md` 和 `memory/long-term.md`。
 
 ## 2. 已有业务代码
 
@@ -19,10 +19,13 @@
 
 - 用户认证与资料：注册、登录、刷新、登出、个人资料、头像、改密等主干已存在。
 - 商品 CRUD：商品列表/详情、商家创建/编辑/删除、图片上传/删除、发布竞拍主干已存在。
-- 竞拍 MVP：已合并并推送到 `master`，出价/排行榜/激活/取消/结算关键路径已有集成测试，后端 `go test ./...` 通过。
-- 订单系统：已合并并推送到 `master`，包含中标确认、模拟支付、确认超时/取消退款、用户/商家订单页。
-- 可观测性健康检查：已合并并推送到 `master`，`GET /healthz` 返回 DB、Redis、auction_engine 组件状态。
-- 前端稳定性补齐：已合并并推送到 `master`，包含页面返回按钮、列表/详情刷新、用户大厅/订单/商家商品页状态刷新。
+- 竞拍 MVP：已完成并归档，出价/排行榜/激活/取消/结算关键路径已有集成测试。
+- 订单系统：已完成并归档，包含中标确认、模拟支付、确认超时/取消退款、用户/商家订单页。
+- 可观测性健康检查：已完成并归档，`GET /healthz` 返回 DB、Redis、auction_engine 组件状态。
+- 前端稳定性补齐：已完成并归档，包含页面返回按钮、列表/详情刷新、用户大厅/订单/商家商品页状态刷新。
+- 商家运营看板：已完成并归档，`GET /api/v1/merchant/dashboard` 和 `/merchant/dashboard` 提供商家自有商品、竞拍、订单和成交指标。
+- 商家竞拍监控：已完成并归档，`/merchant/auctions/:id/monitor` 复用 `/ws/auctions/:id` 实时流展示价格、排行、事件和终态。
+- 演示准备：已完成并归档，包含 `npm run demo:seed`、`docs/demo-readiness.md` 和 `tests/e2e/demo-readiness.spec.ts`。
 
 本次 `auction-engine-mvp` 已新增/接入：
 
@@ -60,39 +63,34 @@
 
 ## 3. 仍未完成
 
-- WebSocket/H5 用户端实时竞拍房间已在 `ws-realtime-live-room` change 中接入，包含用户大厅、直播间、实时价格/排行榜、出价和被超越通知。
-- 订单系统已在 `order-system` change 中接入，包含中标确认、模拟支付、确认超时/买家取消退款、用户订单列表/详情、商家订单列表/详情。
-- 商家看板/运营增强仍是后续 change，不应混进已归档的订单 slice。
+当前报告已与已归档 changes 对齐，没有未归档的 `merchant-dashboard`、`merchant-auction-monitor` 或 `demo-readiness` 工作遗留。后续若继续做成交趋势、出价分布、用户活跃度、结构化日志或运营增强，应作为新的 OpenSpec change 开启。
 
 ## 4. 下一步计划
 
-优先级 1：开启下一阶段 `merchant-admin-lite` / 商家运营看板。
+优先级 1：演示和验收。
 
-- Task 9 已补端到端实时验证：商家 API setup 创建/发布/激活竞拍，用户 A 从 `/app/auctions` 进入直播间并看到 snapshot 倒计时，用户 A 出价，用户 B 第二浏览器上下文更高价出价，用户 A 收到私有 outbid 通知，当前价和排行榜随 WebSocket 更新，随后用户 A 封顶出价触发真实 `auction_end`，终态状态/消息和禁用出价控件均被验证。
-- Playwright 支持 `PLAYWRIGHT_BASE_URL`，Vite dev proxy 支持 `VITE_BACKEND_TARGET`，后端支持显式测试开关 `DISABLE_RATE_LIMIT=1`，便于在已有 8080/3000 服务占用时使用备用端口验证当前后端代码并避免重复 E2E 命中注册限流。
-- `ws-realtime-live-room` 已归档到 `openspec/changes/archive/2026-05-28-ws-realtime-live-room/`，持久规范位于 `openspec/specs/realtime-live-room/spec.md`。
-- `order-system` 已归档到 `openspec/changes/archive/2026-05-29-order-system/`，持久规范位于 `openspec/specs/order-system/spec.md`。
-- `observability-health` 已归档到 `openspec/changes/archive/2026-05-29-observability-health/`，持久规范位于 `openspec/specs/observability-health/spec.md`。
-- 已补订单 E2E：商家/买家 API setup 创建中标订单，买家从 `/app/orders` 进入详情，确认订单，模拟支付，最终展示 `已支付`。
+- 使用 `docs/demo-readiness.md` 启动本地依赖、后端、前端和 demo seed。
+- 使用 demo 账号演示商家看板、商家竞拍监控、买家直播间出价、私有 outbid、成交、确认订单和模拟支付。
+- 需要自动化回归时，可用后端 `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1 REDIS_ADDR=127.0.0.1:16380` 和前端 `VITE_BACKEND_TARGET=http://127.0.0.1:18080` 跑 `npm run test:e2e:demo`。
 
-优先级 2：商家实时看板/运营增强。
+优先级 2：新的商家运营增强 change。
 
-- 可独立规划商家实时监控、运营面板、成交趋势、出价分布和用户活跃度统计。
+- 可独立规划成交趋势、出价分布、用户活跃度、结构化日志、竞拍引擎指标、WebSocket/锁竞争指标。
 
 ## 5. 当前开发方式
 
-当前以 `master` 作为唯一稳定基线；`stability-polish` 和 `observability-health` 的临时 worktree/分支已在阶段 0 收口中删除。
+当前文档/材料收口在独立 worktree 和 topic branch 上进行，不合并 `master`，不打开 PR。
 
-- 当前主工作区：`/Users/vivix/Documents/Codex/douyin_live_auction`
-- 当前稳定分支：`master`
+- 当前工作区：`/Users/vivix/Documents/Codex/douyin_live_auction_worktrees/demo-materials`
+- 当前分支：`codex/demo-materials`
 - Go：`/Users/vivix/.local/go`
 - MySQL：`127.0.0.1:3307`，数据库 `auction_db`
-- Redis：`127.0.0.1:16379`
+- Redis：`127.0.0.1:16380`
 
 最新验证命令：
 
 ```bash
-cd /Users/vivix/Documents/Codex/douyin_live_auction
+cd /Users/vivix/Documents/Codex/douyin_live_auction_worktrees/demo-materials
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/order-system.spec.ts
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:13000 npx playwright test tests/e2e/realtime-live-room.spec.ts
 npx -y @fission-ai/openspec@latest validate --specs --strict --no-interactive
@@ -101,4 +99,4 @@ cd frontend && npm run build
 git diff --check
 ```
 
-结果：`order-system` 和 `realtime-live-room` E2E 已在备用端口对 `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1` 的当前后端和 Vite `VITE_BACKEND_TARGET=http://localhost:18080` 验证通过；OpenSpec specs strict validate 通过，后端全量 Go tests 通过，前端测试/构建通过，`git diff --check` 通过。
+结果：历史行为变更 slice 已通过各自记录的后端、前端、E2E、OpenSpec 和 diff 检查。本次 `codex/demo-materials` 只改 Markdown/OpenSpec 文本/记忆材料，验证使用 OpenSpec specs strict validate 和 `git diff --check`；无需重新运行前后端测试，因为没有修改 Go/TypeScript 业务代码、路由、接口、状态机、迁移或 E2E 逻辑。
