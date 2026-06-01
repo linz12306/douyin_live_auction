@@ -30,15 +30,39 @@
     - `npx -y @fission-ai/openspec@latest validate frontend-experience-roadmap --strict --no-interactive` passed.
     - `git diff --check` passed.
 
+- [x] 2.1 User-confirmed Douyin-style design alignment
+  - Run explicit user-facing brainstorm checkpoint after initial review feedback.
+  - Confirm user H5 should strongly resemble Douyin-style live commerce while avoiding Douyin branding and third-party assets.
+  - Confirm merchant PC should remain a balanced operations dashboard.
+  - Confirm live-room visual source: preset simulated scenes.
+  - Confirm product model: multi-item shelf shell with only the current auction item fully realtime-backed in version one.
+  - Confirm copy strategy: Douyin-like live/shelf copy plus formal order/payment copy.
+  - Confirm bid sheet: strong-state half-screen sheet.
+  - Confirm result flow: in-room result modal followed by order detail.
+  - Write `docs/superpowers/specs/2026-06-01-douyin-style-frontend-design.md`.
+  - Verification:
+    - `npx -y @fission-ai/openspec@latest validate frontend-experience-roadmap --strict --no-interactive` passed after the design document was added.
+    - `git diff --check` passed after the design document was added.
+
+- [x] 2.2 Roadmap updated from approved design
+  - Update exploration, proposal, design, tasks, and spec delta to reflect the approved Douyin-style live commerce direction.
+  - Add `docs/superpowers/plans/2026-06-01-frontend-experience-roadmap.md` so the OpenSpec roadmap has a Superpowers execution plan.
+  - Keep the change active; do not archive.
+  - Verification:
+    - `npx -y @fission-ai/openspec@latest validate frontend-experience-roadmap --strict --no-interactive` passed.
+    - `git diff --check` passed.
+
 - [ ] 3. Package `auction-atmosphere`
   - Scope:
-    - Enhance the H5 buyer live room atmosphere and realtime clarity.
-    - Cover leading, outbid, Soft Close extension, last-10-second urgency, price movement, terminal result, and order entry cues.
+    - Reshape the H5 buyer live room into a Douyin-style live commerce auction experience.
+    - Cover the full-screen live-room shell, preset simulated live scenes, host bar, live/rank badges, comments/system messages, right-side atmosphere actions, bottom commerce actions, auction floating card, product shelf shell, strong-state bid sheet, leading, outbid, Soft Close extension, last-10-second urgency, price movement, in-room terminal result modal, and order entry cues.
+    - Keep only the current auction item fully realtime-backed in version one; do not implement true multi-item realtime bidding without a later OpenSpec contract.
     - Preserve WebSocket as realtime truth for price, ranking, countdown, extension, and terminal status.
   - Likely files:
     - `frontend/src/pages/app/LiveAuctionRoom.tsx`
     - `frontend/src/pages/app/liveRoomUtils.ts`
     - `frontend/src/store/liveRoomStore.ts`
+    - Owned/generated visual assets for simulated live scenes.
     - Focused tests under the existing frontend test structure.
     - Relevant Playwright demo/realtime test if behavior is visible only in browser.
   - Implementation requirements:
@@ -46,10 +70,11 @@
     - Add or update tests before changing behavior where practical.
     - Keep REST bid success from directly changing visible realtime auction state.
     - Add accessible text feedback for every animation-only cue.
-    - Verify narrow mobile viewport and desktop fallback do not overlap text, controls, ranking, or notification content.
+    - Avoid Douyin branding, copied Douyin UI assets, and real third-party creator/product media.
+    - Verify narrow mobile viewport and desktop fallback do not overlap text, controls, ranking, system messages, auction floating card, or bid sheet content.
   - Verification:
-    - Focused frontend tests for bid button states, outbid state, terminal state, and empty notification/ranking states.
-    - Playwright coverage for two buyers where buyer A is outbid by buyer B and can see recovery feedback.
+    - Focused frontend tests for floating card states, bid sheet states, outbid state, terminal modal state, shelf empty/demo states, and empty notification/ranking states.
+    - Playwright coverage for two buyers where buyer A is outbid by buyer B and can see recovery feedback in the live-room system-message layer and bid sheet.
     - `cd frontend && npm run build`.
     - `git diff --check`.
 
@@ -66,6 +91,7 @@
   - Implementation requirements:
     - Start with a Superpowers execution plan for this package.
     - If existing `GET /api/v1/merchant/dashboard` data is insufficient, stop and create or update an OpenSpec API contract before implementation.
+    - Preserve the balanced PC operations dashboard direction: summary metrics, active auction monitor entries, recent orders, and charts.
     - Charts must have loading, empty, error, and zero-value states.
     - Analytics must be scoped to the current merchant only.
   - Verification:
@@ -77,7 +103,7 @@
 - [ ] 5. Package `demo-materials`
   - Scope:
     - Make the local demonstration path presenter-ready and aligned with actual routes and UI states.
-    - Cover merchant setup/monitoring, buyer A and buyer B live bidding, private outbid, terminal result, buyer order confirmation, and simulated payment.
+    - Cover merchant setup/monitoring, Douyin-style buyer live room, product shelf shell, buyer A and buyer B live bidding, private outbid, in-room terminal result modal, buyer order confirmation, and simulated payment.
   - Likely files:
     - `docs/demo-readiness.md`
     - Additional docs under `docs/` if needed for screenshots, checklists, or route cards.
@@ -85,7 +111,7 @@
   - Implementation requirements:
     - Start with a Superpowers execution plan for this package.
     - Keep demo data local-only and clearly non-production.
-    - Include exact service ports, commands, account credentials, route sequence, expected visible checkpoints, and troubleshooting checks.
+    - Include exact service ports, commands, account credentials, route sequence, expected visible checkpoints, screenshot references, and troubleshooting checks.
     - Do not change production behavior for presentation convenience unless an OpenSpec requirement explicitly permits it.
   - Verification:
     - Manual read-through of the runbook against current routes.

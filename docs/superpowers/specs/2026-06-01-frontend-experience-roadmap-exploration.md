@@ -32,6 +32,23 @@ This is not a fast-lane UI polish task. It changes the acceptance criteria and e
 - `frontend/src/pages/merchant/Dashboard.tsx` currently shows compact metric tiles, product/order status counts, active auctions, and recent orders, but not trend, distribution, or user-activity charts.
 - `frontend/src/pages/merchant/AuctionMonitor.tsx` reuses the auction WebSocket state, shows PC-oriented realtime monitor data, rankings, event feed, terminal state, and an existing cancellation command with reason input.
 
+## User Brainstorm Checkpoint
+
+After the first roadmap draft, the user requested an explicit brainstorm and provided Douyin live commerce and live auction reference screenshots.
+
+Confirmed direction:
+
+- User H5 should strongly resemble a Douyin-style live commerce room, while avoiding Douyin branding and real third-party creator/brand assets.
+- Merchant PC should remain a clear operations dashboard, not an entertainment UI.
+- Use approach A: demo loop first with an extensible structure.
+- User H5 main surface should be a full-screen live-room shell with top host bar, live/rank badges, simulated live scene, comments/system messages, right-side atmosphere actions, bottom commerce actions, persistent auction floating card, half-screen bid sheet, half-screen product shelf shell, and in-room result modal.
+- Live-room visual source should be preset simulated scenes such as beauty/skincare, sneaker/collectible, and jewelry/auction rooms. The actual auction product is represented by the floating card, product shelf, bid sheet, and result modal.
+- Use a multi-item product shelf shell, but keep only the current auction item fully real in the first version. Do not imply true multi-item realtime bidding until a later OpenSpec change expands backend and WebSocket semantics.
+- Use mixed copy: live room and shelf copy can use Douyin-like commerce language; order detail, confirmation, and payment copy stays formal and business-clear.
+- Use a strong-state half-screen bid sheet with countdown, current price, my bid state, increment amount, add/subtract controls, and dynamic CTA.
+- Use an in-room result modal first, then route winners to order detail for confirmation/payment.
+- Merchant PC should be a balanced operations workbench: summary metrics, active auction monitor entries, recent orders, and analytics when contracts exist.
+
 ## Users
 
 - Buyer on H5: wants a mobile-first path from registration/login to lobby, live room, bidding, outbid recovery, result, order confirmation, and simulated payment.
@@ -44,18 +61,20 @@ This is not a fast-lane UI polish task. It changes the acceptance criteria and e
 ### Buyer H5 Journey
 
 1. A buyer registers or logs in as role `user` and lands on a discoverable route into `/app/auctions`.
-2. The buyer scans the auction lobby, sees status, image, current price, end time, empty/loading/error states, and enters a live room.
-3. The buyer enters `/app/auctions/:id`, sees live ambience, product context, current price, countdown, connection status, ranking, event feed, and bid controls.
-4. The buyer submits the next bid or a custom valid bid. The UI shows a submitting state, then waits for WebSocket truth before changing current price, ranking, countdown, or leading status.
-5. If another buyer outbids them, the buyer receives a prominent private outbid state with recovery action and realtime feedback.
-6. When Soft Close extends the auction, the countdown reset and extension count are visible without contradicting server time.
-7. When the auction ends, the buyer sees a clear won, lost, no-bid, or cancelled result state. Winners get an order entry; non-winners see terminal status without buyer-only order mutation actions.
-8. The winner opens `/app/orders` or `/app/orders/:id`, confirms the pending order, performs simulated payment, and reaches a paid terminal state.
+2. The buyer scans the auction lobby and can reach both the Douyin-style live room and a discoverable "my auctions" history/status area.
+3. The buyer enters `/app/auctions/:id`, sees a full-screen simulated live commerce room with host bar, badges, live scene, comments/system messages, right-side atmosphere actions, bottom commerce actions, and a persistent auction floating card.
+4. The buyer opens the product shelf shell and sees current/nearby visual items with `竞拍中`, `即将开拍`, `竞拍未成交`, and `竞拍结束` states. Only the current item is fully realtime-backed in version one.
+5. The buyer opens the strong-state bid sheet from the floating card or shelf, sees countdown, current price, my bid state, increment amount, add/subtract controls, and a dynamic CTA.
+6. The buyer submits the next bid or a custom valid bid. The UI shows a submitting state, then waits for WebSocket truth before changing current price, ranking, countdown, or leading status.
+7. If another buyer outbids them, the buyer receives a prominent private outbid state with recovery action in the live-room system-message layer and bid sheet.
+8. When Soft Close extends the auction, the countdown reset and extension count are visible without contradicting server time.
+9. When the auction ends, the buyer sees an in-room result modal for won, lost, no-bid, or cancelled states.
+10. The winner follows the result modal into `/app/orders/:id`, confirms the pending order, performs simulated payment, and reaches a paid terminal state.
 
 ### Merchant PC Journey
 
 1. A merchant registers or logs in as role `merchant` and reaches a PC-oriented dashboard/product management entry.
-2. The merchant publishes a product with required auction rules and can find its active monitor route.
+2. The merchant publishes a product with name, multiple images, description, start price, increment mode/value, optional ceiling price, duration, Soft Close seconds, and max extension count.
 3. The merchant opens `/merchant/auctions/:id/monitor`, sees current price, countdown, status, rankings, event feed, connection state, and terminal messages.
 4. If an auction is abnormal, the merchant can initiate the existing cancellation command only when the current pending/active rules allow it and sees backend rejection copy when the rule denies cancellation.
 5. The merchant inspects `/merchant/orders` or `/merchant/orders/:id` after settlement and sees buyer, product, amount, status, and timestamps without buyer-only actions.
@@ -75,11 +94,11 @@ This is not a fast-lane UI polish task. It changes the acceptance criteria and e
 
 ## Acceptance Criteria
 
-- The OpenSpec change defines page-level requirements for H5 buyer, merchant PC, realtime atmosphere, order result, and demo path.
+- The OpenSpec change defines page-level requirements for Douyin-style H5 buyer live room, merchant PC, realtime atmosphere, order result, and demo path.
 - The OpenSpec change defines state requirements for loading, empty, error, submitting, reconnecting, realtime update, outbid, extended, terminal, and order mutation states.
 - The roadmap preserves `requirements-v3.md` decisions: WebSocket is realtime truth, REST initializes, bids wait for WebSocket confirmation, stale versions are ignored, and server time offsets drive countdowns.
 - The roadmap splits later work into independent packages with clear ownership:
-  - `auction-atmosphere`: H5 live room ambience, animation states, outbid recovery, countdown urgency, leading/lost/won feedback.
+  - `auction-atmosphere`: Douyin-style H5 live-room shell, preset live scenes, auction floating card, product shelf shell, strong-state bid sheet, in-room result modal, comments/system messages, and atmosphere controls.
   - `merchant-analytics`: merchant charted dashboard views for trend, bid distribution, and user activity.
   - `demo-materials`: presenter-facing runbook, fixture notes, screenshots or checklists, and E2E readiness expectations.
   - `perf-observability`: frontend entry boundaries for health, auction engine metrics, and load-test visibility when a UI is needed.
@@ -91,7 +110,7 @@ This is not a fast-lane UI polish task. It changes the acceptance criteria and e
 Use the existing routes and stores as the baseline instead of inventing a parallel frontend architecture.
 
 - Keep `useLiveRoomStore` and the existing WebSocket envelope as the realtime state boundary for buyer live room and merchant monitor.
-- Let `auction-atmosphere` enhance presentation and local UI states around the existing room state. It must not create alternate auction truth or infer settlement from REST bid responses.
+- Let `auction-atmosphere` reshape the H5 room around a Douyin-style live commerce structure while keeping the existing realtime truth boundary. It must not create alternate auction truth, infer settlement from REST bid responses, or imply true multi-item realtime bidding in version one.
 - Let `merchant-analytics` extend the current merchant dashboard. If chart data needs backend support beyond the current dashboard API, the implementation worker must create a child OpenSpec change or extend this one before coding.
 - Let `demo-materials` focus on docs, local demo data path, screenshots/checklists, and E2E coverage. It should not add production-only behavior.
 - Let `perf-observability` define frontend boundaries around existing `/healthz` and any future metrics endpoint. It should remain read-only and non-authoritative for auction operation.
@@ -100,7 +119,7 @@ Use the existing routes and stores as the baseline instead of inventing a parall
 
 | Package | Owned Surface | May Touch | Must Not Touch |
 | --- | --- | --- | --- |
-| `auction-atmosphere` | Buyer H5 lobby/live room realtime presentation and result states | `frontend/src/pages/app/LiveAuctionRoom.tsx`, live-room UI helpers, focused component/E2E tests, small shared UI components | Merchant dashboard/monitor analytics, backend auction semantics, order mutation semantics |
+| `auction-atmosphere` | Douyin-style buyer H5 live room, auction floating card, product shelf shell, strong-state bid sheet, result modal, comments/system message layer | `frontend/src/pages/app/LiveAuctionRoom.tsx`, live-room UI helpers, focused component/E2E tests, small shared UI components, owned/generated visual assets | Merchant dashboard/monitor analytics, backend auction semantics, order mutation semantics, true multi-item realtime bidding |
 | `merchant-analytics` | Merchant dashboard charts and analytics presentation | `frontend/src/pages/merchant/Dashboard.tsx`, dashboard types/API if compatible, chart components, dashboard tests | H5 bidding atmosphere, cancellation semantics, order state transitions |
 | `demo-materials` | Demo runbook, seed/readiness notes, presenter checklist, demo E2E expectations | `docs/demo-readiness.md`, demo docs under `docs/`, E2E docs/tests when planned | Core product UI implementation unless a blocker is explicitly scoped |
 | `perf-observability` | Read-only health/metrics frontend entry boundary | Observability docs, optional frontend route/component after API contract is locked, health/metrics tests | Auction engine writes, wallet/order data, performance claims without measured source |
@@ -119,3 +138,4 @@ Use the existing routes and stores as the baseline instead of inventing a parall
 - Existing authentication, product publishing, auction engine, WebSocket, order workflow, merchant dashboard, and merchant monitor remain the baseline.
 - Future packages may run in parallel only after this OpenSpec change is validated, and each package should create or update its own Superpowers execution plan before touching code.
 - If a package discovers that backend contracts are insufficient, it must pause and update OpenSpec before implementation.
+- "Douyin-style" means structural and experiential similarity to live commerce references, not use of Douyin marks, copied UI assets, or real third-party creator/product media.

@@ -11,11 +11,34 @@ The current route surface is:
 
 The roadmap does not introduce a new state architecture. It constrains future work to existing contracts unless a child OpenSpec change expands them.
 
+## Confirmed Product Direction
+
+The user confirmed approach A from the brainstorm: prioritize the demo-ready loop with an extensible structure.
+
+User H5 should strongly resemble a Douyin-style live commerce room:
+
+- Full-screen live-room shell.
+- Preset simulated live scenes.
+- Persistent auction floating card.
+- Half-screen strong-state bid sheet.
+- Half-screen product shelf shell.
+- In-room result modal.
+- Order confirmation and simulated payment through existing order pages.
+
+Merchant PC should remain a balanced operations dashboard:
+
+- Summary metrics.
+- Active auction monitor entries.
+- Recent orders.
+- Analytics charts when backend contracts are available.
+
+"Douyin-style" means structure, information hierarchy, and interaction rhythm. It does not permit Douyin branding, copied UI assets, or real third-party creator/product media.
+
 ## Current Frontend Baseline
 
 `AuctionLobby` is REST-loaded and refreshable. It already has loading, error, empty, profile, order, and room entry affordances.
 
-`LiveAuctionRoom` uses `useLiveRoomStore`, room WebSocket connection state, current price, countdown, next bid amount, custom bid submission, ranking, notification feed, terminal messages, and an order entry after sold state.
+`LiveAuctionRoom` uses `useLiveRoomStore`, room WebSocket connection state, current price, countdown, next bid amount, custom bid submission, ranking, notification feed, terminal messages, and an order entry after sold state. It is the primary target for the Douyin-style H5 reshape.
 
 `AuctionMonitor` reuses the live room store for merchant monitoring. It shows PC-oriented product context, connection state, status, countdown, latest event, ranking, event feed, terminal state, and an existing cancellation command with reason input.
 
@@ -40,21 +63,47 @@ Future frontend work must keep these state rules explicit:
 
 ## Buyer H5 Experience
 
-The buyer H5 work should remain mobile-first. The first screen of the room should prioritize:
+The buyer H5 work should be mobile-first and live-commerce-first. The first screen of the room should feel like a Douyin-style live commerce room, not a traditional auction detail page.
 
-- Product/live visual context.
-- Current price and countdown.
-- Connection/status indicators.
-- Bid action and custom bid input.
-- Ranking and recent event feedback.
-- Terminal result and order entry when applicable.
+Required live-room layers:
 
-`auction-atmosphere` should enhance the existing room instead of changing auction truth. It may add visual emphasis such as leading state, outbid warning, countdown urgency, price movement, extension reset, and result celebration/settlement cues. It must preserve accessible text feedback and keep controls usable on narrow screens.
+- Top host bar with host avatar, room name, follow action, online count, and close action.
+- Secondary badges for live status, hourly rank, commerce rank, and auction rules.
+- Central preset simulated live-room scene, such as beauty/skincare, sneaker/collectible, or jewelry/auction.
+- Left-bottom comments and system messages.
+- Right-side atmosphere actions such as like, gift, share, popularity ranking, and coupon entry.
+- Bottom comment input and commerce actions such as cart/product shelf, coupon, more, and gift.
+- Persistent lower-right auction floating card with auction status, lot number, current highest price, countdown, bid count when available, and primary action.
+
+Product shelf:
+
+- Use a multi-item product shelf shell with `竞拍中`, `即将开拍`, `竞拍未成交`, and `竞拍结束`.
+- Only the current auction item is fully realtime-backed in version one.
+- Other shelf rows may be visual/demo shell items unless a later OpenSpec change adds true multi-item live room semantics.
+
+Bid sheet:
+
+- Use a half-screen strong-state bid sheet.
+- Show remaining time, product image/title, current price, my bid state, increment amount, add/subtract controls, and dynamic primary CTA.
+- Support visible states for no bid, leading, outbid, submitting, validation/balance errors, and ended.
+
+Result flow:
+
+- Show an in-room result modal before routing.
+- Winners see product summary, final price, confirm deadline, and `去确认订单`.
+- Non-winners see a not-won message and `继续看拍品`.
+- No-bid and cancelled outcomes show terminal explanation and return actions.
+- Order confirmation and simulated payment happen on `/app/orders/:id`, not inside the live room modal.
+
+Copy strategy should be mixed: live room and shelf copy can follow Douyin-like commerce language, while order detail, confirmation, and payment remain formal and business-clear.
+
+`auction-atmosphere` should reshape the H5 room around this structure instead of changing auction truth. It may add visual emphasis such as leading state, outbid warning, countdown urgency, price movement, extension reset, and result celebration/settlement cues. It must preserve accessible text feedback, avoid obscuring bid controls, and keep controls usable on narrow screens.
 
 ## Merchant PC Experience
 
 Merchant pages should stay operational and information-dense. The PC monitor should prioritize scanning and intervention:
 
+- Product publishing with name, multiple images, description, start price, increment mode/value, optional ceiling price, auction duration, Soft Close seconds, and max extension count.
 - Current auction state, price, countdown, extension count, and connection status.
 - Ranking and event feed.
 - Cancellation affordance with reason and restriction copy.
@@ -88,16 +137,21 @@ Any missing metrics endpoint must be specified before UI implementation. The fro
 
 Owned surfaces:
 
-- Buyer live room realtime atmosphere.
-- Buyer outbid and leading states.
-- Countdown urgency and Soft Close feedback.
-- Buyer terminal result display and order entry clarity.
+- Full-screen Douyin-style live-room shell.
+- Preset simulated live scenes.
+- Auction floating card.
+- Product shelf shell.
+- Strong-state bid sheet.
+- In-room result modal.
+- Comments and system message presentation.
+- Buyer outbid, leading, urgency, Soft Close, and terminal feedback.
 
 Primary files likely touched later:
 
 - `frontend/src/pages/app/LiveAuctionRoom.tsx`
 - `frontend/src/pages/app/liveRoomUtils.ts`
 - `frontend/src/store/liveRoomStore.ts`
+- Owned or generated visual assets for simulated live scenes.
 - Focused H5 component and E2E tests.
 
 ### `merchant-analytics`
@@ -150,6 +204,7 @@ Packages may run in parallel when they keep the owned surfaces above and do not 
 - New backend routes or response fields.
 - A new WebSocket message type.
 - A new order, auction, wallet, or payment semantic.
+- True multi-item realtime bidding in one live room.
 - Shared store changes that alter merchant monitor and buyer live room behavior together.
 
 If two packages need `useLiveRoomStore`, `auction-atmosphere` owns user-visible buyer behavior and must coordinate any shared-store changes with monitor expectations.
