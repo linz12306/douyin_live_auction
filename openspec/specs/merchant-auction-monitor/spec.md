@@ -1,7 +1,8 @@
 # merchant-auction-monitor Specification
 
 ## Purpose
-TBD - created by archiving change merchant-auction-monitor. Update Purpose after archive.
+Define the merchant-facing realtime auction monitor, including navigation entry points, WebSocket-backed auction state, bid-event visibility, terminal-state handling, and cancellation command restrictions.
+
 ## Requirements
 ### Requirement: Merchant monitor route
 The system SHALL provide a merchant-facing realtime monitor at `/merchant/auctions/:id/monitor`.
@@ -74,4 +75,3 @@ The backend SHALL expose only the minimal read-only auction id data needed for m
 - **WHEN** the merchant requests their product list
 - **THEN** that product row includes the auction id
 - **AND** no auction bidding, settlement, wallet, or order semantics are changed
-

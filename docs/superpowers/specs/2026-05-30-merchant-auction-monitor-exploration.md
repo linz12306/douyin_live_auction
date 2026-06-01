@@ -37,7 +37,7 @@ Build a merchant-facing realtime auction monitor at `/merchant/auctions/:id/moni
 
 ## Preflight Findings
 
-- Current branch is `codex/merchant-auction-monitor` in a linked worktree at `D:\pythoncode\douyin-live\.worktrees\merchant-auction-monitor`.
+- Current branch is `codex/merchant-auction-monitor` in a linked macOS worktree.
 - OpenSpec CLI is available.
 - `WORKTREE_PROMPT.md` is an untracked instruction artifact and should not be committed.
 - The local MySQL database was behind repo migrations; applying `backend/migrations/001` through `007` created missing `bids` and `orders` tables.

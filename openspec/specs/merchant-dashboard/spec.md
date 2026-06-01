@@ -1,7 +1,8 @@
 # merchant-dashboard Specification
 
 ## Purpose
-TBD - created by archiving change merchant-dashboard. Update Purpose after archive.
+Define the authenticated merchant operations dashboard, including scoped aggregate metrics, active auction summaries, recent merchant orders, and frontend navigation for merchant users.
+
 ## Requirements
 ### Requirement: Merchant dashboard API
 The system SHALL provide an authenticated merchant dashboard API scoped to the current merchant.
@@ -83,4 +84,3 @@ The frontend SHALL provide a merchant dashboard page and visible merchant naviga
 - **GIVEN** an authenticated merchant account
 - **WHEN** the merchant uses product management, order management, or profile
 - **THEN** there is a visible navigation path to `/merchant/dashboard`
-

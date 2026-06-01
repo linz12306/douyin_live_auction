@@ -11,8 +11,9 @@
 
 ## 当前仓库状态
 
+- 当前材料收口工作区：`/Users/vivix/Documents/Codex/douyin_live_auction_worktrees/demo-materials`
+- 当前材料收口分支：`codex/demo-materials`
 - 主仓库：`/Users/vivix/Documents/Codex/douyin_live_auction`
-- 当前长期保留分支：`master`
 - 当前权威需求：`projects/proj-1779447357476-ryiijf/outputs/requirements-v3.md`
 - 当前进度报告：`projects/proj-1779447357476-ryiijf/outputs/progress-report-v3.md`
 - 旧版 `requirements-v1/v2` 和 `progress-report-v1/v2` 已清理；如需追溯历史，使用 Git 历史。
@@ -21,7 +22,7 @@
 
 - Go：`/Users/vivix/.local/go/bin/go`
 - MySQL：`127.0.0.1:3307`，数据库 `auction_db`
-- Redis：`127.0.0.1:16379`
+- Redis：`127.0.0.1:16380`
 - 常用测试端口：后端 `18080`，前端 `13000`
 - 前端代理可用 `VITE_BACKEND_TARGET=http://localhost:18080`
 - 后端本地验证可用 `SERVER_PORT=18080 DISABLE_RATE_LIMIT=1`
@@ -29,7 +30,8 @@
 ## 已完成并归档
 
 - `merchant-dashboard`
-  - Change in progress: `openspec/changes/merchant-dashboard/`
+  - 归档：`openspec/changes/archive/2026-05-31-merchant-dashboard/`
+  - 持久规范：`openspec/specs/merchant-dashboard/spec.md`
   - Added merchant operations dashboard API `GET /api/v1/merchant/dashboard`.
   - Added frontend route `/merchant/dashboard` and entry links from product management, order management, and profile.
   - Dashboard paid metrics count only `paid` orders; pending/cancelled orders are reported in status counts and recent orders only.
@@ -54,6 +56,16 @@
   - 归档：`openspec/changes/archive/2026-05-29-observability-health/`
   - 持久规范：`openspec/specs/observability-health/spec.md`
   - 覆盖：`GET /healthz`，DB/Redis/竞拍引擎健康状态，realtime runtime 轻量 stats，HTTP 200/503 健康映射，敏感错误脱敏。
+
+- `merchant-auction-monitor`
+  - 归档：`openspec/changes/archive/2026-05-31-merchant-auction-monitor/`
+  - 持久规范：`openspec/specs/merchant-auction-monitor/spec.md`
+  - 覆盖：商家监控入口、WebSocket 实时监控、出价事件、终态展示和受限取消命令。
+
+- `demo-readiness`
+  - 归档：`openspec/changes/archive/2026-05-31-demo-readiness/`
+  - 持久规范：`openspec/specs/demo-readiness/spec.md`
+  - 覆盖：本地 demo seed、演示 runbook、demo 账号、商家/买家完整演示 E2E。
 
 - `perf-observability`
   - 归档：`openspec/changes/archive/2026-06-01-perf-observability/`
