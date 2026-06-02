@@ -13,7 +13,7 @@
   - Preserve existing backend/API/WebSocket contracts.
   - Defer personal homepage, real backend search, real ranking, and profile/search expansion beyond `/app/auctions`.
 
-- [ ] 3. Superpowers implementation plan
+- [x] 3. Superpowers implementation plan
   - After user review, create `docs/superpowers/plans/2026-06-02-h5-discovery-live-feed.md`.
   - Break implementation into local filter helpers, H5 visual shell, focused tests, build, screenshot smoke, commit, and push.
 
