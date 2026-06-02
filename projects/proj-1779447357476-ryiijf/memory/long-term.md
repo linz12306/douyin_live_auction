@@ -86,6 +86,14 @@
   - 已补充 `mobile-screenshot-qa-2026-06-02.md`，记录 390x844 主屏、出价半屏、商品橱窗和桌面烟测截图验收结果；下一步建议在直播间确认后单独开启 `h5-profile-search-expansion`。
   - 当前会话没有可调用的 Figma MCP 工具；已创建 repo-local Figma 文件结构模板和移动端截图验收模板，后续不能声称 Figma 高保真视觉完成，直到 Figma 文件实际落地。
 
+- `h5-discovery-live-feed`
+  - 分支：`codex/frontend-experience-integration`
+  - OpenSpec change：`openspec/changes/h5-discovery-live-feed/`
+  - 二期用户已选择搜索/发现优先，并确认 `直播流入口` 方案。
+  - 已锁定 `/app/auctions` 从普通竞拍大厅升级为 H5 `发现竞拍` 入口：搜索视觉、频道 chips、大直播卡、双列拍品卡、订单/我的入口。
+  - 首版只使用现有 `listAuctionLobby()` / `AuctionLobbyItem[]`；搜索和频道是本地筛选/展示能力，不新增后端搜索、热榜、WebSocket 或竞拍语义。
+  - 个人主页改版、真实后端搜索和真实热榜排序继续后置。
+
 ## 关键业务决策
 
 - 竞拍成交生成 `pending_confirm` 订单时，auction engine 已经扣减中标冻结金额。
