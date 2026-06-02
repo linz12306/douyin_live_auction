@@ -50,6 +50,23 @@ type DashboardRecentOrderRow struct {
 	CancelledAt     *time.Time
 }
 
+type DashboardTransactionTrendRow struct {
+	Date           string
+	PaidAmount     float64
+	PaidOrderCount int
+}
+
+type DashboardBidDistributionRow struct {
+	Bucket   string
+	BidCount int
+}
+
+type DashboardUserActivityRow struct {
+	Date            string
+	ActiveUserCount int
+	BidCount        int
+}
+
 func NewMerchantDashboardRepo(db *sql.DB) *MerchantDashboardRepo {
 	return &MerchantDashboardRepo{db: db}
 }
@@ -224,6 +241,102 @@ func (r *MerchantDashboardRepo) RecentOrders(ctx context.Context, merchantID int
 		if cancelledAt.Valid {
 			value := cancelledAt.Time
 			item.CancelledAt = &value
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (r *MerchantDashboardRepo) TransactionTrend(ctx context.Context, merchantID int64, days int) ([]DashboardTransactionTrendRow, error) {
+	if days <= 0 || days > 31 {
+		days = 7
+	}
+	startDate := time.Now().UTC().AddDate(0, 0, -days+1).Format("2006-01-02")
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT DATE_FORMAT(COALESCE(paid_at, updated_at, created_at), '%Y-%m-%d') AS trend_date,
+                COALESCE(SUM(amount), 0), COUNT(*)
+         FROM orders
+         WHERE merchant_id = ?
+           AND status = 'paid'
+           AND DATE(COALESCE(paid_at, updated_at, created_at)) >= ?
+         GROUP BY trend_date
+         ORDER BY trend_date ASC`,
+		merchantID, startDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []DashboardTransactionTrendRow
+	for rows.Next() {
+		var item DashboardTransactionTrendRow
+		if err := rows.Scan(&item.Date, &item.PaidAmount, &item.PaidOrderCount); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (r *MerchantDashboardRepo) BidDistribution(ctx context.Context, merchantID int64) ([]DashboardBidDistributionRow, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT CASE
+                    WHEN b.amount < 100 THEN '0-99'
+                    WHEN b.amount < 500 THEN '100-499'
+                    WHEN b.amount < 1000 THEN '500-999'
+                    WHEN b.amount < 5000 THEN '1000-4999'
+                    ELSE '5000+'
+                END AS bucket,
+                COUNT(*)
+         FROM bids b
+         JOIN auctions a ON a.id = b.auction_id
+         WHERE a.merchant_id = ?
+         GROUP BY bucket`,
+		merchantID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []DashboardBidDistributionRow
+	for rows.Next() {
+		var item DashboardBidDistributionRow
+		if err := rows.Scan(&item.Bucket, &item.BidCount); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (r *MerchantDashboardRepo) UserActivity(ctx context.Context, merchantID int64, days int) ([]DashboardUserActivityRow, error) {
+	if days <= 0 || days > 31 {
+		days = 7
+	}
+	startDate := time.Now().UTC().AddDate(0, 0, -days+1).Format("2006-01-02")
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT DATE_FORMAT(b.created_at, '%Y-%m-%d') AS activity_date,
+                COUNT(DISTINCT b.user_id), COUNT(*)
+         FROM bids b
+         JOIN auctions a ON a.id = b.auction_id
+         WHERE a.merchant_id = ?
+           AND DATE(b.created_at) >= ?
+         GROUP BY activity_date
+         ORDER BY activity_date ASC`,
+		merchantID, startDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []DashboardUserActivityRow
+	for rows.Next() {
+		var item DashboardUserActivityRow
+		if err := rows.Scan(&item.Date, &item.ActiveUserCount, &item.BidCount); err != nil {
+			return nil, err
 		}
 		items = append(items, item)
 	}

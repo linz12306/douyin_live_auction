@@ -57,9 +57,12 @@
 
 ## 当前进行中
 
-- `merchant-auction-monitor`
-  - OpenSpec change 已实现并通过验证，尚未归档，等待验收后再 archive。
-  - 分支/worktree：`codex/merchant-auction-monitor` / `D:\pythoncode\douyin-live\.worktrees\merchant-auction-monitor`
+- `merchant-analytics`
+  - 分支：`codex/merchant-analytics-dashboard`
+  - OpenSpec change：`openspec/changes/merchant-analytics/`
+  - 已扩展 `GET /api/v1/merchant/dashboard` 的只读 `analytics` 字段，包含成交趋势、出价分布和用户活跃度。
+  - 商家 analytics 仅统计当前商家的订单和拍品出价，不改变竞拍、钱包、订单、结算、支付、取消或 WebSocket 语义。
+  - 前端 `/merchant/dashboard` 已增加 PC 运营风格图表，保留原有汇总指标、状态桶、进行中竞拍、最近订单和导航。
 
 ## 关键业务决策
 
