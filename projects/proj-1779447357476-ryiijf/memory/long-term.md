@@ -75,6 +75,13 @@
   - 商家 analytics 仅统计当前商家的订单和拍品出价，不改变竞拍、钱包、订单、结算、支付、取消或 WebSocket 语义。
   - 前端 `/merchant/dashboard` 已增加 PC 运营风格图表，保留原有汇总指标、状态桶、进行中竞拍、最近订单和导航。
 
+- `h5-visual-design-pipeline`
+  - 分支：`codex/frontend-experience-integration`
+  - OpenSpec change：`openspec/changes/h5-visual-design-pipeline/`
+  - 已锁定用户端 H5 抖音式视觉设计管线：真机截图/录屏 -> Figma 高保真拆解 -> 组件清单 -> React H5 实现 -> 动效还原 -> 移动端截图验收。
+  - 首轮只覆盖直播间全状态；个人主页、搜索页、发现/大厅扩展放到第二阶段。
+  - 当前会话没有可调用的 Figma MCP 工具，且用户尚未提供真机素材；已创建 repo-local Figma 文件结构模板和移动端截图验收模板，后续不能声称高保真视觉完成，直到素材和 Figma 文件实际落地。
+
 ## 关键业务决策
 
 - 竞拍成交生成 `pending_confirm` 订单时，auction engine 已经扣减中标冻结金额。
