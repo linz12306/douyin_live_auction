@@ -5,7 +5,8 @@ This template is the repo-local handoff for the Figma file that should be create
 Current status:
 
 - Figma MCP tools were unavailable in this session.
-- User-provided real-device screenshots or recordings have not been attached yet.
+- User-provided Source Batch 01 was supplied in chat and summarized in `source-material-teardown.md`.
+- Source Batch 01 image files are not committed to the repo; use the chat attachments or later uploaded Figma/file assets as the visual source.
 - This document defines the exact file/page/frame/component structure to create later.
 
 ## File
@@ -22,6 +23,7 @@ Create frames:
 - `Live Room Screenshot References`
 - `Recording Keyframes`
 - `Do Not Copy / Brand Safety Notes`
+- `Source Batch 01 Summary`
 
 Each source item should record:
 
@@ -32,6 +34,16 @@ Each source item should record:
 - Notes on whether the reference is structural, visual, motion, or copywriting guidance.
 
 Do not paste Douyin logos, copied icons, or third-party creator/product assets as implementation assets.
+
+For Source Batch 01, mirror the reference index from `source-material-teardown.md`:
+
+- R1: beauty live commerce room.
+- R2: sneaker auction live room.
+- R3: bid sheet close-up.
+- R4: product shelf/status table.
+- R5: bid sheet state variants.
+- R6: ended bid sheet state.
+- R7: result modal variants.
 
 ## Page 01 Teardown
 

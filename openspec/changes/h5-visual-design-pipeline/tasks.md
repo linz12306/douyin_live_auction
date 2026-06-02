@@ -23,6 +23,12 @@
   - Define real-device comparison requirements once user source material is available.
   - Define no-overlap, action-state, realtime-truth, and reduced-motion checks.
 
+- [x] 4.1 Source Batch 01 teardown
+  - Record the first user-provided reference batch in `docs/design/h5-visual-design-pipeline/source-material-teardown.md`.
+  - Create `docs/design/h5-visual-design-pipeline/react-h5-refinement-brief.md`.
+  - Update the Figma template and mobile acceptance checklist to reference Source Batch 01.
+  - Keep reference images out of the repo and treat them as structure/state/motion guidance only.
+
 - [x] 5. Verification
   - Run `npx -y @fission-ai/openspec@latest validate h5-visual-design-pipeline --strict --no-interactive`.
   - Run `git diff --check`.

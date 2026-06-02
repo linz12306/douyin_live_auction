@@ -6,7 +6,7 @@ This checklist is used after React H5 visual refinement is implemented from the 
 
 - Primary automated viewport: 390x844.
 - Desktop fallback smoke viewport: 1200x900.
-- Real-device comparison: at least one user-provided phone screenshot or recording keyframe after source material is available.
+- Real-device/source comparison: compare against Source Batch 01 from chat until the user uploads persistent Figma/file assets.
 
 ## Required 390x844 Screenshots
 
@@ -22,6 +22,14 @@ Capture these states:
 - Winner result modal.
 - Non-winner sold result modal.
 - No-bid or cancelled terminal result.
+
+## Source Batch 01 Comparison Targets
+
+- Default live room should borrow density and hierarchy from R1/R2: compact host capsule, badge rows, comments, right action rail, floating commerce/auction card, and bottom controls.
+- Auction card should primarily follow R2: state header, bid count, lot/product identity, current price, countdown, and a single dominant bid CTA.
+- Bid sheet should follow R3/R5/R6: timer headline, current/my bid split, large centered amount, edge steppers, state chip, and terminal disabled CTA.
+- Product shelf should follow R4: dense rows, image-left/content-right, state chips, price-label changes, and active/terminal CTA differences.
+- Result modal should follow R7: live-room context remains behind the modal, winner and non-winner sold states have distinct hierarchy, and only winners see order-entry CTA.
 
 ## Layout Checks
 
