@@ -41,10 +41,36 @@ export interface DashboardRecentOrder {
   cancelled_at?: string;
 }
 
+export interface DashboardTransactionTrendPoint {
+  date: string;
+  paid_amount: number;
+  paid_order_count: number;
+}
+
+export interface DashboardBidDistributionBucket {
+  bucket: string;
+  min_amount: number;
+  max_amount?: number;
+  bid_count: number;
+}
+
+export interface DashboardUserActivityPoint {
+  date: string;
+  active_user_count: number;
+  bid_count: number;
+}
+
+export interface DashboardAnalytics {
+  transaction_trend: DashboardTransactionTrendPoint[];
+  bid_distribution: DashboardBidDistributionBucket[];
+  user_activity: DashboardUserActivityPoint[];
+}
+
 export interface MerchantDashboard {
   product_status_counts: DashboardStatusCount<ProductStatus>[];
   order_status_counts: DashboardStatusCount<OrderStatus>[];
   transaction_summary: DashboardTransactionSummary;
   active_auctions: DashboardActiveAuction[];
   recent_orders: DashboardRecentOrder[];
+  analytics?: DashboardAnalytics;
 }

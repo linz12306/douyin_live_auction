@@ -1,6 +1,6 @@
 # 项目长期记忆
 
-> 更新时间：2026-05-30
+> 更新时间：2026-06-02
 
 ## 用户偏好
 
@@ -57,12 +57,23 @@
 
 ## 当前进行中
 
+- `frontend-experience-integration`
+  - 分支：`codex/frontend-experience-integration`
+  - 已合入 `codex/auction-atmosphere-h5` 和 `codex/merchant-analytics-dashboard`，用于统一验证前端体验路线图的两个已完成包。
+
 - `auction-atmosphere`
   - 分支：`codex/auction-atmosphere-h5`
   - OpenSpec change：`openspec/changes/auction-atmosphere/`
   - 已完成用户端 H5 `/app/auctions/:id` 直播间氛围改造：全屏直播间壳、主播栏、状态徽标、消息层、右侧氛围按钮、底部操作、竞拍浮卡、半屏出价面板、半屏商品橱窗和房间内结果弹层。
   - 仍保持 WebSocket 为实时真理源；REST 出价成功不直接改当前价、排行、倒计时、延时、领先/被超越或终态。
   - 已通过前端测试、构建、OpenSpec 校验、截图布局检查和 diff 检查；完整双买家 E2E 需在后端/MySQL/Redis 启动后再跑。
+
+- `merchant-analytics`
+  - 分支：`codex/merchant-analytics-dashboard`
+  - OpenSpec change：`openspec/changes/merchant-analytics/`
+  - 已扩展 `GET /api/v1/merchant/dashboard` 的只读 `analytics` 字段，包含成交趋势、出价分布和用户活跃度。
+  - 商家 analytics 仅统计当前商家的订单和拍品出价，不改变竞拍、钱包、订单、结算、支付、取消或 WebSocket 语义。
+  - 前端 `/merchant/dashboard` 已增加 PC 运营风格图表，保留原有汇总指标、状态桶、进行中竞拍、最近订单和导航。
 
 ## 关键业务决策
 
