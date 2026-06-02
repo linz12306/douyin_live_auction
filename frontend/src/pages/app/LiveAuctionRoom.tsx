@@ -29,9 +29,9 @@ const CONNECTION_TEXT = {
 };
 
 const SHELF_DEMO_ITEMS = [
-  { title: '限定彩妆套组', state: '即将开拍', price: '预估 ¥168.00', note: '演示货架' },
-  { title: '复古银饰手链', state: '竞拍未成交', price: '等待重拍', note: '演示货架' },
-  { title: '潮流球鞋挂件', state: '竞拍结束', price: '落槌 ¥299.00', note: '演示货架' },
+  { title: '金镶玉平安扣吊坠', state: '即将开拍', priceLabel: '起拍价', price: '¥1200', action: '去看看', note: '演示货架' },
+  { title: '复古银饰手链', state: '竞拍未成交', priceLabel: '起拍价', price: '¥9000', action: '已结束', note: '演示货架' },
+  { title: '潮流球鞋挂件', state: '竞拍结束', priceLabel: '落槌价', price: '¥299', action: '已结束', note: '演示货架' },
 ];
 
 let currentTimeMs = Date.now();
@@ -65,6 +65,18 @@ function formatCountdown(ms: number) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+function formatCountdownLong(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function formatLotId(auctionId: number) {
+  return `NO.${String(auctionId).padStart(4, '0')}`;
+}
+
 function extractBidError(err: unknown) {
   if (typeof err === 'object' && err !== null && 'response' in err) {
     const response = (err as { response?: { data?: { message?: unknown } } }).response;
@@ -76,6 +88,12 @@ function extractBidError(err: unknown) {
 function formatIncrement(type: string | undefined, value: number, stepAmount: number) {
   if (type === 'percent') return `${value}%`;
   return formatPrice(stepAmount);
+}
+
+function shelfPriceLabel(status: AuctionStatus | undefined, bidCount: number) {
+  if (status === 'ended_sold' || status === 'cancelled') return '落槌价';
+  if (status === 'active' && bidCount > 0) return '当前最高价';
+  return '起拍价';
 }
 
 function safeDisplayName(item: RankingItem) {
@@ -193,6 +211,22 @@ export default function LiveAuctionRoom() {
   const customBidAmount = Number(customAmount);
   const hasCustomAmount = customAmount.trim().length > 0 && Number.isFinite(customBidAmount) && customBidAmount > 0;
   const primaryBidAmount = hasCustomAmount ? customBidAmount : roomNextBidAmount;
+  const lotId = isValidAuctionId ? formatLotId(auctionId) : 'NO.----';
+  const bidDeltaAmount = Number((primaryBidAmount - roomCurrentPrice).toFixed(2));
+  const sheetTimerText = terminal
+    ? '当前拍品竞拍已结束'
+    : pending
+      ? '即将开拍'
+      : `距竞拍结束仅剩 ${formatCountdownLong(countdownMs)}`;
+  const stateChipText = useMemo(() => {
+    if (bidError) return '出价失败，请检查金额';
+    if (terminal) return '当前拍品竞拍已结束';
+    if (isLeading) return '当前您已是最高价';
+    if (isOutbid) return '已被超过，立即追回';
+    if (bidDeltaAmount > 0) return `高于当前价${formatPrice(bidDeltaAmount)}`;
+    return '等待实时竞拍状态';
+  }, [bidDeltaAmount, bidError, isLeading, isOutbid, terminal]);
+  const myBidDisplay = ownRanking ? formatPrice(ownRanking.amount) : '暂无出价';
 
   const sheetPrimaryText = useMemo(() => {
     if (terminal) return '竞拍已结束';
@@ -212,16 +246,6 @@ export default function LiveAuctionRoom() {
     if (isOutbid) return '立即追回';
     return '立即出价';
   }, [isCurrentRoom, isLeading, isOutbid, pending, terminal]);
-
-  const bidStateText = useMemo(() => {
-    if (terminal) return roomTerminalMessage || '本场竞拍已结束';
-    if (pending) return '竞拍尚未开始，先看规则和拍品';
-    if (!active) return '等待实时快照同步';
-    if (isLeading) return '当前您是最高价';
-    if (isOutbid) return latestOutbid?.message || '您已被超过，请及时追回';
-    if (ownRanking) return `我的排名 第 ${ownRanking.rank}`;
-    return '尚未出价，抢先举牌';
-  }, [active, isLeading, isOutbid, latestOutbid, ownRanking, pending, roomTerminalMessage, terminal]);
 
   const roomMessages = useMemo(() => {
     const realtimeMessages = roomNotifications.slice(0, 4).map((item) => ({
@@ -363,46 +387,60 @@ export default function LiveAuctionRoom() {
           <ActionRailButton label="优惠券" value="领券">券</ActionRailButton>
         </aside>
 
-        <section className="absolute bottom-28 right-3 z-30 w-[46%] min-w-[178px]">
-          <div className={`rounded-lg border p-3 shadow-xl backdrop-blur ${
+        <section className="absolute bottom-28 right-3 z-30 w-[48%] min-w-[184px] max-w-[206px]">
+          <div className={`overflow-hidden rounded-lg bg-white text-zinc-950 shadow-2xl shadow-black/45 ${
             isOutbid
-              ? 'border-rose-300/60 bg-rose-950/76'
+              ? 'ring-2 ring-rose-300/80'
               : urgent
-                ? 'border-amber-200/70 bg-amber-950/72'
-                : 'border-white/15 bg-zinc-950/76'
+                ? 'ring-2 ring-rose-400/75'
+                : 'ring-1 ring-white/35'
           }`}>
-            <div className="flex items-center justify-between gap-2 text-[11px] text-white/65">
-              <span className="truncate">当前拍品</span>
-              <span className="shrink-0">{bidCount > 0 ? `${bidCount} 人出价` : '等待首拍'}</span>
+            <div className="flex items-center justify-between gap-2 px-3 pb-1 pt-2">
+              <span className="text-sm font-black">{roomStatus === 'active' ? '正在竞拍' : displayStatus}</span>
+              <span className="shrink-0 rounded-full bg-rose-500 px-2 py-1 text-[11px] font-black text-white">
+                {bidCount > 0 ? `${bidCount}次出价` : '等待首拍'}
+              </span>
             </div>
-            <h1 className="mt-1 line-clamp-2 break-words text-sm font-black leading-snug">
-              {roomProduct?.title || (isHydrating ? '恢复登录中...' : '直播竞拍间')}
-            </h1>
-            <div className="mt-2 grid grid-cols-[1fr_auto] items-end gap-2">
-              <div>
-                <div className="text-[11px] text-white/55">当前价</div>
-                <div className="break-words text-xl font-black text-emerald-200">{formatPrice(roomCurrentPrice)}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[11px] text-white/55">倒计时</div>
-                <div className={`font-mono text-lg font-black ${urgent ? 'text-rose-100' : 'text-amber-200'}`}>
-                  {formatCountdown(countdownMs)}
+            <div className="px-3 text-[11px] font-medium text-zinc-500">拍品编号：{lotId}</div>
+            <div className="grid grid-cols-[52px_minmax(0,1fr)] gap-2 px-3 py-2">
+              <img src={heroImage} alt="" className="h-[52px] w-[52px] rounded-lg border border-zinc-200 object-cover" />
+              <div className="min-w-0">
+                <h1 className="line-clamp-2 break-words text-sm font-black leading-snug">
+                  {roomProduct?.title || (isHydrating ? '恢复登录中...' : '直播竞拍间')}
+                </h1>
+                <div className="mt-1 text-[11px] font-medium text-zinc-500">
+                  加价 {formatIncrement(roomBidIncrementType, roomBidIncrementValue, stepAmount)}
                 </div>
               </div>
             </div>
-            {roomCurrentExtendCount > 0 ? (
-              <div className="mt-2 rounded border border-amber-200/35 bg-amber-300/12 px-2 py-1 text-[11px] text-amber-100">
-                已延时 {roomCurrentExtendCount} 次
+            <div className="bg-gradient-to-br from-violet-600 to-indigo-700 px-3 py-3 text-white">
+              <div className="text-[12px] font-semibold text-white/80">{shelfPriceLabel(roomStatus, bidCount)}</div>
+              <div className="mt-1 whitespace-nowrap text-[30px] font-black leading-none tabular-nums">{formatPrice(roomCurrentPrice)}</div>
+              <button type="button" className="mt-2 rounded-full border border-white/20 px-2 py-1 text-[11px] font-bold text-white/90">
+                出价记录 ›
+              </button>
+            </div>
+            <div className="bg-white px-3 py-2">
+              <div className="flex items-end justify-between gap-2">
+                <span className="text-[12px] font-semibold text-zinc-500">倒计时</span>
+                <span className={`font-mono text-[30px] font-black leading-none tabular-nums ${urgent ? 'text-rose-500' : 'text-rose-400'}`}>
+                  {formatCountdown(countdownMs)}
+                </span>
               </div>
-            ) : null}
+              {roomCurrentExtendCount > 0 ? (
+                <div className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">
+                  Soft Close 已延时 {roomCurrentExtendCount} 次
+                </div>
+              ) : null}
+            </div>
             <button
               type="button"
               aria-label="打开出价面板"
               disabled={!isCurrentRoom || terminal}
               onClick={openBidSheet}
-              className="mt-3 h-10 w-full rounded-lg bg-emerald-300 px-3 text-sm font-black text-zinc-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-white/18 disabled:text-white/45"
+              className="h-12 w-full bg-rose-500 px-3 text-xl font-black text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
             >
-              {floatingActionText}
+              {floatingActionText === '立即出价' ? '出价' : floatingActionText}
             </button>
           </div>
         </section>
@@ -454,46 +492,62 @@ export default function LiveAuctionRoom() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="shelf-title"
-              className="absolute bottom-0 left-0 right-0 max-h-[68vh] rounded-t-lg bg-zinc-950 px-4 pb-5 pt-4 shadow-2xl"
+              className="absolute bottom-0 left-0 right-0 max-h-[72vh] rounded-t-xl bg-white px-3 pb-5 pt-3 text-zinc-950 shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <h2 id="shelf-title" className="text-lg font-black">商品橱窗</h2>
-                  <p className="text-xs text-white/50">当前拍品实时竞拍，其他为演示货架</p>
+                  <p className="text-xs text-zinc-500">
+                    <span>进主播橱窗 · </span>
+                    <span>当前拍品实时竞拍，其他为演示货架</span>
+                  </p>
                 </div>
                 <button
                   type="button"
                   aria-label="关闭商品橱窗"
                   onClick={() => setShelfOpen(false)}
-                  className="h-9 w-9 rounded-lg border border-white/12 bg-white/8 text-sm font-black"
+                  className="h-9 w-9 rounded-lg border border-zinc-200 bg-zinc-50 text-sm font-black text-zinc-700"
                 >
                   X
                 </button>
+              </div>
+              <div className="mb-3 grid grid-cols-3 gap-2 text-center text-xs text-zinc-500">
+                <span className="rounded bg-rose-50 px-2 py-1 font-bold text-rose-500">带货口碑 5.0高</span>
+                <span className="rounded bg-amber-50 px-2 py-1 font-bold text-amber-700">安心购</span>
+                <span className="rounded bg-sky-50 px-2 py-1 font-bold text-sky-700">拍卖保障</span>
               </div>
               <div className="space-y-2 overflow-y-auto">
                 <button
                   type="button"
                   onClick={openBidSheet}
-                  className="flex w-full items-center gap-3 rounded-lg border border-emerald-300/45 bg-emerald-300/10 p-3 text-left"
+                  className="grid w-full grid-cols-[72px_minmax(0,1fr)_76px] items-center gap-3 rounded-lg border border-rose-100 bg-rose-50/70 p-2 text-left shadow-sm"
                 >
-                  <img src={heroImage} alt="" className="h-14 w-14 shrink-0 rounded object-cover" />
+                  <img src={heroImage} alt="" className="h-[72px] w-[72px] shrink-0 rounded-lg object-cover" />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-bold text-emerald-200">{roomStatus ? STATUS_TEXT[roomStatus] : '竞拍中'}</span>
-                    <span className="mt-1 block truncate text-sm font-bold text-white">{roomProduct?.title || '当前竞拍商品'}</span>
-                    <span className="mt-1 block text-xs text-white/55">实时竞拍 · {formatPrice(roomCurrentPrice)}</span>
+                    <span className="inline-flex rounded bg-rose-500 px-2 py-1 text-xs font-black text-white">{roomStatus ? STATUS_TEXT[roomStatus] : '竞拍中'}</span>
+                    <span className="mt-1 block line-clamp-2 text-sm font-black text-zinc-950">{roomProduct?.title || '当前竞拍商品'}</span>
+                    <span className="mt-1 block text-xs text-zinc-500">{shelfPriceLabel(roomStatus, bidCount)}</span>
+                    <span className="block text-lg font-black text-rose-500">{formatPrice(roomCurrentPrice)}</span>
                   </span>
-                  <span className="shrink-0 rounded bg-emerald-300 px-2 py-1 text-xs font-black text-zinc-950">去出价</span>
+                  <span className="flex h-10 shrink-0 items-center justify-center rounded bg-rose-500 px-2 text-xs font-black text-white">立即出价</span>
                 </button>
                 {SHELF_DEMO_ITEMS.map((item) => (
-                  <div key={item.title} className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/6 p-3">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded bg-white/10 text-xs font-black text-white/65">
+                  <div key={item.title} className="grid grid-cols-[72px_minmax(0,1fr)_76px] items-center gap-3 rounded-lg border border-zinc-100 bg-white p-2 shadow-sm">
+                    <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-xs font-black text-zinc-500">
                       预览
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-bold text-amber-100">{item.state}</div>
-                      <div className="mt-1 truncate text-sm font-semibold text-white">{item.title}</div>
-                      <div className="mt-1 text-xs text-white/45">{item.price} · {item.note}</div>
+                      <div className={`inline-flex rounded px-2 py-1 text-xs font-black text-white ${item.action === '已结束' ? 'bg-zinc-300' : 'bg-rose-500'}`}>
+                        {item.state}
+                      </div>
+                      <div className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-900">{item.title}</div>
+                      <div className="mt-1 text-xs text-zinc-500">{item.priceLabel}</div>
+                      <div className="text-lg font-black text-rose-500">{item.price}</div>
+                      <div className="text-[11px] text-zinc-400">{item.note}</div>
+                    </div>
+                    <div className={`flex h-10 items-center justify-center rounded px-2 text-xs font-black text-white ${item.action === '已结束' ? 'bg-rose-300' : 'bg-rose-500'}`}>
+                      {item.action}
                     </div>
                   </div>
                 ))}
@@ -508,71 +562,73 @@ export default function LiveAuctionRoom() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="bid-sheet-title"
-              className="absolute bottom-0 left-0 right-0 max-h-[78vh] rounded-t-lg bg-zinc-950 px-4 pb-5 pt-4 shadow-2xl"
+              className="absolute bottom-0 left-0 right-0 max-h-[82vh] overflow-y-auto rounded-t-xl bg-gradient-to-br from-rose-50 via-white to-sky-50 px-4 pb-5 pt-4 text-zinc-950 shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 id="bid-sheet-title" className="text-lg font-black">竞拍出价</h2>
-                  <p className="mt-1 truncate text-sm text-white/55">{roomProduct?.title || '等待商品快照'}</p>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <span className="w-9" aria-hidden="true" />
+                <div className="min-w-0 text-center">
+                  <h2 id="bid-sheet-title" className="sr-only">竞拍出价</h2>
+                  <div className="text-lg font-black">{sheetTimerText}</div>
                 </div>
                 <button
                   type="button"
                   aria-label="关闭出价面板"
                   onClick={() => setBidSheetOpen(false)}
-                  className="h-9 w-9 shrink-0 rounded-lg border border-white/12 bg-white/8 text-sm font-black"
+                  className="h-9 w-9 shrink-0 rounded-lg border border-zinc-200 bg-white text-sm font-black text-zinc-700"
                 >
                   X
                 </button>
               </div>
 
-              <div className="flex gap-3">
-                <img src={heroImage} alt={roomProduct?.title || '竞拍商品'} className="h-20 w-20 shrink-0 rounded-lg object-cover" />
-                <div className="min-w-0 flex-1">
+              <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-3">
+                <img src={heroImage} alt={roomProduct?.title || '竞拍商品'} className="h-[84px] w-[84px] shrink-0 rounded-lg object-cover shadow" />
+                <div className="min-w-0">
                   <div className="flex flex-wrap gap-1">
-                    <span className="rounded bg-white/10 px-2 py-1 text-xs text-white/70">{displayStatus}</span>
-                    <span className="rounded bg-white/10 px-2 py-1 text-xs text-white/70">
-                      加价 {formatIncrement(roomBidIncrementType, roomBidIncrementValue, stepAmount)}
+                    <span className="rounded bg-rose-500 px-2 py-1 text-xs font-black text-white">{displayStatus}</span>
+                    <span className="rounded bg-white px-2 py-1 text-xs font-bold text-zinc-500 shadow-sm">
+                      拍品编号 {lotId}
                     </span>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div>
-                      <div className="text-xs text-white/50">当前最高价</div>
-                      <div className="mt-1 text-2xl font-black text-emerald-200">{formatPrice(roomCurrentPrice)}</div>
+                  <p className="mt-2 line-clamp-2 text-base font-black leading-snug">{roomProduct?.title || '等待商品快照'}</p>
+                  <div className="mt-3 grid grid-cols-2 divide-x divide-zinc-200 rounded-lg bg-white/70 p-3 shadow-sm">
+                    <div className="pr-3">
+                      <div className="text-xs text-zinc-500">当前价</div>
+                      <div className="mt-1 text-2xl font-black tabular-nums text-zinc-950">{formatPrice(roomCurrentPrice)}</div>
                     </div>
-                    <div>
-                      <div className="text-xs text-white/50">剩余时间</div>
-                      <div className={`mt-1 font-mono text-2xl font-black ${urgent ? 'text-rose-200' : 'text-amber-200'}`}>
-                        {formatCountdown(countdownMs)}
-                      </div>
+                    <div className="pl-3">
+                      <div className="text-xs text-zinc-500">我的出价</div>
+                      <div className={`mt-1 text-xl font-black tabular-nums ${ownRanking ? 'text-rose-500' : 'text-zinc-400'}`}>{myBidDisplay}</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className={`mt-4 rounded-lg border px-3 py-3 text-sm ${
+              <div className={`mx-auto mt-4 w-fit rounded-md px-3 py-1 text-xs font-black text-white shadow ${
                 isOutbid
-                  ? 'border-rose-300/45 bg-rose-500/14 text-rose-50'
+                  ? 'bg-rose-500'
                   : isLeading
-                    ? 'border-emerald-300/45 bg-emerald-300/12 text-emerald-50'
-                    : 'border-white/10 bg-white/8 text-white/75'
+                    ? 'bg-rose-400'
+                    : bidError
+                      ? 'bg-rose-600'
+                      : 'bg-rose-400'
               }`}>
-                {bidStateText}
+                {stateChipText}
               </div>
 
               {roomCurrentExtendCount > 0 ? (
-                <div className="mt-3 rounded border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-sm text-amber-100">
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700">
                   Soft Close 已触发 {roomCurrentExtendCount} 次延时
                 </div>
               ) : null}
 
-              <div className="mt-4 grid grid-cols-[44px_minmax(0,1fr)_44px] gap-2">
+              <div className="mt-4 grid grid-cols-[48px_minmax(0,1fr)_48px] items-center gap-3">
                 <button
                   type="button"
                   aria-label="减少出价金额"
                   disabled={bidDisabled || isLeading}
                   onClick={() => adjustCustomAmount(-1)}
-                  className="h-11 rounded-lg border border-white/12 bg-white/8 text-xl font-black disabled:cursor-not-allowed disabled:opacity-35"
+                  className="h-12 rounded-md border border-zinc-200 bg-white text-2xl font-black text-zinc-500 shadow-sm disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   -
                 </button>
@@ -583,16 +639,19 @@ export default function LiveAuctionRoom() {
                     inputMode="decimal"
                     value={customAmount}
                     onChange={(event) => setCustomAmount(event.target.value)}
-                    placeholder={`最低 ${formatPrice(roomNextBidAmount)}`}
-                    className="h-11 w-full rounded-lg border border-white/12 bg-black/35 px-3 text-center text-base font-bold text-white outline-none transition placeholder:text-white/35 focus:border-emerald-300/70"
+                    placeholder={formatPrice(primaryBidAmount)}
+                    className="h-16 w-full rounded-lg border-0 bg-transparent px-3 text-center text-[42px] font-black leading-none text-zinc-950 outline-none transition placeholder:text-zinc-950 focus:bg-white/75"
                   />
+                  <span className="mt-1 block text-center text-sm text-zinc-500">
+                    加价幅度 {formatIncrement(roomBidIncrementType, roomBidIncrementValue, stepAmount)}
+                  </span>
                 </label>
                 <button
                   type="button"
                   aria-label="增加出价金额"
                   disabled={bidDisabled || isLeading}
                   onClick={() => adjustCustomAmount(1)}
-                  className="h-11 rounded-lg border border-white/12 bg-white/8 text-xl font-black disabled:cursor-not-allowed disabled:opacity-35"
+                  className="h-12 rounded-md border border-zinc-200 bg-white text-2xl font-black text-zinc-600 shadow-sm disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   +
                 </button>
@@ -602,7 +661,7 @@ export default function LiveAuctionRoom() {
                 type="button"
                 disabled={bidDisabled || isLeading}
                 onClick={() => submitBid(primaryBidAmount)}
-                className="mt-3 h-12 w-full rounded-lg bg-emerald-300 px-4 text-base font-black text-zinc-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-white/18 disabled:text-white/45"
+                className="mt-4 h-14 w-full rounded-full bg-gradient-to-r from-rose-400 to-rose-600 px-4 text-lg font-black text-white shadow-lg shadow-rose-500/25 transition hover:from-rose-300 hover:to-rose-500 disabled:cursor-not-allowed disabled:from-zinc-200 disabled:to-zinc-200 disabled:text-zinc-500 disabled:shadow-none"
               >
                 {sheetPrimaryText}
               </button>
@@ -611,13 +670,13 @@ export default function LiveAuctionRoom() {
                 type="button"
                 disabled={bidDisabled || isLeading || !hasCustomAmount}
                 onClick={() => submitBid(customBidAmount)}
-                className="mt-2 h-11 w-full rounded-lg border border-amber-300/45 bg-amber-300/12 px-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/8 disabled:text-white/35"
+                className="mt-2 h-11 w-full rounded-full border border-rose-200 bg-white px-3 text-sm font-bold text-rose-500 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400"
               >
                 确认自定义出价
               </button>
 
               {bidError ? (
-                <div className="mt-3 rounded border border-rose-300/35 bg-rose-500/15 px-3 py-2 text-sm text-rose-100">
+                <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-600">
                   {bidError}
                 </div>
               ) : null}
@@ -626,16 +685,21 @@ export default function LiveAuctionRoom() {
         ) : null}
 
         {showResultModal ? (
-          <div className="absolute inset-0 z-[60] flex items-end bg-black/62 px-4 pb-5">
+          <div className="absolute inset-0 z-[60] flex items-center bg-black/68 px-5 py-8 backdrop-blur-sm">
             <section
               role="dialog"
               aria-modal="true"
               aria-labelledby="result-title"
-              className="w-full rounded-lg border border-white/12 bg-zinc-950 p-4 shadow-2xl"
+              className="relative w-full rounded-xl bg-gradient-to-br from-rose-50 via-white to-sky-50 p-5 text-center text-zinc-950 shadow-2xl"
             >
-              <div className="text-xs font-bold text-amber-100">{displayStatus}</div>
-              <h2 id="result-title" className="mt-2 text-2xl font-black">竞拍结果</h2>
-              <p className="mt-2 text-sm leading-relaxed text-white/70">
+              <div className="absolute -top-12 left-0 right-0 text-center text-3xl font-black text-white drop-shadow-lg">
+                {isWinner ? '恭喜竞拍成功' : roomStatus === 'ended_sold' ? '落槌定音' : displayStatus}
+              </div>
+              <div className="mx-auto mb-3 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700">
+                {displayStatus}
+              </div>
+              <h2 id="result-title" className="sr-only">竞拍结果</h2>
+              <p className="text-sm leading-relaxed text-zinc-600">
                 {isWinner
                   ? '恭喜竞拍成功，请前往订单确认并完成模拟支付。'
                   : roomStatus === 'ended_sold'
@@ -644,21 +708,26 @@ export default function LiveAuctionRoom() {
                       ? '本场暂无有效出价，拍品已流拍。'
                       : '本场竞拍已取消，相关冻结金额会按规则释放。'}
               </p>
-              <div className="mt-4 rounded-lg bg-white/8 p-3">
-                <div className="line-clamp-2 text-sm font-bold">{roomProduct?.title || '竞拍商品'}</div>
-                <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-                  <span className="text-white/55">落槌价</span>
-                  <span className="font-black text-emerald-200">{formatPrice(roomFinalPrice ?? roomCurrentPrice)}</span>
+              <div className="mt-4 rounded-xl bg-white p-4 text-left shadow-sm">
+                <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-3">
+                  <img src={heroImage} alt="" className="h-[72px] w-[72px] rounded-lg object-cover" />
+                  <div className="min-w-0">
+                    <div className="line-clamp-2 text-sm font-black">{roomProduct?.title || '竞拍商品'}</div>
+                    <div className="mt-2 text-xs text-zinc-500">{isWinner ? '保证金 · 拍品付款后退回' : '最终成交价'}</div>
+                    <div className="mt-1 text-3xl font-black text-amber-700 tabular-nums">
+                      {formatPrice(roomFinalPrice ?? roomCurrentPrice)}
+                    </div>
+                  </div>
                 </div>
                 {roomTerminalMessage ? (
-                  <div className="mt-2 text-xs text-white/55">{roomTerminalMessage}</div>
+                  <div className="mt-3 rounded bg-zinc-50 px-3 py-2 text-xs text-zinc-500">{roomTerminalMessage}</div>
                 ) : null}
               </div>
               <div className="mt-4 flex gap-2">
                 {isWinner ? (
                   <Link
                     to="/app/orders"
-                    className="flex h-11 flex-1 items-center justify-center rounded-lg bg-emerald-300 px-3 text-sm font-black text-zinc-950"
+                    className="flex h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-r from-rose-400 to-rose-600 px-3 text-sm font-black text-white shadow-lg shadow-rose-500/25"
                   >
                     查看中标订单
                   </Link>
@@ -666,7 +735,7 @@ export default function LiveAuctionRoom() {
                 <button
                   type="button"
                   onClick={() => setResultDismissed(true)}
-                  className="h-11 flex-1 rounded-lg border border-white/12 bg-white/8 px-3 text-sm font-bold text-white"
+                  className="h-12 flex-1 rounded-full border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-700"
                 >
                   继续看拍品
                 </button>

@@ -29,6 +29,14 @@
   - Update the Figma template and mobile acceptance checklist to reference Source Batch 01.
   - Keep reference images out of the repo and treat them as structure/state/motion guidance only.
 
+- [x] 4.2 React H5 visual refinement
+  - Refine `frontend/src/pages/app/LiveAuctionRoom.tsx` against Source Batch 01.
+  - Reshape the auction floating card toward the R2 auction reference with a white control card, bid-count chip, lot id, separated price/countdown zones, and red CTA.
+  - Reshape the bid sheet toward R3/R5/R6 with a light half-screen surface, timer headline, current/my bid split, state chip, large amount input, edge steppers, and pink primary CTA.
+  - Reshape the product shelf toward R4 with dense white auction rows, state-specific price labels, and state-specific CTAs while keeping demo rows clearly labeled.
+  - Reshape the result modal toward R7 with distinct winner/sold hierarchy and existing order route entry.
+  - Preserve REST/WS truth rules and existing buyer order routes.
+
 - [x] 5. Verification
   - Run `npx -y @fission-ai/openspec@latest validate h5-visual-design-pipeline --strict --no-interactive`.
   - Run `git diff --check`.

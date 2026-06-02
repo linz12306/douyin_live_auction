@@ -81,6 +81,8 @@
   - 已锁定用户端 H5 抖音式视觉设计管线：真机截图/录屏 -> Figma 高保真拆解 -> 组件清单 -> React H5 实现 -> 动效还原 -> 移动端截图验收。
   - 首轮只覆盖直播间全状态；个人主页、搜索页、发现/大厅扩展放到第二阶段。
   - 用户已在聊天中提供 Source Batch 01 真机/参考素材；已创建 `source-material-teardown.md` 和 `react-h5-refinement-brief.md`，用于指导后续 React H5 精修。
+  - 已创建 `visual-reference-board.html` 作为本地可视化参考板。
+  - 已按 Source Batch 01 对 `LiveAuctionRoom` 做一轮 frontend-design 精修：竞拍浮卡、出价半屏、商品橱窗、结果弹窗更贴近抖音式竞拍直播间参考，同时保持 WebSocket 为实时真理源。
   - 当前会话没有可调用的 Figma MCP 工具；已创建 repo-local Figma 文件结构模板和移动端截图验收模板，后续不能声称 Figma 高保真视觉完成，直到 Figma 文件实际落地。
 
 ## 关键业务决策
