@@ -115,6 +115,11 @@ async function enterLiveRoomFromLobby(page: Page, auctionId: number, title: stri
   await expect(page).toHaveURL(new RegExp(`/app/auctions/${auctionId}$`));
 }
 
+async function openBidSheet(page: Page) {
+  await page.getByRole('button', { name: '打开出价面板' }).click();
+  await expect(page.getByRole('dialog', { name: '竞拍出价' })).toBeVisible();
+}
+
 test('live room streams snapshot, bids, outbid notice, countdown, and terminal auction_end', async ({ browser, baseURL }) => {
   const api = await playwrightRequest.newContext({ baseURL });
   const unique = Date.now().toString(36);
@@ -141,27 +146,28 @@ test('live room streams snapshot, bids, outbid notice, countdown, and terminal a
     await expect(countdown).toContainText(/0[1-5]:[0-5]\d/);
     const initialCountdown = await countdown.textContent();
     await expect.poll(() => countdown.textContent(), { timeout: 6500 }).not.toBe(initialCountdown);
-    await expect(pageA.getByRole('button', { name: '出价 ¥125.00' })).toBeEnabled();
+    await openBidSheet(pageA);
+    await expect(pageA.getByRole('button', { name: '立即出价 ¥125.00' })).toBeEnabled();
 
-    await pageA.getByRole('button', { name: '出价 ¥125.00' }).click();
+    await pageA.getByRole('button', { name: '立即出价 ¥125.00' }).click();
     await expect(pageA.locator('text=当前价').locator('..')).toContainText('¥125.00');
-    await expect(pageA.locator('section').filter({ hasText: '排行榜' })).toContainText('User Alpha');
+    await expect(pageA.locator('body')).toContainText('User Alpha');
 
     await pageB.goto(`/app/auctions/${auctionId}`);
     await expect(pageB.getByRole('heading', { name: title })).toBeVisible();
     await expect(pageB.locator('text=当前价').locator('..')).toContainText('¥125.00');
-    await pageB.getByRole('button', { name: '出价 ¥150.00' }).click();
+    await openBidSheet(pageB);
+    await pageB.getByRole('button', { name: '立即出价 ¥150.00' }).click();
 
-    await expect(pageA.locator('section').filter({ hasText: '实时消息' })).toContainText('您已被超过，当前最高出价为 150');
+    await expect(pageA.locator('body')).toContainText('您已被超过，当前最高出价为 150');
     await expect(pageA.locator('text=当前价').locator('..')).toContainText('¥150.00');
-    const ranking = pageA.locator('section').filter({ hasText: '排行榜' });
-    await expect(ranking).toContainText('User Beta');
-    await expect(ranking).toContainText('¥150.00');
+    await expect(pageA.locator('body')).toContainText('User Beta');
+    await expect(pageA.locator('body')).toContainText('¥150.00');
 
-    await pageA.getByRole('button', { name: '出价 ¥175.00' }).click();
+    await pageA.getByRole('button', { name: '立即追回 ¥175.00' }).click();
     await expect(pageA.locator('text=当前价').locator('..')).toContainText('¥175.00');
     await expect(pageA.locator('span').filter({ hasText: '已成交' })).toBeVisible();
-    await expect(pageA.locator('section').filter({ hasText: '实时消息' })).toContainText('竞拍已结束');
+    await expect(pageA.locator('body')).toContainText('竞拍已结束');
     await expect(pageA.getByRole('button', { name: '竞拍已结束' })).toBeDisabled();
     await expect(pageA.getByRole('button', { name: '确认自定义出价' })).toBeDisabled();
   } finally {

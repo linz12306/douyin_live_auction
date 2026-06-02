@@ -5,6 +5,7 @@ import {
   type APIRequestContext,
   type APIResponse,
   type BrowserContext,
+  type Page,
 } from '@playwright/test';
 
 const password = 'test123';
@@ -28,6 +29,11 @@ interface AuthResult {
 interface ProductDetail {
   product: { id: number };
   auction: { id: number };
+}
+
+async function openBidSheet(page: Page) {
+  await page.getByRole('button', { name: '打开出价面板' }).click();
+  await expect(page.getByRole('dialog', { name: '竞拍出价' })).toBeVisible();
 }
 
 async function readData(response: APIResponse) {
@@ -138,12 +144,14 @@ test('presenter demo journey covers live auction, monitor, settlement, and payme
     await expect(buyerAPage).toHaveURL(new RegExp(`/app/auctions/${auctionId}$`));
     await expect(buyerAPage.getByRole('heading', { name: title })).toBeVisible();
 
+    await openBidSheet(buyerAPage);
     await buyerAPage.getByRole('button', { name: /125/ }).click();
     await expect(buyerAPage.locator('body')).toContainText(/[¥楼]125\.00/);
     await expect(merchantPage.locator('body')).toContainText(/[¥楼]125\.00/);
 
     await buyerBPage.goto(`/app/auctions/${auctionId}`);
     await expect(buyerBPage.getByRole('heading', { name: title })).toBeVisible();
+    await openBidSheet(buyerBPage);
     await buyerBPage.getByRole('button', { name: /150/ }).click();
 
     await expect(buyerAPage.locator('body')).toContainText(/[¥楼]150\.00/);

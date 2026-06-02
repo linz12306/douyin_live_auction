@@ -57,9 +57,12 @@
 
 ## 当前进行中
 
-- `merchant-auction-monitor`
-  - OpenSpec change 已实现并通过验证，尚未归档，等待验收后再 archive。
-  - 分支/worktree：`codex/merchant-auction-monitor` / `D:\pythoncode\douyin-live\.worktrees\merchant-auction-monitor`
+- `auction-atmosphere`
+  - 分支：`codex/auction-atmosphere-h5`
+  - OpenSpec change：`openspec/changes/auction-atmosphere/`
+  - 已完成用户端 H5 `/app/auctions/:id` 直播间氛围改造：全屏直播间壳、主播栏、状态徽标、消息层、右侧氛围按钮、底部操作、竞拍浮卡、半屏出价面板、半屏商品橱窗和房间内结果弹层。
+  - 仍保持 WebSocket 为实时真理源；REST 出价成功不直接改当前价、排行、倒计时、延时、领先/被超越或终态。
+  - 已通过前端测试、构建、OpenSpec 校验、截图布局检查和 diff 检查；完整双买家 E2E 需在后端/MySQL/Redis 启动后再跑。
 
 ## 关键业务决策
 

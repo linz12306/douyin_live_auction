@@ -136,8 +136,11 @@ describe('LiveAuctionRoom', () => {
     renderRoom();
 
     expect(screen.getByRole('heading', { name: '复古牛仔夹克' })).toBeInTheDocument();
+    expect(screen.getByText('拍场主理人')).toBeInTheDocument();
+    expect(screen.getByText('LIVE')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '打开出价面板' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '打开商品橱窗' })).toBeInTheDocument();
     expect(screen.getAllByText('¥120.00').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: '出价 ¥130.00' })).toBeEnabled();
     expect(screen.getByText('小林')).toBeInTheDocument();
     expect(screen.getByText('您已被超过，当前最高出价为 120')).toBeInTheDocument();
     expect(new URL(FakeWebSocket.instances[0].url).searchParams.get('token')).toBe('access-token');
@@ -146,7 +149,9 @@ describe('LiveAuctionRoom', () => {
   it('submits the next bid through REST without directly changing realtime price', async () => {
     renderRoom();
 
-    fireEvent.click(screen.getByRole('button', { name: '出价 ¥130.00' }));
+    fireEvent.click(screen.getByRole('button', { name: '打开出价面板' }));
+    expect(screen.getByRole('dialog', { name: '竞拍出价' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '立即追回 ¥130.00' }));
 
     await waitFor(() => expect(mockedPlaceBid).toHaveBeenCalledWith(7, 130));
     expect(useLiveRoomStore.getState().currentPrice).toBe(120);
@@ -154,6 +159,7 @@ describe('LiveAuctionRoom', () => {
   });
 
   it('updates current price and the next bid button from websocket price_update messages', async () => {
+    seedRoom({ notifications: [] });
     renderRoom();
 
     act(() => {
@@ -181,13 +187,14 @@ describe('LiveAuctionRoom', () => {
     });
 
     expect(screen.getAllByText('¥140.00').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: '出价 ¥150.00' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: '打开出价面板' }));
+    expect(screen.getByRole('button', { name: '立即出价 ¥150.00' })).toBeEnabled();
   });
 
   it('refreshes the room snapshot on demand after merchant-side updates', async () => {
     renderRoom();
 
-    fireEvent.click(screen.getByRole('button', { name: '刷新状态' }));
+    fireEvent.click(screen.getByRole('button', { name: '刷新直播状态' }));
 
     expect(FakeWebSocket.instances).toHaveLength(2);
 
@@ -221,13 +228,14 @@ describe('LiveAuctionRoom', () => {
     });
 
     expect(screen.getByRole('heading', { name: '更新后的复古牛仔夹克' })).toBeInTheDocument();
-    expect(screen.getByText('商家刚更新的介绍')).toBeInTheDocument();
+    expect(screen.getByAltText('更新后的复古牛仔夹克')).toHaveAttribute('src', 'https://img.test/jacket-updated.jpg');
   });
 
   it('submits a custom amount through REST', async () => {
     renderRoom();
 
-    fireEvent.change(screen.getByLabelText('自定义出价'), { target: { value: '188.5' } });
+    fireEvent.click(screen.getByRole('button', { name: '打开出价面板' }));
+    fireEvent.change(screen.getByLabelText('自定义出价金额'), { target: { value: '188.5' } });
     fireEvent.click(screen.getByRole('button', { name: '确认自定义出价' }));
 
     await waitFor(() => expect(mockedPlaceBid).toHaveBeenCalledWith(7, 188.5));
@@ -237,20 +245,63 @@ describe('LiveAuctionRoom', () => {
     mockedPlaceBid.mockRejectedValueOnce({ response: { data: { message: '出价必须高于当前价' } } });
     renderRoom();
 
-    fireEvent.click(screen.getByRole('button', { name: '出价 ¥130.00' }));
+    fireEvent.click(screen.getByRole('button', { name: '打开出价面板' }));
+    fireEvent.click(screen.getByRole('button', { name: '立即追回 ¥130.00' }));
 
     expect(await screen.findByText('出价必须高于当前价')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '出价 ¥130.00' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '立即追回 ¥130.00' })).toBeEnabled();
   });
 
   it('disables bidding in terminal auction states', () => {
-    seedRoom({ status: 'ended_sold', terminalMessage: '竞拍已成交' });
+    seedRoom({ status: 'ended_sold', winnerId: buyerUser.id, finalPrice: 120, terminalMessage: '竞拍已成交' });
 
     renderRoom();
 
-    expect(screen.getByRole('button', { name: '竞拍已结束' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '确认自定义出价' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '打开出价面板' })).toBeDisabled();
+    expect(screen.getByRole('dialog', { name: '竞拍结果' })).toBeInTheDocument();
+    expect(screen.getByText('恭喜竞拍成功，请前往订单确认并完成模拟支付。')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '查看中标订单' })).toHaveAttribute('href', '/app/orders');
     expect(screen.getByText('竞拍已成交')).toBeInTheDocument();
+  });
+
+  it('opens the product shelf shell without implying multi-item realtime bidding', () => {
+    renderRoom();
+
+    fireEvent.click(screen.getByRole('button', { name: '打开商品橱窗' }));
+
+    expect(screen.getByRole('dialog', { name: '商品橱窗' })).toBeInTheDocument();
+    expect(screen.getByText('当前拍品实时竞拍，其他为演示货架')).toBeInTheDocument();
+    expect(screen.getAllByText('直播竞拍中').length).toBeGreaterThan(0);
+    expect(screen.getByText('即将开拍')).toBeInTheDocument();
+    expect(screen.getByText('竞拍未成交')).toBeInTheDocument();
+    expect(screen.getByText('竞拍结束')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /复古牛仔夹克/ }));
+    expect(screen.getByRole('dialog', { name: '竞拍出价' })).toBeInTheDocument();
+  });
+
+  it('shows the authenticated buyer leading state in the bid sheet', () => {
+    seedRoom({
+      highestBidderId: buyerUser.id,
+      notifications: [],
+      rankings: [
+        {
+          rank: 1,
+          user_id: buyerUser.id,
+          display_name: 'Buyer',
+          avatar_url: '',
+          amount: 120,
+          status: 'winning',
+          bid_time: '2026-05-28T10:00:00.000Z',
+        },
+      ],
+    });
+
+    renderRoom();
+    fireEvent.click(screen.getByRole('button', { name: '打开出价面板' }));
+
+    expect(screen.getAllByText('当前您是最高价').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: '当前您是最高价' })).toBeDisabled();
   });
 
   it('neutralizes stale room state while route auction and store auction differ', () => {
@@ -265,7 +316,7 @@ describe('LiveAuctionRoom', () => {
 
     expect(screen.queryByRole('heading', { name: '复古牛仔夹克' })).not.toBeInTheDocument();
     expect(screen.queryByText('小林')).not.toBeInTheDocument();
-    const primaryBid = screen.getByRole('button', { name: '等待快照' });
+    const primaryBid = screen.getByRole('button', { name: '打开出价面板' });
     expect(primaryBid).toBeDisabled();
 
     fireEvent.click(primaryBid);
