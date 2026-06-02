@@ -83,6 +83,7 @@
   - 用户已在聊天中提供 Source Batch 01 真机/参考素材；已创建 `source-material-teardown.md` 和 `react-h5-refinement-brief.md`，用于指导后续 React H5 精修。
   - 已创建 `visual-reference-board.html` 作为本地可视化参考板。
   - 已按 Source Batch 01 对 `LiveAuctionRoom` 做一轮 frontend-design 精修：竞拍浮卡、出价半屏、商品橱窗、结果弹窗更贴近抖音式竞拍直播间参考，同时保持 WebSocket 为实时真理源。
+  - 已补充 `mobile-screenshot-qa-2026-06-02.md`，记录 390x844 主屏、出价半屏、商品橱窗和桌面烟测截图验收结果；下一步建议在直播间确认后单独开启 `h5-profile-search-expansion`。
   - 当前会话没有可调用的 Figma MCP 工具；已创建 repo-local Figma 文件结构模板和移动端截图验收模板，后续不能声称 Figma 高保真视觉完成，直到 Figma 文件实际落地。
 
 ## 关键业务决策

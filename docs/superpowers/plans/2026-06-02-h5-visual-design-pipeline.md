@@ -77,6 +77,27 @@ git diff --check
 
 Result: passed with no whitespace errors.
 
+- [x] **Step 2.1: React H5 visual verification**
+
+Run:
+
+```bash
+cd frontend && npm run test -- LiveAuctionRoom
+cd frontend && npm run build
+```
+
+Result: both passed after the React H5 visual refinement.
+
+- [x] **Step 2.2: Mobile screenshot QA**
+
+Create:
+
+```text
+docs/design/h5-visual-design-pipeline/mobile-screenshot-qa-2026-06-02.md
+```
+
+Result: recorded the 390x844 main-room, bid-sheet, shelf, and 1200x900 desktop smoke screenshots; documented passed checks, remaining review items, and the recommended second-stage profile/search change.
+
 - [ ] **Step 3: Commit and push**
 
 Run:
@@ -88,4 +109,10 @@ git commit -m "docs(frontend): add h5 visual design pipeline"
 git push
 ```
 
-Expected: commit is created and pushed from the current branch.
+Result so far:
+
+- Commits created:
+  - `198fd0b docs(frontend): add h5 visual design pipeline`
+  - `67a9041 docs(frontend): add h5 source material teardown`
+  - `ee4a370 feat(frontend): refine h5 live auction design`
+- Push is blocked by local global pre-push policy hook `/Users/vivix/.git-hooks/pre-push`; do not bypass the hook.

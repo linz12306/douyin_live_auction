@@ -37,6 +37,12 @@
   - Reshape the result modal toward R7 with distinct winner/sold hierarchy and existing order route entry.
   - Preserve REST/WS truth rules and existing buyer order routes.
 
+- [x] 4.3 Mobile screenshot QA
+  - Create `docs/design/h5-visual-design-pipeline/mobile-screenshot-qa-2026-06-02.md`.
+  - Record the local 390x844 main-room, bid-sheet, shelf, and 1200x900 desktop smoke screenshots.
+  - Record passed visual checks, remaining visual review items, and the recommended second-stage profile/search change.
+  - Keep screenshot files as local validation artifacts instead of committing generated images.
+
 - [x] 5. Verification
   - Run `npx -y @fission-ai/openspec@latest validate h5-visual-design-pipeline --strict --no-interactive`.
   - Run `git diff --check`.
@@ -44,9 +50,16 @@
   - Verification:
     - `npx -y @fission-ai/openspec@latest validate h5-visual-design-pipeline --strict --no-interactive` passed.
     - `git diff --check` passed.
+    - `cd frontend && npm run test -- LiveAuctionRoom` passed with 11 tests after React H5 visual refinement.
+    - `cd frontend && npm run build` passed after React H5 visual refinement.
+    - Playwright visual smoke passed with mocked auth/live-room store and captured `/tmp/h5-live-room-refined-mobile-fixed.png`, `/tmp/h5-live-room-refined-bid-sheet.png`, `/tmp/h5-live-room-refined-shelf.png`, and `/tmp/h5-live-room-refined-desktop.png`.
 
 - [ ] 6. Finalize, commit, and push
   - Update project memory.
   - Confirm no unrelated dirty files are included.
-  - Commit the verified slice with `docs(frontend): add h5 visual design pipeline`.
+  - Commit verified slices:
+    - `198fd0b docs(frontend): add h5 visual design pipeline`
+    - `67a9041 docs(frontend): add h5 source material teardown`
+    - `ee4a370 feat(frontend): refine h5 live auction design`
   - Push the current branch and report commit/push state.
+  - Current push status: blocked by local global pre-push policy hook `/Users/vivix/.git-hooks/pre-push`; do not bypass the hook.
