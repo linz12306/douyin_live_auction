@@ -1,6 +1,8 @@
+import { pathToFileURL } from 'node:url';
+
 const baseURL = process.env.DEMO_API_BASE_URL ?? 'http://127.0.0.1:8080';
 const password = process.env.DEMO_PASSWORD ?? 'test123';
-const imagePath = '/favicon.svg';
+export const demoImagePath = '/static/images/demo-auction-product.svg';
 const runId = process.env.DEMO_RUN_ID ?? Date.now().toString(36);
 
 const accounts = {
@@ -34,13 +36,30 @@ async function registerOrLogin(account) {
 
   if (response.ok) {
     const body = await response.json();
+    assertExpectedRole(body.data, account);
     return body.data;
   }
 
-  return request('/api/v1/auth/login', {
+  const loginResult = await request('/api/v1/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username: account.username, password }),
   });
+  assertExpectedRole(loginResult, account);
+  return loginResult;
+}
+
+function getReturnedRole(authResult) {
+  return authResult?.user?.role ?? authResult?.role;
+}
+
+export function assertExpectedRole(authResult, account) {
+  const actualRole = getReturnedRole(authResult);
+  if (actualRole !== account.role) {
+    throw new Error(
+      `${account.username} expected role ${account.role}, got ${actualRole ?? 'unknown'}. ` +
+      'Reset or fix the existing demo account before seeding.',
+    );
+  }
 }
 
 function auth(token) {
@@ -54,7 +73,7 @@ async function createActiveAuction(merchantToken, title) {
     body: JSON.stringify({
       title,
       description: 'Local demo auction product',
-      image_urls: [imagePath],
+      image_urls: [demoImagePath],
     }),
   });
   const productId = created.product.id;
@@ -114,7 +133,9 @@ async function main() {
   console.log(JSON.stringify(result, null, 2));
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

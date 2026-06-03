@@ -120,6 +120,19 @@ describe('AuctionLobby', () => {
     expect(screen.getByRole('link', { name: '进入直播：刚开拍的复古夹克' })).toHaveAttribute('href', '/app/auctions/9');
   });
 
+  it('renders the product image supplied by the lobby API', async () => {
+    mocks.listAuctionLobby.mockResolvedValueOnce([activeItem]);
+
+    renderLobby();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole('img', { name: '刚开拍的复古夹克' })).toHaveAttribute('src', '/static/images/jacket.jpg');
+    expect(screen.queryByText('拍品图片待上新')).not.toBeInTheDocument();
+  });
+
   it('shows a filtered-empty state without implying backend search failed', async () => {
     mocks.listAuctionLobby.mockResolvedValueOnce([activeItem]);
 

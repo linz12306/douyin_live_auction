@@ -185,30 +185,30 @@ export default function AuctionLobby() {
     <div className="min-h-screen bg-[#050708] text-white">
       <main className="mx-auto min-h-screen max-w-5xl bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.26),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(244,63,94,0.22),transparent_32%),linear-gradient(180deg,#0b1014,#050708_52%,#09090b)] px-4 pb-8 pt-5 sm:px-6 sm:pt-7">
         <header className="mb-5 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
               <PageBackButton fallback="/profile" className="mb-3 border-white/10 bg-white/8" />
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-200/75">Live auction</p>
-              <h1 className="mt-1 text-2xl font-black text-white">发现竞拍</h1>
+              <h1 className="mt-1 whitespace-nowrap text-2xl font-black text-white">发现竞拍</h1>
             </div>
-            <nav className="flex shrink-0 items-center gap-2" aria-label="买家导航">
+            <nav className="grid grid-cols-3 gap-2 sm:flex sm:shrink-0 sm:items-center" aria-label="买家导航">
               <button
                 type="button"
                 onClick={() => void loadLobby()}
                 disabled={refreshing}
-                className="rounded-full border border-white/12 bg-white/8 px-3 py-2 text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-w-0 rounded-full border border-white/12 bg-white/8 px-3 py-2 text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {refreshing ? '刷新中...' : '刷新'}
               </button>
               <Link
                 to="/app/orders"
-                className="rounded-full border border-white/12 bg-white/8 px-3 py-2 text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white"
+                className="min-w-0 rounded-full border border-white/12 bg-white/8 px-3 py-2 text-center text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white"
               >
                 订单
               </Link>
               <Link
                 to="/profile"
-                className="rounded-full border border-white/12 bg-white/8 px-3 py-2 text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white"
+                className="min-w-0 rounded-full border border-white/12 bg-white/8 px-3 py-2 text-center text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white"
               >
                 我的
               </Link>
@@ -224,14 +224,14 @@ export default function AuctionLobby() {
               placeholder="搜索直播 / 拍品 / 商家"
               className="h-11 w-full rounded-[8px] border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition placeholder:text-white/38 focus:border-rose-300/70 focus:bg-black/45"
             />
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:flex">
               {FILTERS.map((filter) => (
                 <button
                   key={filter.key}
                   type="button"
                   onClick={() => setActiveFilter(filter.key)}
                   aria-pressed={filter.key === activeFilter}
-                  className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  className={`min-w-0 rounded-full border px-3 py-2 text-sm font-semibold transition sm:px-4 ${
                     filter.key === activeFilter
                       ? 'border-rose-300 bg-rose-400 text-zinc-950 shadow-lg shadow-rose-950/30'
                       : 'border-white/10 bg-white/8 text-white/68 hover:border-white/25 hover:text-white'
