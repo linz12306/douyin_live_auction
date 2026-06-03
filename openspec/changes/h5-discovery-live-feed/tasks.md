@@ -17,19 +17,28 @@
   - After user review, create `docs/superpowers/plans/2026-06-02-h5-discovery-live-feed.md`.
   - Break implementation into local filter helpers, H5 visual shell, focused tests, build, screenshot smoke, commit, and push.
 
-- [ ] 4. React H5 implementation
+- [x] 4. React H5 implementation
   - Refine `frontend/src/pages/app/AuctionLobby.tsx`.
   - Keep `listAuctionLobby()` as the only data source.
   - Add local search/filter affordance.
   - Add hero live card and secondary auction feed.
   - Preserve `/app/auctions/:id`, `/app/orders`, and `/profile` navigation.
+  - Add accessible selected-state semantics for channel chips and distinguishable accessible names for auction entry CTAs.
 
-- [ ] 5. Verification
+- [x] 5. Verification
   - Run `cd frontend && npm run test -- AuctionLobby`.
   - Run `cd frontend && npm run build`.
   - Run `npx -y @fission-ai/openspec@latest validate h5-discovery-live-feed --strict --no-interactive`.
   - Run `git diff --check`.
   - Capture mobile screenshot smoke at 390x844 after implementation.
+  - Verification:
+    - `cd frontend && npm run test -- AuctionLobby` passed with 7 tests.
+    - `cd frontend && npm run build` passed.
+    - `npx -y @fission-ai/openspec@latest validate h5-discovery-live-feed --strict --no-interactive` passed.
+    - `git diff --check` passed.
+    - Screenshot smoke captured `/tmp/h5-discovery-live-feed-mobile.png` and `/tmp/h5-discovery-live-feed-filtered-empty.png`.
+    - Subagent spec review passed.
+    - Subagent code-quality review passed after accessibility fixes.
 
 - [ ] 6. Finalize
   - Update memory.

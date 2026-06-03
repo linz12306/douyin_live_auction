@@ -1,6 +1,6 @@
 # H5 Discovery Live Feed Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Upgrade `/app/auctions` from a conventional auction lobby into a mobile-first H5 `发现竞拍` live-discovery entrance.
 
@@ -18,7 +18,7 @@
   - Owns polling/visibility regression tests plus new local search/filter, filtered-empty, and entry-link tests.
 - Modify: `openspec/changes/h5-discovery-live-feed/tasks.md`
   - Keep task completion synchronized.
-- Modify: `projects/proj-1779447357476-ryiijf/memory/2026-06-02.md`
+- Modify: `projects/proj-1779447357476-ryiijf/memory/2026-06-03.md`
   - Record implementation and verification results.
 - Modify: `projects/proj-1779447357476-ryiijf/memory/long-term.md`
   - Record current discovery-page status after verified implementation.
@@ -31,7 +31,7 @@ No backend, API, WebSocket, wallet, order, payment, or merchant files should cha
 - Modify: `frontend/src/pages/app/AuctionLobby.test.tsx`
 - Modify: `frontend/src/pages/app/AuctionLobby.tsx`
 
-- [ ] **Step 1: Add a failing test for local search**
+- [x] **Step 1: Add a failing test for local search**
 
 Add this test inside `describe('AuctionLobby', ...)`:
 
@@ -72,7 +72,7 @@ expect(screen.queryByText('刚开拍的复古夹克')).not.toBeInTheDocument();
 expect(screen.getByText('本地筛选 · 1 个结果')).toBeInTheDocument();
 ```
 
-- [ ] **Step 2: Run the focused test and confirm failure**
+- [x] **Step 2: Run the focused test and confirm failure**
 
 Run:
 
@@ -82,7 +82,7 @@ cd frontend && npm run test -- AuctionLobby
 
 Expected: the new test fails because the search input and local filtering do not exist yet.
 
-- [ ] **Step 3: Add local filter state and helpers**
+- [x] **Step 3: Add local filter state and helpers**
 
 In `AuctionLobby.tsx`, add React change-event import:
 
@@ -133,7 +133,7 @@ const filteredItems = useMemo(() => {
 }, [activeFilter, items, normalizedSearch]);
 ```
 
-- [ ] **Step 4: Run the focused test**
+- [x] **Step 4: Run the focused test**
 
 Run:
 
@@ -149,7 +149,7 @@ Expected: the new local search test still fails until the input and rendered lis
 - Modify: `frontend/src/pages/app/AuctionLobby.tsx`
 - Modify: `frontend/src/pages/app/AuctionLobby.test.tsx`
 
-- [ ] **Step 1: Add tests for discovery shell and navigation**
+- [x] **Step 1: Add tests for discovery shell and navigation**
 
 Add:
 
@@ -189,7 +189,7 @@ it('shows a filtered-empty state without implying backend search failed', async 
 });
 ```
 
-- [ ] **Step 2: Run tests and confirm failure**
+- [x] **Step 2: Run tests and confirm failure**
 
 Run:
 
@@ -199,7 +199,7 @@ cd frontend && npm run test -- AuctionLobby
 
 Expected: tests fail because the discovery heading, search input, local empty state, and route names are not implemented.
 
-- [ ] **Step 3: Replace the page shell**
+- [x] **Step 3: Replace the page shell**
 
 In `AuctionLobby.tsx`, replace the old header and grid with a discovery shell that keeps existing state branches. Use `filteredItems` for content rendering.
 
@@ -244,7 +244,7 @@ API-empty copy remains:
 <p className="font-semibold text-white">暂无可参与竞拍</p>
 ```
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -260,7 +260,7 @@ Expected: all `AuctionLobby` tests pass.
 - Modify: `frontend/src/pages/app/AuctionLobby.tsx`
 - Modify: `frontend/src/pages/app/AuctionLobby.test.tsx`
 
-- [ ] **Step 1: Add a channel-chip filtering test**
+- [x] **Step 1: Add a channel-chip filtering test**
 
 Add:
 
@@ -284,7 +284,7 @@ it('filters currently loaded items with discovery channel chips', async () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and confirm failure**
+- [x] **Step 2: Run tests and confirm failure**
 
 Run:
 
@@ -294,7 +294,7 @@ cd frontend && npm run test -- AuctionLobby
 
 Expected: the new test fails until chip buttons call `handleFilterChange` and content uses filtered items.
 
-- [ ] **Step 3: Add chip rendering**
+- [x] **Step 3: Add chip rendering**
 
 In `AuctionLobby.tsx`, define chips near constants:
 
@@ -336,7 +336,7 @@ const prioritizedItems = useMemo(() => {
 const [heroItem, ...feedItems] = prioritizedItems;
 ```
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -351,7 +351,7 @@ Expected: all `AuctionLobby` tests pass.
 **Files:**
 - Modify: `frontend/src/pages/app/AuctionLobby.tsx`
 
-- [ ] **Step 1: Add visual helpers**
+- [x] **Step 1: Add visual helpers**
 
 Add helpers near existing `formatEndTime`:
 
@@ -376,7 +376,7 @@ const getHeroSubtitle = (item: AuctionLobbyItem) => {
 
 Use these helpers in hero/feed cards.
 
-- [ ] **Step 2: Ensure state panels match discovery shell**
+- [x] **Step 2: Ensure state panels match discovery shell**
 
 Keep these visible strings for regression and review:
 
@@ -394,7 +394,7 @@ Error panel must include a retry button that calls `loadLobby()`:
 <button type="button" onClick={() => void loadLobby()}>重新加载</button>
 ```
 
-- [ ] **Step 3: Run focused tests**
+- [x] **Step 3: Run focused tests**
 
 Run:
 
@@ -408,10 +408,10 @@ Expected: all `AuctionLobby` tests pass.
 
 **Files:**
 - Modify: `openspec/changes/h5-discovery-live-feed/tasks.md`
-- Modify: `projects/proj-1779447357476-ryiijf/memory/2026-06-02.md`
+- Modify: `projects/proj-1779447357476-ryiijf/memory/2026-06-03.md`
 - Modify: `projects/proj-1779447357476-ryiijf/memory/long-term.md`
 
-- [ ] **Step 1: Run focused frontend tests**
+- [x] **Step 1: Run focused frontend tests**
 
 Run:
 
@@ -421,7 +421,7 @@ cd frontend && npm run test -- AuctionLobby
 
 Expected: PASS.
 
-- [ ] **Step 2: Run frontend build**
+- [x] **Step 2: Run frontend build**
 
 Run:
 
@@ -431,7 +431,7 @@ cd frontend && npm run build
 
 Expected: PASS.
 
-- [ ] **Step 3: Run OpenSpec validation**
+- [x] **Step 3: Run OpenSpec validation**
 
 Run:
 
@@ -441,7 +441,7 @@ npx -y @fission-ai/openspec@latest validate h5-discovery-live-feed --strict --no
 
 Expected: `Change 'h5-discovery-live-feed' is valid`.
 
-- [ ] **Step 4: Run diff hygiene check**
+- [x] **Step 4: Run diff hygiene check**
 
 Run:
 
@@ -451,7 +451,7 @@ git diff --check
 
 Expected: no output and exit code 0.
 
-- [ ] **Step 5: Capture mobile screenshot smoke**
+- [x] **Step 5: Capture mobile screenshot smoke**
 
 Start the frontend with a mocked or local backend setup. If backend services are not running, use the same Playwright route-mocking approach used for H5 live-room visual checks.
 
@@ -469,13 +469,13 @@ Expected visual checks:
 - Card links and top nav remain visible.
 - Filtered-empty state distinguishes local filtering from API failure.
 
-- [ ] **Step 6: Update task and memory docs**
+- [x] **Step 6: Update task and memory docs**
 
 Record actual verification commands and screenshot paths in:
 
 ```text
 openspec/changes/h5-discovery-live-feed/tasks.md
-projects/proj-1779447357476-ryiijf/memory/2026-06-02.md
+projects/proj-1779447357476-ryiijf/memory/2026-06-03.md
 projects/proj-1779447357476-ryiijf/memory/long-term.md
 ```
 
@@ -500,7 +500,7 @@ Expected: only planned frontend, OpenSpec task, Superpowers plan, and memory fil
 Run:
 
 ```bash
-git add frontend/src/pages/app/AuctionLobby.tsx frontend/src/pages/app/AuctionLobby.test.tsx openspec/changes/h5-discovery-live-feed/tasks.md docs/superpowers/plans/2026-06-02-h5-discovery-live-feed.md projects/proj-1779447357476-ryiijf/memory/2026-06-02.md projects/proj-1779447357476-ryiijf/memory/long-term.md
+git add frontend/src/pages/app/AuctionLobby.tsx frontend/src/pages/app/AuctionLobby.test.tsx openspec/changes/h5-discovery-live-feed/tasks.md docs/superpowers/plans/2026-06-02-h5-discovery-live-feed.md projects/proj-1779447357476-ryiijf/memory/2026-06-03.md projects/proj-1779447357476-ryiijf/memory/long-term.md
 git commit -m "feat(frontend): add h5 discovery live feed"
 ```
 
@@ -515,6 +515,24 @@ git push origin HEAD:codex/frontend-experience-integration
 ```
 
 Expected in this local environment: push may be blocked by `/Users/vivix/.git-hooks/pre-push`. If blocked, report it and do not bypass the hook.
+
+## Execution Results
+
+- Implementation:
+  - `frontend/src/pages/app/AuctionLobby.tsx` now renders the `发现竞拍` H5 discovery shell.
+  - `frontend/src/pages/app/AuctionLobby.test.tsx` covers polling, visibility refresh, local search, filtered empty, channel chips, ending-soon filtering, navigation, and accessible CTA names.
+- Review:
+  - Subagent spec compliance review passed.
+  - Subagent code-quality review initially found CTA accessible-name and chip selected-state issues.
+  - Fixes were applied and code-quality re-review passed.
+- Verification:
+  - `cd frontend && npm run test -- AuctionLobby` passed with 7 tests.
+  - `cd frontend && npm run build` passed.
+  - `npx -y @fission-ai/openspec@latest validate h5-discovery-live-feed --strict --no-interactive` passed.
+  - `git diff --check` passed.
+  - Mobile screenshots captured:
+    - `/tmp/h5-discovery-live-feed-mobile.png`
+    - `/tmp/h5-discovery-live-feed-filtered-empty.png`
 
 ## Self-Review
 

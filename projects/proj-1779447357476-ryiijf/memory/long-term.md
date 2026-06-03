@@ -1,6 +1,6 @@
 # 项目长期记忆
 
-> 更新时间：2026-06-02
+> 更新时间：2026-06-03
 
 ## 用户偏好
 
@@ -93,6 +93,8 @@
   - 已锁定 `/app/auctions` 从普通竞拍大厅升级为 H5 `发现竞拍` 入口：搜索视觉、频道 chips、大直播卡、双列拍品卡、订单/我的入口。
   - 首版只使用现有 `listAuctionLobby()` / `AuctionLobbyItem[]`；搜索和频道是本地筛选/展示能力，不新增后端搜索、热榜、WebSocket 或竞拍语义。
   - 已创建 `docs/superpowers/plans/2026-06-02-h5-discovery-live-feed.md`，实现计划覆盖本地筛选测试、发现页视觉壳、频道 chips、hero 优先级、状态验收和移动端截图。
+  - 已实现 `/app/auctions` H5 `发现竞拍` 直播流入口：本地搜索/筛选、频道 chips、大直播卡、双列拍品卡、订单/我的入口、加载/错误/空态/本地筛选空态，以及可访问性状态。
+  - 已通过 `AuctionLobby` 测试、前端 build、OpenSpec strict、diff 检查、移动端截图 smoke、subagent spec review 和 code-quality review。
   - 个人主页改版、真实后端搜索和真实热榜排序继续后置。
 
 ## 关键业务决策
