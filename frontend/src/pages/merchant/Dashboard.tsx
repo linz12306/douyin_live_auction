@@ -200,19 +200,22 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 px-4 py-10 text-center text-white/65">
-        加载中...
+      <div className="min-h-screen bg-[#080b11] flex items-center justify-center text-slate-400/80">
+        <div className="text-center">
+          <p className="text-sm font-semibold">加载看板数据中...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !dashboard) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
+      <div className="min-h-screen bg-[#080b11] text-white">
         <main className="mx-auto max-w-6xl px-4 py-8">
-          <PageBackButton fallback="/profile" className="mb-3" />
-          <div className="rounded-lg border border-red-400/50 bg-red-500/20 px-4 py-3 text-sm text-red-100">
-            {error || '看板加载失败'}
+          <PageBackButton fallback="/profile" className="mb-4 border-white/10 bg-white/5 hover:bg-white/10" />
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200 backdrop-blur-lg flex items-center gap-2">
+            <span className="shrink-0">⚠️</span>
+            <span>{error || '看板加载失败'}</span>
           </div>
         </main>
       </div>
@@ -223,129 +226,142 @@ export default function Dashboard() {
   const analytics = analyticsOrEmpty(dashboard.analytics);
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <div className="min-h-screen bg-[#080b11] relative overflow-hidden text-white">
+      {/* 背景光效 */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/3 blur-[120px] pointer-events-none" />
+
+      <main className="mx-auto max-w-6xl px-4 py-8 relative z-10">
+        <header className="mb-8 flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
           <div>
-            <PageBackButton fallback="/profile" className="mb-3" />
-            <h1 className="text-2xl font-bold text-white">运营看板</h1>
-            <p className="mt-1 text-sm text-white/55">当前商家的商品、订单与成交概览</p>
+            <PageBackButton fallback="/profile" className="mb-3 border-white/10 bg-white/5 hover:bg-white/10" />
+            <h1 className="text-3xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent tracking-tight">运营看板</h1>
+            <p className="mt-1 text-sm text-slate-400/80">当前商家的拍品、成交额、订单及核心业务数据综合概览</p>
           </div>
           <div className="flex gap-2">
-            <Link to="/merchant/products" className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/75 hover:border-white/40">
+            <Link to="/merchant/products" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/90 hover:border-white/25 hover:bg-white/10 transition-all duration-200">
               商品管理
             </Link>
-            <Link to="/merchant/orders" className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/75 hover:border-white/40">
+            <Link to="/merchant/orders" className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/90 hover:border-white/25 hover:bg-white/10 transition-all duration-200">
               订单管理
             </Link>
           </div>
         </header>
 
-        <section className="grid gap-3 md:grid-cols-5">
-          <div className="rounded-lg border border-white/15 bg-white/10 p-4">
-            <div className="text-sm text-white/55">成交金额</div>
-            <div className="mt-2 text-2xl font-bold text-emerald-200">{formatPrice(summary.total_paid_amount)}</div>
+        {/* 五大成交核心指标 */}
+        <section className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10 hover:border-purple-500/20 transition-all duration-200">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">成交金额</div>
+            <div className="mt-2 text-2xl font-black text-transparent bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text tabular-nums">{formatPrice(summary.total_paid_amount)}</div>
           </div>
-          <div className="rounded-lg border border-white/15 bg-white/10 p-4">
-            <div className="text-sm text-white/55">成交订单</div>
-            <div className="mt-2 text-2xl font-bold text-white">{summary.paid_order_count} 单</div>
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10 hover:border-purple-500/20 transition-all duration-200">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">成交订单</div>
+            <div className="mt-2 text-2xl font-black text-slate-100 tabular-nums">{summary.paid_order_count} <span className="text-xs font-medium text-slate-400">单</span></div>
           </div>
-          <div className="rounded-lg border border-white/15 bg-white/10 p-4">
-            <div className="text-sm text-white/55">平均成交价</div>
-            <div className="mt-2 text-2xl font-bold text-cyan-200">{formatPrice(summary.average_paid_price)}</div>
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10 hover:border-purple-500/20 transition-all duration-200">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">平均成交单价</div>
+            <div className="mt-2 text-2xl font-black text-transparent bg-gradient-to-r from-cyan-400 to-blue-300 bg-clip-text tabular-nums">{formatPrice(summary.average_paid_price)}</div>
           </div>
-          <div className="rounded-lg border border-white/15 bg-white/10 p-4">
-            <div className="text-sm text-white/55">进行中竞拍</div>
-            <div className="mt-2 text-2xl font-bold text-amber-200">{dashboard.active_auctions.length} 场</div>
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10 hover:border-purple-500/20 transition-all duration-200">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">进行中竞拍</div>
+            <div className="mt-2 text-2xl font-black text-amber-400 tabular-nums">{dashboard.active_auctions.length} <span className="text-xs font-medium text-slate-400">场</span></div>
           </div>
-          <div className="rounded-lg border border-white/15 bg-white/10 p-4">
-            <div className="text-sm text-white/55">最近订单</div>
-            <div className="mt-2 text-2xl font-bold text-white">{dashboard.recent_orders.length} 单</div>
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10 hover:border-purple-500/20 transition-all duration-200">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">本周新增订单</div>
+            <div className="mt-2 text-2xl font-black text-slate-100 tabular-nums">{dashboard.recent_orders.length} <span className="text-xs font-medium text-slate-400">单</span></div>
           </div>
         </section>
 
-        <section className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-lg border border-white/12 bg-white/8 p-4">
+        {/* 数据图表卡片 */}
+        <section className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h2 className="font-semibold text-white">成交趋势</h2>
-                <p className="mt-1 text-sm text-white/45">近 7 天已支付订单</p>
+                <h2 className="text-base font-bold text-slate-200">成交趋势</h2>
+                <p className="mt-1 text-xs text-slate-400/80">近 7 天已支付订单成交额</p>
               </div>
-              <span className="rounded border border-emerald-300/25 bg-emerald-300/10 px-2 py-1 text-xs text-emerald-100">
-                仅已支付
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black text-emerald-300 uppercase tracking-wide">
+                已支付统计
               </span>
             </div>
             <TransactionTrendChart points={analytics.transaction_trend} />
           </div>
 
-          <div className="rounded-lg border border-white/12 bg-white/8 p-4">
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10">
             <div className="mb-4">
-              <h2 className="font-semibold text-white">出价分布</h2>
-              <p className="mt-1 text-sm text-white/45">当前商家拍品的全部出价金额区间</p>
+              <h2 className="text-base font-bold text-slate-200">出价分布区间</h2>
+              <p className="mt-1 text-xs text-slate-400/80">商户所有发布拍品的历史出价频次分布</p>
             </div>
             <BidDistributionChart buckets={analytics.bid_distribution} />
           </div>
         </section>
 
-        <section className="mt-4 rounded-lg border border-white/12 bg-white/8 p-4">
+        {/* 活跃度数据 */}
+        <section className="mt-6 rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-white">用户活跃度</h2>
-              <p className="mt-1 text-sm text-white/45">近 7 天出价次数与活跃竞拍用户</p>
+              <h2 className="text-base font-bold text-slate-200">买家用户活跃度</h2>
+              <p className="mt-1 text-xs text-slate-400/80">近 7 天买家竞标出价次数与实际独立出价人数</p>
             </div>
-            <span className="rounded border border-amber-300/25 bg-amber-300/10 px-2 py-1 text-xs text-amber-100">
-              出价与用户
+            <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[10px] font-black text-amber-300 uppercase tracking-wide">
+              参与行为趋势
             </span>
           </div>
           <UserActivityChart points={analytics.user_activity} />
         </section>
 
-        <section className="mt-6 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-lg border border-white/15 bg-white/10 p-4">
-            <h2 className="font-semibold text-white">商品状态</h2>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {/* 商品与订单状态桶 */}
+        <section className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10">
+            <h2 className="text-base font-bold text-slate-200 mb-4 flex items-center gap-2">
+              <span className="text-purple-400">📦</span> 商品各状态分类
+            </h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {(Object.keys(PRODUCT_STATUS_TEXT) as ProductStatus[]).map((status) => (
-                <div key={status} className="rounded-lg border border-white/10 bg-black/10 px-3 py-2">
-                  <div className="text-xs text-white/50">{PRODUCT_STATUS_TEXT[status]}</div>
-                  <div className="mt-1 text-xl font-bold text-white">{productCounts[status] ?? 0}</div>
+                <div key={status} className="rounded-xl border border-white/5 bg-slate-950/40 p-3 shadow-inner">
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{PRODUCT_STATUS_TEXT[status]}</div>
+                  <div className="mt-1 text-2xl font-black text-slate-100 tabular-nums">{productCounts[status] ?? 0}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-lg border border-white/15 bg-white/10 p-4">
-            <h2 className="font-semibold text-white">订单状态</h2>
-            <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10">
+            <h2 className="text-base font-bold text-slate-200 mb-4 flex items-center gap-2">
+              <span className="text-pink-400">📋</span> 订单状态分类汇总
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
               {(Object.keys(ORDER_STATUS_TEXT) as OrderStatus[]).map((status) => (
-                <div key={status} className="rounded-lg border border-white/10 bg-black/10 px-3 py-2">
-                  <div className="text-xs text-white/50">{ORDER_STATUS_TEXT[status]}</div>
-                  <div className="mt-1 text-xl font-bold text-white">{orderCounts[status] ?? 0}</div>
+                <div key={status} className="rounded-xl border border-white/5 bg-slate-950/40 p-3 shadow-inner">
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{ORDER_STATUS_TEXT[status]}</div>
+                  <div className="mt-1 text-2xl font-black text-slate-100 tabular-nums">{orderCounts[status] ?? 0}</div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-lg border border-white/15 bg-white/10 p-4">
+        {/* 实时列表 & 最近订单 */}
+        <section className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="font-semibold text-white">进行中竞拍</h2>
-              <Link to="/merchant/products" className="text-sm text-cyan-200 hover:text-cyan-100">查看商品</Link>
+              <h2 className="text-base font-bold text-slate-200">进行中竞拍</h2>
+              <Link to="/merchant/products" className="text-xs font-bold text-purple-400 hover:text-purple-300 transition duration-200">查看全部商品 ›</Link>
             </div>
             {dashboard.active_auctions.length === 0 ? (
-              <p className="py-8 text-center text-white/55">暂无进行中竞拍</p>
+              <p className="py-12 text-center text-slate-500 text-sm">暂无进行中竞拍</p>
             ) : (
               <div className="space-y-3">
                 {dashboard.active_auctions.map((auction) => (
-                  <article key={auction.auction_id} className="rounded-lg border border-white/10 bg-black/10 p-3">
+                  <article key={auction.auction_id} className="rounded-xl border border-white/5 bg-slate-950/40 p-4 hover:border-purple-500/10 transition duration-200">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="break-words font-semibold text-white">{auction.product_title}</h3>
-                        <p className="mt-1 text-sm text-white/50">结束：{formatTime(auction.ended_at)}</p>
+                        <h3 className="break-words font-bold text-slate-200 text-sm leading-snug">{auction.product_title}</h3>
+                        <p className="mt-1.5 text-xs text-slate-400">结束：{formatTime(auction.ended_at)}</p>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-emerald-200">{formatPrice(auction.current_price)}</div>
-                        <div className="mt-1 text-xs text-white/50">{auction.bid_count} 次出价</div>
+                      <div className="text-right shrink-0">
+                        <div className="font-black text-transparent bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-base tabular-nums">{formatPrice(auction.current_price)}</div>
+                        <div className="mt-1 text-xs font-semibold text-slate-400">{auction.bid_count} 次出价</div>
                       </div>
                     </div>
                   </article>
@@ -354,34 +370,36 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="rounded-lg border border-white/15 bg-white/10 p-4">
+          <div className="rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl shadow-xl shadow-black/10">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="font-semibold text-white">最近订单</h2>
-              <Link to="/merchant/orders" className="text-sm text-cyan-200 hover:text-cyan-100">查看订单</Link>
+              <h2 className="text-base font-bold text-slate-200">本周新增订单</h2>
+              <Link to="/merchant/orders" className="text-xs font-bold text-purple-400 hover:text-purple-300 transition duration-200">查看全部订单 ›</Link>
             </div>
             {dashboard.recent_orders.length === 0 ? (
-              <p className="py-8 text-center text-white/55">暂无订单</p>
+              <p className="py-12 text-center text-slate-500 text-sm">暂无订单</p>
             ) : (
               <div className="space-y-3">
                 {dashboard.recent_orders.map((order) => (
-                  <article key={order.id} className="rounded-lg border border-white/10 bg-black/10 p-3">
+                  <article key={order.id} className="rounded-xl border border-white/5 bg-slate-950/40 p-4 hover:border-purple-500/10 transition duration-200">
                     <div className="flex gap-3">
-                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-white/5">
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-900 border border-white/5">
                         {order.product_image_url ? (
                           <img src={order.product_image_url} alt={order.product_title} className="h-full w-full object-cover" />
                         ) : (
-                          <div className="flex h-full items-center justify-center text-xs text-white/40">无图</div>
+                          <div className="flex h-full items-center justify-center text-[10px] font-semibold text-slate-500">暂无图</div>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <h3 className="break-words font-semibold text-white">{order.product_title}</h3>
-                            <p className="mt-1 text-sm text-white/50">买家：{order.buyer_name || `用户 ${order.buyer_id}`}</p>
+                            <h3 className="break-words font-bold text-slate-200 text-xs leading-snug line-clamp-1">{order.product_title}</h3>
+                            <p className="mt-1 text-[11px] text-slate-400">买家：{order.buyer_name || `用户 ${order.buyer_id}`}</p>
                           </div>
-                          <div className="text-right">
-                            <div className="font-bold text-emerald-200">{formatPrice(order.amount)}</div>
-                            <div className="mt-1 text-xs text-white/50">{ORDER_STATUS_TEXT[order.status] || order.status}</div>
+                          <div className="text-right shrink-0">
+                            <div className="font-bold text-transparent bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-sm tabular-nums">{formatPrice(order.amount)}</div>
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-slate-800 text-slate-300 border border-white/5">
+                              {ORDER_STATUS_TEXT[order.status] || order.status}
+                            </span>
                           </div>
                         </div>
                       </div>

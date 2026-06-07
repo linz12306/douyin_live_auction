@@ -52,6 +52,17 @@ Fast-lane requirements:
 
 Documentation-only typo/format/comment fixes may be lighter, but still state verification.
 
+## User Confirmation Gates
+
+When a change uses the Superpowers/OpenSpec workflow, agents must pause for explicit user confirmation at these points:
+
+- After the brainstorm checkpoint, before writing or finalizing OpenSpec documents.
+- After writing or updating Superpowers exploration/spec documents, before treating them as approved.
+- After creating or updating the Superpowers execution plan, before starting implementation.
+- Before committing or pushing workflow documents or implementation changes, unless the user has already explicitly asked for unattended commit/push in the current turn.
+
+Do not treat a general approval to start the workflow as approval for every later gate. If the user says to continue unattended, record that assumption in the relevant exploration or plan document.
+
 ## Full Workflow
 
 ### Phase 0: Preflight
@@ -79,6 +90,8 @@ Write or update:
 
 - `docs/superpowers/specs/YYYY-MM-DD-<change-id>-exploration.md`
 
+After writing the exploration document, summarize the file path and key decisions to the user and wait for review or approval before proceeding to OpenSpec lock, unless the user explicitly requested unattended execution in the current turn.
+
 ### Phase 2: OpenSpec Lock
 
 Create or update:
@@ -94,6 +107,7 @@ Rules:
 - Run `openspec validate <change-id> --strict` when available.
 - Do not implement until this phase passes.
 - If implementation shows the spec is wrong, pause coding and return here.
+- After OpenSpec lock and validation pass, summarize proposal/design/tasks/spec paths and wait for user approval before creating the execution plan or committing the lock documents, unless the user explicitly requested unattended execution in the current turn.
 
 ### Phase 3: Superpowers Execution
 
@@ -103,6 +117,7 @@ Rules:
 - Use systematic debugging for failures.
 - Keep OpenSpec tasks and the Superpowers plan synchronized.
 - Commit each verified slice.
+- After writing the execution plan, ask the user whether to proceed with subagent-driven execution, inline execution, or stop for review. Do not start implementation until the user chooses.
 
 #### Subagent Scheduling
 

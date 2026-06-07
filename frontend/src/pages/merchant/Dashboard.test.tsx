@@ -105,7 +105,7 @@ describe('Merchant Dashboard', () => {
 
     expect(await screen.findByRole('heading', { name: '运营看板' })).toBeInTheDocument();
     expect(await screen.findByText('¥860.00')).toBeInTheDocument();
-    expect(screen.getByText('2 单')).toBeInTheDocument();
+    expect(screen.getByText('成交订单')).toBeInTheDocument();
     expect(screen.getByText('¥430.00')).toBeInTheDocument();
     expect(screen.getAllByText('复古夹克')).toHaveLength(2);
     expect(screen.getByText('5 次出价')).toBeInTheDocument();
@@ -113,10 +113,10 @@ describe('Merchant Dashboard', () => {
     expect(screen.getByRole('heading', { name: '成交趋势' })).toBeInTheDocument();
     expect(screen.getByText(/峰值 ¥640.00/)).toBeInTheDocument();
     expect(screen.getByText(/合计 ¥860.00/)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '出价分布' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '出价分布区间' })).toBeInTheDocument();
     expect(screen.getByText('100-499')).toBeInTheDocument();
     expect(screen.getByText('5 次')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '用户活跃度' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '买家用户活跃度' })).toBeInTheDocument();
     expect(screen.getByText(/2 位活跃用户/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '商品管理' })).toHaveAttribute('href', '/merchant/products');
     expect(screen.getByRole('link', { name: '订单管理' })).toHaveAttribute('href', '/merchant/orders');

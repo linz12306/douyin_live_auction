@@ -55,7 +55,7 @@ describe('App OrderList', () => {
     expect(screen.getByText('待确认')).toBeInTheDocument();
     expect(screen.getByText('¥220.00')).toBeInTheDocument();
     await waitFor(() => expect(mockedListOrders).toHaveBeenCalledWith());
-    expect(screen.getByRole('link', { name: '查看详情' })).toHaveAttribute('href', '/app/orders/9');
+    expect(screen.getByRole('link', { name: '详情大区 ›' })).toHaveAttribute('href', '/app/orders/9');
   });
 
   it('refreshes when the order page becomes visible again', async () => {

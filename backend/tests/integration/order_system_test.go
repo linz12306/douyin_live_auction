@@ -247,6 +247,57 @@ func TestOrderAPIMerchantListsAndViewsOwnOrders(t *testing.T) {
 	}
 }
 
+func TestOrderAPIUsesProductImageWhenLiveMediaExists(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, _ := registerAuctionUser(t, ts)
+	ceiling := float64(20)
+	productID, auctionID := publishAuction(t, ts, merchantToken, &ceiling)
+	if _, err := db.Exec(
+		`INSERT INTO product_live_media (product_id, media_type, media_url, poster_url)
+		 VALUES (?, 'image', '/static/live-media/order-room.webp', NULL)`,
+		productID,
+	); err != nil {
+		t.Fatalf("insert live media: %v", err)
+	}
+	activateAuction(t, db, auctionID)
+	placeBid(t, ts, auctionID, userToken, 20)
+
+	var orderID int64
+	if err := db.QueryRow("SELECT id FROM orders WHERE auction_id = ?", auctionID).Scan(&orderID); err != nil {
+		t.Fatalf("query settled order: %v", err)
+	}
+
+	listResp, err := makeRequest("GET", ts.URL+"/api/v1/orders?page=1&size=20", userToken, nil)
+	if err != nil {
+		t.Fatalf("list buyer orders: %v", err)
+	}
+	defer listResp.Body.Close()
+	if listResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected buyer order list 200, got %d", listResp.StatusCode)
+	}
+	listItem := apiItemForOrderID(decodeAPIData(t, listResp), orderID)
+	if listItem["product_image_url"] != "/static/images/test.jpg" {
+		t.Fatalf("expected order list product image, got %#v", listItem["product_image_url"])
+	}
+
+	detailResp, err := makeRequest("GET", ts.URL+fmt.Sprintf("/api/v1/orders/%d", orderID), userToken, nil)
+	if err != nil {
+		t.Fatalf("get buyer order detail: %v", err)
+	}
+	defer detailResp.Body.Close()
+	if detailResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected buyer order detail 200, got %d", detailResp.StatusCode)
+	}
+	detailData := decodeAPIData(t, detailResp)
+	if detailData["product_image_url"] != "/static/images/test.jpg" {
+		t.Fatalf("expected order detail product image, got %#v", detailData["product_image_url"])
+	}
+}
+
 func TestOrderAPIScopesOrdersByRole(t *testing.T) {
 	r, db := setupAuctionServer(t)
 	ts := httptest.NewServer(r)
@@ -338,9 +389,13 @@ func decodeAPIData(t *testing.T, resp *http.Response) map[string]interface{} {
 }
 
 func apiItemsContainOrderID(data map[string]interface{}, orderID int64) bool {
+	return apiItemForOrderID(data, orderID) != nil
+}
+
+func apiItemForOrderID(data map[string]interface{}, orderID int64) map[string]interface{} {
 	items, ok := data["items"].([]interface{})
 	if !ok {
-		return false
+		return nil
 	}
 	for _, raw := range items {
 		item, ok := raw.(map[string]interface{})
@@ -348,8 +403,8 @@ func apiItemsContainOrderID(data map[string]interface{}, orderID int64) bool {
 			continue
 		}
 		if int64(item["id"].(float64)) == orderID {
-			return true
+			return item
 		}
 	}
-	return false
+	return nil
 }

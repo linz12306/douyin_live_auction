@@ -106,92 +106,126 @@ export default function OrderDetail() {
   }
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-950 px-4 py-10 text-center text-white/65">加载中...</div>;
+    return (
+      <div className="min-h-screen bg-[#050708] flex items-center justify-center text-slate-400/80">
+        <p className="text-sm font-semibold">加载中...</p>
+      </div>
+    );
   }
 
   if (!order) {
-    return <div className="min-h-screen bg-slate-950 px-4 py-10 text-center text-white/65">{error || '订单不存在'}</div>;
+    return (
+      <div className="min-h-screen bg-[#050708] flex items-center justify-center text-slate-400/80">
+        <p className="text-sm font-semibold">{error || '订单不存在'}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-zinc-950 text-white">
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mb-4 flex flex-wrap gap-2">
-          <PageBackButton fallback="/app/orders" />
+    <div className="min-h-screen bg-[#050708] relative overflow-hidden text-white">
+      {/* 极光背景微光 */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-rose-600/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-teal-600/5 blur-[120px] pointer-events-none" />
+
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8 relative z-10">
+        <div className="mb-6 flex flex-wrap gap-2">
+          <PageBackButton fallback="/app/orders" className="border-white/10 bg-white/5 hover:bg-white/10" />
           <button
             type="button"
             onClick={() => void loadOrder()}
             disabled={refreshing || submitting}
-            className="rounded-lg border border-white/15 bg-white/8 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white/80 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {refreshing ? '刷新中...' : '刷新状态'}
           </button>
         </div>
 
-        <section className="overflow-hidden rounded-lg border border-white/12 bg-white/10 shadow-xl shadow-black/20">
+        <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111422]/60 shadow-2xl shadow-black/40 backdrop-blur-xl">
           <div className="grid gap-0 md:grid-cols-[280px_minmax(0,1fr)]">
-            <div className="aspect-[4/3] bg-zinc-900 md:aspect-auto">
+            <div className="aspect-[4/3] bg-zinc-950 border-b md:border-b-0 md:border-r border-white/5">
               {order.product_image_url ? (
                 <img src={order.product_image_url} alt={order.product_title} className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full min-h-64 items-center justify-center text-sm text-white/45">暂无图片</div>
+                <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-slate-500">暂无商品大图</div>
               )}
             </div>
-            <div className="min-w-0 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <h1 className="break-words text-2xl font-bold">{order.product_title}</h1>
-                <span className="shrink-0 rounded border border-emerald-300/40 bg-emerald-300/15 px-2 py-1 text-xs text-emerald-100">
-                  {statusText(order.status)}
-                </span>
+            <div className="min-w-0 p-6 flex flex-col justify-between">
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <h1 className="break-words text-2xl font-black bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent tracking-tight leading-snug">{order.product_title}</h1>
+                  <span className="shrink-0 inline-block px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide border uppercase border-rose-500/25 bg-rose-500/10 text-rose-300">
+                    {statusText(order.status)}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-slate-400 leading-relaxed">{order.product_description || '暂无商品介绍'}</p>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">成交结算价</div>
+                    <div className="mt-1 text-2xl font-black text-rose-300 tabular-nums">{formatPrice(order.amount)}</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">确认截止时间</div>
+                    <div className="mt-1 text-sm font-bold text-slate-200">{formatTime(order.confirm_deadline)}</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">确认成立时间</div>
+                    <div className="mt-1 text-sm font-bold text-slate-200">{formatTime(order.confirmed_at)}</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">实际完成支付</div>
+                    <div className="mt-1 text-sm font-bold text-slate-200">{formatTime(order.paid_at)}</div>
+                  </div>
+                </div>
               </div>
-              <p className="mt-3 text-sm text-white/60">{order.product_description || '暂无商品介绍'}</p>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg bg-zinc-950/45 p-3">
-                  <div className="text-xs text-white/45">成交金额</div>
-                  <div className="mt-1 text-2xl font-black text-emerald-200">{formatPrice(order.amount)}</div>
-                </div>
-                <div className="rounded-lg bg-zinc-950/45 p-3">
-                  <div className="text-xs text-white/45">确认截止</div>
-                  <div className="mt-1 text-sm text-white/85">{formatTime(order.confirm_deadline)}</div>
-                </div>
-                <div className="rounded-lg bg-zinc-950/45 p-3">
-                  <div className="text-xs text-white/45">确认时间</div>
-                  <div className="mt-1 text-sm text-white/85">{formatTime(order.confirmed_at)}</div>
-                </div>
-                <div className="rounded-lg bg-zinc-950/45 p-3">
-                  <div className="text-xs text-white/45">支付时间</div>
-                  <div className="mt-1 text-sm text-white/85">{formatTime(order.paid_at)}</div>
-                </div>
-              </div>
+              <div className="mt-5">
+                {order.cancel_reason ? (
+                  <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-200 flex items-center gap-2">
+                    <span className="shrink-0">⚠️</span>
+                    <span className="font-semibold">取消原因：{order.cancel_reason}</span>
+                  </div>
+                ) : null}
 
-              {order.cancel_reason ? (
-                <div className="mt-4 rounded border border-rose-300/35 bg-rose-500/15 px-3 py-2 text-sm text-rose-100">
-                  取消原因：{order.cancel_reason}
-                </div>
-              ) : null}
-              {error ? (
-                <div className="mt-4 rounded border border-rose-300/35 bg-rose-500/15 px-3 py-2 text-sm text-rose-100">
-                  {error}
-                </div>
-              ) : null}
+                {error ? (
+                  <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-200 flex items-center gap-2">
+                    <span className="shrink-0">⚠️</span>
+                    <span>{error}</span>
+                  </div>
+                ) : null}
 
-              <div className="mt-5 flex flex-wrap gap-3">
-                {order.actions.can_confirm ? (
-                  <button type="button" disabled={submitting} onClick={() => runAction('confirm')} className="rounded-lg bg-emerald-300 px-4 py-3 text-sm font-bold text-zinc-950 hover:bg-emerald-200 disabled:opacity-60">
-                    确认订单
-                  </button>
-                ) : null}
-                {order.actions.can_pay ? (
-                  <button type="button" disabled={submitting} onClick={() => runAction('pay')} className="rounded-lg bg-sky-300 px-4 py-3 text-sm font-bold text-zinc-950 hover:bg-sky-200 disabled:opacity-60">
-                    模拟支付
-                  </button>
-                ) : null}
-                {order.actions.can_cancel ? (
-                  <button type="button" disabled={submitting} onClick={() => runAction('cancel')} className="rounded-lg border border-rose-300/45 bg-rose-500/15 px-4 py-3 text-sm font-bold text-rose-100 hover:bg-rose-500/25 disabled:opacity-60">
-                    取消订单
-                  </button>
-                ) : null}
+                <div className="flex flex-wrap gap-3">
+                  {order.actions.can_confirm ? (
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => runAction('confirm')}
+                      className="rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-6 py-3 text-sm active:scale-[0.98] transition shadow-lg shadow-emerald-500/15 disabled:opacity-50 disabled:scale-100"
+                    >
+                      确认中标订单
+                    </button>
+                  ) : null}
+                  {order.actions.can_pay ? (
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => runAction('pay')}
+                      className="rounded-xl bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-400 hover:to-red-400 text-white font-black px-6 py-3 text-sm active:scale-[0.98] transition shadow-lg shadow-rose-500/20 disabled:opacity-50 disabled:scale-100"
+                    >
+                      立即模拟支付
+                    </button>
+                  ) : null}
+                  {order.actions.can_cancel ? (
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => runAction('cancel')}
+                      className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 font-bold px-6 py-3 text-sm transition"
+                    >
+                      申请取消订单
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>

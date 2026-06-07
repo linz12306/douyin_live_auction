@@ -10,6 +10,23 @@
 
 ---
 
+## Execution Status
+
+- [x] Backend schema/repository/product detail support implemented.
+- [x] Backend live media upload/replace/delete/static serving implemented with ownership, status, type, extension, content, size, and filesystem cleanup guards.
+- [x] Realtime snapshot contract includes optional `product.live_media`.
+- [x] Merchant `ProductForm` includes live media preview, upload, replace, delete, readonly, and validation states.
+- [x] Buyer `LiveAuctionRoom` renders live video/image media ahead of the fallback staged scene.
+- [x] Demo seed uploads a real live media file through the merchant API while keeping product gallery images as summary imagery.
+- [x] Lobby and order summary image regressions verify `product_images` remain the summary source.
+- [x] Focused backend and frontend tests passed for implemented slices.
+- [x] Manual browser preview for `demo_merchant / test123` and `demo_buyer_a / test123`.
+- [x] Final build/OpenSpec/diff verification.
+- [x] Memory update.
+- [ ] Commit and push after explicit user confirmation.
+
+---
+
 ## File Map
 
 - Create: `backend/migrations/008_create_product_live_media.sql`

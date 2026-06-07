@@ -38,15 +38,20 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
-      <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-white/20">
-        <PageBackButton fallback="/login" className="mb-5 bg-white/5" />
-        <h1 className="text-3xl font-bold text-white text-center mb-2">实时竞拍大师</h1>
-        <p className="text-white/60 text-center mb-8">创建你的账号</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#080b11] relative overflow-hidden">
+      {/* 极光背景微光 */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/8 blur-[120px] pointer-events-none" />
+
+      <div className="bg-[#111422]/60 backdrop-blur-xl border border-white/8 rounded-2xl p-8 w-full max-w-md shadow-2xl shadow-black/60 relative z-10">
+        <PageBackButton fallback="/login" className="mb-6 border-white/10 bg-white/5 hover:bg-white/10" />
+        <h1 className="text-3xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent text-center mb-2 tracking-tight">实时竞拍大师</h1>
+        <p className="text-slate-400/80 text-center mb-8 text-sm">创建您的账号，开启竞拍之旅</p>
 
         {error && (
-          <div className="bg-red-500/20 border border-red-400 text-red-200 rounded-lg p-3 mb-4 text-sm">
-            {error}
+          <div className="bg-red-500/10 border border-red-500/30 text-red-200 rounded-xl p-4 mb-6 text-sm flex items-center gap-2 backdrop-blur">
+            <span className="text-red-400 font-bold shrink-0">⚠️</span>
+            <span>{error}</span>
           </div>
         )}
 
@@ -57,7 +62,7 @@ export default function Register() {
               placeholder="用户名（4-20位字母数字下划线）"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-purple-400 transition"
+              className="w-full px-4 py-3 rounded-xl bg-slate-950/40 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/15 transition-all duration-200 shadow-inner shadow-black/10"
               required
             />
           </div>
@@ -67,7 +72,7 @@ export default function Register() {
               placeholder="昵称（最多50字符）"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-purple-400 transition"
+              className="w-full px-4 py-3 rounded-xl bg-slate-950/40 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/15 transition-all duration-200 shadow-inner shadow-black/10"
               required
             />
           </div>
@@ -77,21 +82,21 @@ export default function Register() {
               placeholder="密码（至少6位）"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-purple-400 transition"
+              className="w-full px-4 py-3 rounded-xl bg-slate-950/40 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/15 transition-all duration-200 shadow-inner shadow-black/10"
               required
             />
           </div>
 
           <div>
-            <label className="text-white/80 text-sm mb-2 block">选择角色</label>
+            <label className="text-slate-300 text-sm font-semibold mb-2 block">选择角色</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setRole('user')}
-                className={`p-4 rounded-xl border-2 text-center transition ${
+                className={`p-4 rounded-xl border border-2 text-center transition-all duration-200 ${
                   role === 'user'
-                    ? 'border-purple-400 bg-purple-500/20 text-white'
-                    : 'border-white/20 bg-white/5 text-white/60 hover:border-white/40'
+                    ? 'border-purple-500 bg-purple-500/15 text-white shadow-lg shadow-purple-500/10'
+                    : 'border-slate-800 bg-slate-950/20 text-slate-400 hover:border-slate-700 hover:text-slate-200'
                 }`}
               >
                 <div className="text-2xl mb-1">👤</div>
@@ -101,10 +106,10 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setRole('merchant')}
-                className={`p-4 rounded-xl border-2 text-center transition ${
+                className={`p-4 rounded-xl border border-2 text-center transition-all duration-200 ${
                   role === 'merchant'
-                    ? 'border-pink-400 bg-pink-500/20 text-white'
-                    : 'border-white/20 bg-white/5 text-white/60 hover:border-white/40'
+                    ? 'border-pink-500 bg-pink-500/15 text-white shadow-lg shadow-pink-500/10'
+                    : 'border-slate-800 bg-slate-950/20 text-slate-400 hover:border-slate-700 hover:text-slate-200'
                 }`}
               >
                 <div className="text-2xl mb-1">🏪</div>
@@ -117,14 +122,14 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg hover:opacity-90 disabled:opacity-50 transition"
+            className="w-full py-3.5 mt-2 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 text-white font-bold rounded-xl hover:from-violet-500 hover:via-purple-500 hover:to-pink-500 active:scale-[0.98] shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 disabled:opacity-50 disabled:scale-100 transition-all duration-200"
           >
             {loading ? '注册中...' : '注 册'}
           </button>
         </form>
 
-        <p className="text-white/60 text-center mt-6 text-sm">
-          已有账号？<Link to="/login" className="text-purple-300 hover:underline">立即登录</Link>
+        <p className="text-slate-400/80 text-center mt-6 text-sm">
+          已有账号？<Link to="/login" className="text-purple-400 font-semibold hover:text-purple-300 transition hover:underline underline-offset-4">立即登录</Link>
         </p>
       </div>
     </div>

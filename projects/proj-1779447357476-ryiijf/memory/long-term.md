@@ -97,6 +97,16 @@
   - 已通过 `AuctionLobby` 测试、前端 build、OpenSpec strict、diff 检查、移动端截图 smoke、subagent spec review 和 code-quality review。
   - 个人主页改版、真实后端搜索和真实热榜排序继续后置。
 
+- `merchant-live-media`
+  - 分支：`codex/frontend-experience-integration`
+  - OpenSpec change：`openspec/changes/merchant-live-media/`
+  - 已实现商家为每个商品配置一个直播间素材：后端 `product_live_media` 表、`/api/v1/products/:id/live-media` 上传/替换/删除、`/static/live-media` 静态服务、商品详情和 WebSocket snapshot 的可选 `live_media` 字段。
+  - 商家 `ProductForm` 已新增 `直播间素材` 区块，支持新建暂存上传、草稿编辑直接替换/删除、预览、错误提示和非草稿只读。
+  - 用户端 `LiveAuctionRoom` 已优先渲染商家上传的图片/视频作为直播间舞台背景；没有 live media 时继续使用当前 fallback staged scene。
+  - 大厅和订单摘要图仍以 `product_images` 为来源；已有 lobby/order 回归测试保护不被 live media 覆盖。
+  - Demo seed 现在通过真实上传接口注入 live media；本地预览种子 `mpxxsy9z` 创建 auction `1802`，可用 `/app/auctions/1802` 查看。
+  - 自动验证和浏览器预览已通过；commit/push 暂停等待用户确认。
+
 ## 关键业务决策
 
 - 竞拍成交生成 `pending_confirm` 订单时，auction engine 已经扣减中标冻结金额。

@@ -116,20 +116,20 @@ function ActionRailButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex w-10 flex-col items-center gap-1 text-white drop-shadow"
+      className="group flex w-11 flex-col items-center gap-1 text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)]"
     >
-      <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/35 text-xs font-black backdrop-blur">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/38 text-xs font-black shadow-lg shadow-black/30 backdrop-blur-xl transition group-hover:scale-105">
         {children}
       </span>
-      <span className="max-w-10 truncate text-[10px] font-semibold">{value}</span>
+      <span className="max-w-11 truncate rounded-full bg-black/28 px-1.5 py-0.5 text-[10px] font-semibold backdrop-blur">{value}</span>
     </button>
   );
 }
 
 function RankingPill({ item }: { item: RankingItem }) {
   return (
-    <li className="flex h-8 min-w-0 items-center gap-2 rounded bg-black/35 px-2 backdrop-blur">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-amber-300 text-[11px] font-black text-zinc-950">
+    <li className="flex h-8 min-w-0 items-center gap-2 rounded-full bg-black/42 px-2 pr-3 shadow-lg shadow-black/20 backdrop-blur-xl">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-orange-400 text-[11px] font-black text-zinc-950">
         {item.rank}
       </span>
       <span className="min-w-0 truncate text-xs font-semibold text-white">{safeDisplayName(item)}</span>
@@ -195,6 +195,7 @@ export default function LiveAuctionRoom() {
   const urgent = active && countdownMs > 0 && countdownMs <= 10_000;
   const displayStatus = roomStatus ? STATUS_TEXT[roomStatus] : '等待快照';
   const heroImage = roomProduct?.image_urls?.[0] || heroFallback;
+  const liveMedia = roomProduct?.live_media;
   const bidCount = roomRankings.length;
   const isLeading = active && Boolean(user?.id && roomHighestBidderId === user.id);
   const latestOutbid = roomNotifications.find((item) => item.type === 'outbid');
@@ -306,71 +307,133 @@ export default function LiveAuctionRoom() {
   const showResultModal = isCurrentRoom && terminal && !resultDismissed;
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white lg:grid lg:place-items-center lg:px-6 lg:py-6">
-      <main className="relative mx-auto h-[100svh] min-h-[640px] w-full max-w-[430px] overflow-hidden bg-black shadow-2xl shadow-black/50 lg:h-[860px] lg:min-h-0 lg:rounded-lg lg:border lg:border-white/10">
-        <img
-          src={heroImage}
-          alt={roomProduct?.title || '直播间模拟场景'}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/10 to-black/88" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.55),transparent_34%,rgba(0,0,0,0.28))]" />
+    <div className="min-h-screen bg-[#07080b] text-white lg:grid lg:place-items-center lg:px-6 lg:py-6">
+      <main className="relative mx-auto h-[100svh] min-h-[640px] w-full max-w-[430px] overflow-hidden bg-black shadow-2xl shadow-black/50 lg:h-[860px] lg:min-h-0 lg:rounded-[8px] lg:border lg:border-white/10">
+        {liveMedia?.type === 'video' ? (
+          <video
+            data-testid="live-room-media-video"
+            src={liveMedia.url}
+            poster={liveMedia.poster_url ?? undefined}
+            className="absolute inset-0 h-full w-full object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+        ) : liveMedia?.type === 'image' ? (
+          <img
+            data-testid="live-room-media-image"
+            src={liveMedia.url}
+            alt="直播间背景素材"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : null}
+        <div className={`absolute inset-0 ${liveMedia ? 'bg-black/16' : 'bg-[radial-gradient(circle_at_18%_24%,rgba(255,204,142,0.32),transparent_22%),radial-gradient(circle_at_82%_46%,rgba(255,47,87,0.18),transparent_26%),linear-gradient(145deg,#80614f_0%,#242730_43%,#07080b_100%)]'}`} />
+        {!liveMedia ? (
+          <>
+            <div className="absolute left-[-58px] top-36 h-56 w-56 rounded-full bg-amber-200/18 blur-xl" />
+            <div className="absolute left-0 top-48 h-40 w-28 rounded-r-full bg-[linear-gradient(90deg,rgba(255,230,181,0.44),rgba(255,230,181,0.02))] blur-sm" />
+            <div className="absolute left-10 top-48 h-28 w-20 rounded-t-full border border-amber-100/18 bg-amber-100/22 shadow-2xl shadow-amber-200/20" />
+            <div className="absolute left-4 top-[46%] h-24 w-28 rounded-[8px] border border-white/10 bg-black/42 p-3 text-center shadow-xl shadow-black/30 backdrop-blur">
+              <div className="text-xs font-semibold text-white/55">拍品编号</div>
+              <div className="mt-1 font-mono text-lg font-black text-white/88">{lotId}</div>
+              <div className="mt-2 text-xs text-white/58">成色 9.5新</div>
+            </div>
+            <div className="absolute right-5 top-40 h-48 w-24 rounded-[8px] border border-white/10 bg-black/25 shadow-xl shadow-black/20 backdrop-blur-sm">
+              <div className="mx-auto mt-5 h-20 w-16 rounded-[8px] bg-white/12" />
+              <div className="mx-auto mt-5 h-16 w-16 rounded-[8px] bg-amber-100/18" />
+            </div>
+            <div className="absolute left-16 top-36 w-64 text-center text-[32px] font-black leading-tight text-white/38 drop-shadow-[0_4px_16px_rgba(0,0,0,0.65)]">
+              潮玩拍卖<br />球鞋专场
+            </div>
+            <div className="absolute left-1/2 top-[25%] h-28 w-24 -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_45%_35%,#f0c5aa,#b98268_70%)] shadow-2xl shadow-black/35" />
+            <div className="absolute left-1/2 top-[36%] h-64 w-44 -translate-x-1/2 rounded-t-[80px] bg-[#111318] shadow-2xl shadow-black/50" />
+            <div className="absolute left-[28%] top-[47%] h-16 w-48 -rotate-6 rounded-full bg-[#17191f] shadow-xl shadow-black/35" />
+            <div className="absolute left-[20%] top-[39%] h-24 w-56 rotate-[-8deg] rounded-[28px] border border-white/18 bg-white/86 p-2 shadow-2xl shadow-black/40">
+              <img
+                src={heroImage}
+                alt={roomProduct?.title || '直播间模拟场景'}
+                className="h-full w-full rounded-[20px] object-cover"
+              />
+            </div>
+          </>
+        ) : null}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/76 via-black/6 to-black/92" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.62),transparent_42%,rgba(0,0,0,0.45))]" />
+        <div className="absolute inset-x-0 top-0 z-20 flex h-9 items-center justify-between px-5 pt-2 text-sm font-semibold text-white/95 sm:hidden">
+          <span>20:15</span>
+          <span className="tracking-[0.18em]">▮▮▮  WiFi  73</span>
+        </div>
 
-        <header className="absolute left-0 right-0 top-0 z-20 px-3 pt-3">
+        <header className="absolute left-0 right-0 top-0 z-30 px-3 pt-10 sm:pt-3">
           <div className="flex items-center gap-2">
-            <PageBackButton fallback="/app/auctions" className="h-9 shrink-0 border-white/10 bg-black/30 px-2 py-1 text-xs" />
-            <div className="min-w-0 flex-1 rounded-lg bg-black/30 px-2 py-2 backdrop-blur">
+            <div className="min-w-0 flex-1 rounded-full bg-black/36 px-2 py-2 shadow-lg shadow-black/20 backdrop-blur-xl">
               <div className="flex min-w-0 items-center gap-2">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rose-400 via-amber-300 to-emerald-300 text-xs font-black text-zinc-950">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-rose-400 bg-gradient-to-br from-rose-200 via-amber-200 to-emerald-200 text-xs font-black text-zinc-950 shadow-lg shadow-rose-950/30">
                   拍
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-bold">拍场主理人</div>
-                  <div className="truncate text-[11px] text-white/60">在线 {Math.max(128, bidCount * 23 + 128)} 人 · {CONNECTION_TEXT[connectionState]}</div>
+                  <span className="sr-only">拍场主理人</span>
+                  <div className="truncate text-base font-black">潮玩拍卖馆</div>
+                  <div className="truncate text-xs text-white/68">围观 {Math.max(86_000, bidCount * 2300 + 86_000).toLocaleString('zh-CN')} · {CONNECTION_TEXT[connectionState]}</div>
                 </div>
                 <button
                   type="button"
                   aria-label="刷新直播状态"
                   onClick={refreshRoom}
                   disabled={!isValidAuctionId || !accessToken}
-                  className="h-7 w-7 shrink-0 rounded border border-white/12 bg-white/10 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-8 w-8 shrink-0 rounded-full border border-white/12 bg-white/10 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   刷
                 </button>
                 <button
                   type="button"
-                  className="h-7 shrink-0 rounded bg-white px-2 text-xs font-bold text-zinc-950"
+                  className="h-9 shrink-0 rounded-full bg-rose-500 px-4 text-sm font-black text-white shadow-lg shadow-rose-950/35"
                 >
                   关注
                 </button>
               </div>
             </div>
+            <div className="hidden shrink-0 items-center -space-x-2 sm:flex">
+              <span className="h-8 w-8 rounded-full border border-white/50 bg-white/45" />
+              <span className="h-8 w-8 rounded-full border border-white/50 bg-sky-200/55" />
+              <span className="h-8 w-8 rounded-full border border-white/50 bg-amber-200/55" />
+            </div>
+            <span className="hidden rounded-full bg-black/35 px-3 py-2 text-sm font-bold backdrop-blur sm:inline-flex">8.6万</span>
+            <PageBackButton
+              fallback="/app/auctions"
+              ariaLabel="关闭直播间"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/24 text-4xl font-light leading-none text-white/90 backdrop-blur"
+            >
+              ×
+            </PageBackButton>
           </div>
 
-          <div className="mt-2 flex gap-1 overflow-hidden">
-            <span className="shrink-0 rounded bg-rose-500 px-2 py-1 text-[11px] font-black">LIVE</span>
-            <span className="shrink-0 rounded bg-black/35 px-2 py-1 text-[11px] text-amber-100 backdrop-blur">小时榜 Top 8</span>
-            <span className="shrink-0 rounded bg-black/35 px-2 py-1 text-[11px] text-emerald-100 backdrop-blur">好物热拍</span>
-            <span className="min-w-0 truncate rounded bg-black/35 px-2 py-1 text-[11px] text-white/85 backdrop-blur">{displayStatus}</span>
+          <div className="mt-2 flex flex-wrap gap-1.5 overflow-hidden">
+            <span className="sr-only">LIVE</span>
+            <span className="shrink-0 rounded-full bg-rose-500 px-3 py-1.5 text-xs font-black shadow-lg shadow-rose-950/30">▮ 直播中</span>
+            <span className="shrink-0 rounded-full bg-black/38 px-3 py-1.5 text-xs font-semibold text-amber-100 backdrop-blur-xl">古玩榜第 8 名</span>
+            <span className="shrink-0 rounded-full bg-black/38 px-3 py-1.5 text-xs font-semibold text-white/90 backdrop-blur-xl">更多直播 ›</span>
+            <span className="min-w-0 truncate rounded-full bg-black/38 px-3 py-1.5 text-xs font-semibold text-white/90 backdrop-blur-xl">{displayStatus}</span>
           </div>
         </header>
 
-        <section className="absolute left-3 right-16 top-28 z-10">
+        <section className="absolute left-3 right-16 top-32 z-10">
           <div className="flex max-w-full flex-col gap-1">
             {roomRankings.slice(0, 3).map((item) => <RankingPill key={`${item.rank}-${item.user_id}-${item.amount}`} item={item} />)}
           </div>
         </section>
 
-        <section className="absolute bottom-28 left-3 z-20 w-[44%] max-w-[180px]" aria-live="polite">
+        <section className="absolute bottom-28 left-3 z-20 w-[58%] max-w-[258px]" aria-live="polite">
           <h2 className="sr-only">实时消息</h2>
           <ul className="space-y-1">
             {roomMessages.map((item) => (
               <li
                 key={item.id}
-                className={`rounded px-2 py-1 text-xs leading-relaxed shadow backdrop-blur ${
+                className={`rounded-full px-3 py-1.5 text-sm leading-relaxed shadow-lg backdrop-blur-xl ${
                   item.type === 'outbid'
                     ? 'border border-rose-300/50 bg-rose-500/28 text-rose-50'
-                    : 'bg-black/32 text-white/82'
+                    : 'bg-black/38 text-white/86'
                 }`}
               >
                 {item.message}
@@ -379,24 +442,23 @@ export default function LiveAuctionRoom() {
           </ul>
         </section>
 
-        <aside className="absolute right-3 top-40 z-20 flex flex-col items-center gap-2">
-          <ActionRailButton label="点赞" value="12.8w">赞</ActionRailButton>
+        <aside className="absolute right-3 top-[42%] z-20 flex -translate-y-1/2 flex-col items-center gap-3">
+          <ActionRailButton label="人气榜" value="人气榜">榜</ActionRailButton>
+          <ActionRailButton label="点赞" value="12.8w">心</ActionRailButton>
           <ActionRailButton label="礼物" value="礼物">礼</ActionRailButton>
-          <ActionRailButton label="分享" value="分享">享</ActionRailButton>
-          <ActionRailButton label="热度榜" value="榜单">榜</ActionRailButton>
-          <ActionRailButton label="优惠券" value="领券">券</ActionRailButton>
+          <ActionRailButton label="分享" value="168">↗</ActionRailButton>
         </aside>
 
         <section className="absolute bottom-28 right-3 z-30 w-[48%] min-w-[184px] max-w-[206px]">
-          <div className={`overflow-hidden rounded-lg bg-white text-zinc-950 shadow-2xl shadow-black/45 ${
+          <div className={`overflow-hidden rounded-[18px] bg-white/96 text-zinc-950 shadow-2xl shadow-black/45 backdrop-blur ${
             isOutbid
               ? 'ring-2 ring-rose-300/80'
               : urgent
                 ? 'ring-2 ring-rose-400/75'
                 : 'ring-1 ring-white/35'
           }`}>
-            <div className="flex items-center justify-between gap-2 px-3 pb-1 pt-2">
-              <span className="text-sm font-black">{roomStatus === 'active' ? '正在竞拍' : displayStatus}</span>
+            <div className="flex items-center justify-between gap-2 px-3 pb-1 pt-3">
+              <span className="text-base font-black">{roomStatus === 'active' ? '正在竞拍' : displayStatus}</span>
               <span className="shrink-0 rounded-full bg-rose-500 px-2 py-1 text-[11px] font-black text-white">
                 {bidCount > 0 ? `${bidCount}次出价` : '等待首拍'}
               </span>
@@ -413,7 +475,7 @@ export default function LiveAuctionRoom() {
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-violet-600 to-indigo-700 px-3 py-3 text-white">
+            <div className="bg-gradient-to-br from-[#315dff] to-[#7338ff] px-3 py-3 text-white">
               <div className="text-[12px] font-semibold text-white/80">{shelfPriceLabel(roomStatus, bidCount)}</div>
               <div className="mt-1 whitespace-nowrap text-[30px] font-black leading-none tabular-nums">{formatPrice(roomCurrentPrice)}</div>
               <button type="button" className="mt-2 rounded-full border border-white/20 px-2 py-1 text-[11px] font-bold text-white/90">
@@ -438,7 +500,7 @@ export default function LiveAuctionRoom() {
               aria-label="打开出价面板"
               disabled={!isCurrentRoom || terminal}
               onClick={openBidSheet}
-              className="h-12 w-full bg-rose-500 px-3 text-xl font-black text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
+              className="h-14 w-full bg-gradient-to-r from-rose-500 to-red-500 px-3 text-xl font-black text-white transition hover:from-rose-400 hover:to-red-400 disabled:cursor-not-allowed disabled:from-zinc-200 disabled:to-zinc-200 disabled:text-zinc-500"
             >
               {floatingActionText === '立即出价' ? '出价' : floatingActionText}
             </button>
@@ -463,8 +525,9 @@ export default function LiveAuctionRoom() {
                 setBidSheetOpen(false);
                 setShelfOpen(true);
               }}
-              className="h-10 w-12 rounded-lg border border-white/12 bg-white/12 text-sm font-bold text-white"
+              className="relative h-12 w-12 rounded-[8px] border border-white/12 bg-white/12 text-sm font-bold text-white shadow-lg shadow-black/20 backdrop-blur"
             >
+              <span className="absolute -right-1 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-black text-white">24</span>
               商品
             </button>
             <button
@@ -472,14 +535,14 @@ export default function LiveAuctionRoom() {
               aria-label="底部竞拍入口"
               disabled={!isCurrentRoom || terminal}
               onClick={openBidSheet}
-              className="h-10 w-12 rounded-lg bg-amber-300 text-sm font-black text-zinc-950 disabled:cursor-not-allowed disabled:bg-white/18 disabled:text-white/45"
+              className="h-12 w-12 rounded-[8px] bg-amber-300 text-sm font-black text-zinc-950 shadow-lg shadow-black/20 disabled:cursor-not-allowed disabled:bg-white/18 disabled:text-white/45"
             >
               竞拍
             </button>
             <Link
               to="/app/orders"
               aria-label="查看我的订单"
-              className="flex h-10 w-12 items-center justify-center rounded-lg border border-white/12 bg-white/12 text-sm font-bold text-white"
+              className="flex h-12 w-12 items-center justify-center rounded-[8px] border border-white/12 bg-white/12 text-sm font-bold text-white shadow-lg shadow-black/20 backdrop-blur"
             >
               订单
             </Link>

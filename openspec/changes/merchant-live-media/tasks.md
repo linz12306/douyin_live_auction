@@ -21,7 +21,7 @@
   - Include owned verification commands for each slice.
   - Decide whether new-product live media is held as a pending local file or uploaded after initial product creation.
 
-- [ ] 4. Backend live media storage and API
+- [x] 4. Backend live media storage and API
   - Add migration/model/repository support for one optional live media object per product.
   - Add live media static directory configuration and serving.
   - Add merchant-scoped upload/replace/delete handlers.
@@ -29,21 +29,21 @@
   - Keep runtime uploads untracked.
   - Add backend tests for success, validation failure, ownership, status guards, and delete behavior.
 
-- [ ] 5. Product and realtime contracts
+- [x] 5. Product and realtime contracts
   - Extend product detail DTO/API to include optional `live_media`.
   - Extend realtime product summary snapshot to include optional `live_media`.
   - Ensure existing clients remain compatible when the field is absent.
   - Verify lobby/order/dashboard summary images still come from `product_images`.
   - Add backend snapshot, product detail, lobby summary, and order summary tests.
 
-- [ ] 6. Merchant frontend controls
+- [x] 6. Merchant frontend controls
   - Extend product types and product API helpers for live media.
   - Add `直播间素材` controls to `ProductForm`.
   - Support preview, replace, remove, errors, loading state, and readonly state.
   - Preserve existing product image behavior and publish rules.
   - Add focused frontend tests for create/edit/readonly/error flows.
 
-- [ ] 7. Buyer live-room rendering
+- [x] 7. Buyer live-room rendering
   - Extend auction types/store expectations for optional live media.
   - Render video live media as muted looping inline scene media.
   - Render image live media as scene media.
@@ -51,19 +51,19 @@
   - Keep bidding controls, comments, shelf, and result modal readable above media.
   - Add focused `LiveAuctionRoom` tests for video, image, and fallback paths.
 
-- [ ] 8. Demo seed and preview verification
-  - Update demo seed or fixtures so at least one active auction has product images and live media.
-  - Verify `demo_merchant / test123` can see or configure the media area.
-  - Verify `demo_buyer_a / test123` sees product images in `/app/auctions` and live media in `/app/auctions/:id`.
-  - Capture mobile screenshot smoke if frontend layout changes materially.
+- [x] 8. Demo seed and preview verification
+  - [x] Update demo seed or fixtures so at least one active auction has product images and live media.
+  - [x] Verify `demo_merchant / test123` can see or configure the media area.
+  - [x] Verify `demo_buyer_a / test123` sees product images in `/app/auctions` and live media in `/app/auctions/:id`.
+  - [x] Capture mobile screenshot smoke if frontend layout changes materially.
 
 - [ ] 9. Final verification
-  - Run relevant backend Go tests.
-  - Run `cd frontend && npm run test -- ProductForm`.
-  - Run `cd frontend && npm run test -- LiveAuctionRoom`.
-  - Run `cd frontend && npm run build`.
-  - Run `npx -y @fission-ai/openspec@latest validate merchant-live-media --strict --no-interactive`.
-  - Run `git diff --check`.
-  - Update OpenSpec tasks and Superpowers plan checkboxes with real results.
-  - Update memory.
-  - Commit and push verified slices unless the user asks to keep them local.
+  - [x] Run relevant backend Go tests.
+  - [x] Run `cd frontend && npm run test -- ProductForm`.
+  - [x] Run `cd frontend && npm run test -- LiveAuctionRoom`.
+  - [x] Run `cd frontend && npm run build`.
+  - [x] Run `npx -y @fission-ai/openspec@latest validate merchant-live-media --strict --no-interactive`.
+  - [x] Run `git diff --check`.
+  - [x] Update OpenSpec tasks and Superpowers plan checkboxes with real results.
+  - [x] Update memory.
+  - [ ] Commit and push verified slices unless the user asks to keep them local.

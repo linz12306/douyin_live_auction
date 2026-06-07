@@ -5,8 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -25,8 +31,24 @@ func randomSuffix() string {
 	return fmt.Sprintf("%05d", atomic.AddInt64(&suffixCounter, 1)%100000)
 }
 
+type productTestServer struct {
+	router       *gin.Engine
+	db           *sql.DB
+	imageDir     string
+	liveMediaDir string
+}
+
 func setupProductServer(t *testing.T) (*gin.Engine, *sql.DB) {
+	srv := setupProductServerWithDirs(t)
+	return srv.router, srv.db
+}
+
+func setupProductServerWithDirs(t *testing.T) productTestServer {
+	t.Helper()
+
 	cfg := config.Load()
+	cfg.ImageDir = t.TempDir()
+	cfg.LiveMediaDir = t.TempDir()
 	db, err := config.NewDB(cfg.DBDSN)
 	if err != nil {
 		t.Fatalf("Failed to connect to MySQL: %v", err)
@@ -36,6 +58,7 @@ func setupProductServer(t *testing.T) (*gin.Engine, *sql.DB) {
 	// Clean up test data
 	db.Exec("DELETE FROM auction_logs WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'test_merchant_%'))")
 	db.Exec("DELETE FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'test_merchant_%')")
+	db.Exec("DELETE FROM product_live_media WHERE product_id IN (SELECT id FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'test_merchant_%'))")
 	db.Exec("DELETE FROM product_images WHERE product_id IN (SELECT id FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'test_merchant_%'))")
 	db.Exec("DELETE FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'test_merchant_%')")
 	db.Exec("DELETE FROM users WHERE username LIKE 'test_merchant_%'")
@@ -50,7 +73,7 @@ func setupProductServer(t *testing.T) (*gin.Engine, *sql.DB) {
 	productSvc := service.NewProductService(productRepo, auctionRepo)
 
 	authH := handler.NewAuthHandler(authSvc)
-	productH := handler.NewProductHandler(productSvc, cfg.ImageDir)
+	productH := handler.NewProductHandler(productSvc, cfg.ImageDir, cfg.LiveMediaDir)
 
 	r := gin.New()
 	auth := r.Group("/api/v1/auth")
@@ -58,6 +81,8 @@ func setupProductServer(t *testing.T) (*gin.Engine, *sql.DB) {
 		auth.POST("/register", authH.Register)
 		auth.POST("/login", authH.Login)
 	}
+	r.Static("/static/images", cfg.ImageDir)
+	r.Static("/static/live-media", cfg.LiveMediaDir)
 
 	products := r.Group("/api/v1/products")
 	products.Use(middleware.JWTAuth(cfg))
@@ -68,10 +93,12 @@ func setupProductServer(t *testing.T) (*gin.Engine, *sql.DB) {
 		products.PUT("/:id", productH.Update)
 		products.DELETE("/:id", productH.Delete)
 		products.POST("/:id/images", productH.UploadImage)
+		products.POST("/:id/live-media", productH.UploadLiveMedia)
+		products.DELETE("/:id/live-media", productH.DeleteLiveMedia)
 		products.POST("/:id/publish", productH.Publish)
 	}
 
-	return r, db
+	return productTestServer{router: r, db: db, imageDir: cfg.ImageDir, liveMediaDir: cfg.LiveMediaDir}
 }
 
 func registerMerchant(t *testing.T, ts *httptest.Server) string {
@@ -109,6 +136,112 @@ func makeRequest(method, url, token string, body []byte) (*http.Response, error)
 	return http.DefaultClient.Do(req)
 }
 
+func createLiveMediaDraftProduct(t *testing.T, ts *httptest.Server, token, title string) int64 {
+	t.Helper()
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"title":       title,
+		"description": "desc",
+		"image_urls":  []string{"/static/images/test.jpg"},
+	})
+	resp, err := makeRequest("POST", ts.URL+"/api/v1/products", token, body)
+	if err != nil {
+		t.Fatalf("create draft product failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d", resp.StatusCode)
+	}
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decode create product response: %v", err)
+	}
+	productData := result["data"].(map[string]interface{})["product"].(map[string]interface{})
+	return int64(productData["id"].(float64))
+}
+
+func uploadMultipartFile(t *testing.T, url, token, fieldName, filename, contentType string, content []byte) *http.Response {
+	t.Helper()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	partHeader := make(textproto.MIMEHeader)
+	partHeader.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, fieldName, filename))
+	partHeader.Set("Content-Type", contentType)
+	part, err := writer.CreatePart(partHeader)
+	if err != nil {
+		t.Fatalf("create multipart part: %v", err)
+	}
+	if _, err := io.Copy(part, bytes.NewReader(content)); err != nil {
+		t.Fatalf("write multipart part: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, &body)
+	if err != nil {
+		t.Fatalf("create upload request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("upload multipart file: %v", err)
+	}
+	return resp
+}
+
+func validWebPContent(label string) []byte {
+	content := append([]byte("RIFF\x1a\x00\x00\x00WEBPVP8 "), []byte(label)...)
+	return append(content, make([]byte, 20)...)
+}
+
+func validMP4Content(label string) []byte {
+	content := append([]byte("\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom"), []byte(label)...)
+	return append(content, make([]byte, 20)...)
+}
+
+func decodeLiveMediaURL(t *testing.T, resp *http.Response) string {
+	t.Helper()
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decode live media response: %v", err)
+	}
+	data := result["data"].(map[string]interface{})
+	mediaURL, ok := data["url"].(string)
+	if !ok || !strings.HasPrefix(mediaURL, "/static/live-media/") {
+		t.Fatalf("expected live media static url, got %#v", data["url"])
+	}
+	return mediaURL
+}
+
+func liveMediaFilePath(t *testing.T, liveMediaDir, mediaURL string) string {
+	t.Helper()
+
+	filename := strings.TrimPrefix(mediaURL, "/static/live-media/")
+	if filename == mediaURL || filename == "" || filename != filepath.Base(filename) {
+		t.Fatalf("unexpected live media url %q", mediaURL)
+	}
+	return filepath.Join(liveMediaDir, filename)
+}
+
+func assertFileExists(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("expected file %s to exist: %v", path, err)
+	}
+}
+
+func assertFileRemoved(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("expected file %s to be removed, stat err=%v", path, err)
+	}
+}
+
 func createAndPublishProduct(t *testing.T, ts *httptest.Server, token, title, imageURL string) (int64, int64) {
 	body, _ := json.Marshal(map[string]interface{}{
 		"title": title, "description": "desc",
@@ -138,6 +271,273 @@ func createAndPublishProduct(t *testing.T, ts *httptest.Server, token, title, im
 	resp2.Body.Close()
 	auction := publishResult["data"].(map[string]interface{})["auction"].(map[string]interface{})
 	return productID, int64(auction["id"].(float64))
+}
+
+func TestMerchantUploadsProductLiveMedia(t *testing.T) {
+	r, _ := setupProductServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerMerchant(t, ts)
+	draftProductID := createLiveMediaDraftProduct(t, ts, merchantToken, "Upload Live Image")
+
+	imageResp := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", draftProductID), merchantToken, "media", "scene.webp", "image/webp", validWebPContent("image bytes"))
+	defer imageResp.Body.Close()
+	if imageResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected image upload 200, got %d", imageResp.StatusCode)
+	}
+	var imageResult map[string]interface{}
+	if err := json.NewDecoder(imageResp.Body).Decode(&imageResult); err != nil {
+		t.Fatalf("decode image upload response: %v", err)
+	}
+	imageData := imageResult["data"].(map[string]interface{})
+	if imageData["type"] != "image" {
+		t.Fatalf("expected image type, got %#v", imageData["type"])
+	}
+	imageURL, ok := imageData["url"].(string)
+	if !ok || !strings.HasPrefix(imageURL, "/static/live-media/") {
+		t.Fatalf("expected live media static url, got %#v", imageData["url"])
+	}
+
+	pendingProductID, _ := createAndPublishProduct(t, ts, merchantToken, "Upload Live Video", "/static/images/video-test.jpg")
+	videoResp := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", pendingProductID), merchantToken, "media", "scene.mp4", "video/mp4", validMP4Content("video bytes"))
+	defer videoResp.Body.Close()
+	if videoResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected video upload 200, got %d", videoResp.StatusCode)
+	}
+	var videoResult map[string]interface{}
+	if err := json.NewDecoder(videoResp.Body).Decode(&videoResult); err != nil {
+		t.Fatalf("decode video upload response: %v", err)
+	}
+	videoData := videoResult["data"].(map[string]interface{})
+	if videoData["type"] != "video" {
+		t.Fatalf("expected video type, got %#v", videoData["type"])
+	}
+	videoURL, ok := videoData["url"].(string)
+	if !ok || !strings.HasPrefix(videoURL, "/static/live-media/") {
+		t.Fatalf("expected live media static url, got %#v", videoData["url"])
+	}
+}
+
+func TestProductLiveMediaReplacementRemovesOldFile(t *testing.T) {
+	srv := setupProductServerWithDirs(t)
+	ts := httptest.NewServer(srv.router)
+	defer ts.Close()
+
+	merchantToken := registerMerchant(t, ts)
+	productID := createLiveMediaDraftProduct(t, ts, merchantToken, "Replace Live Media")
+
+	firstResp := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", productID), merchantToken, "media", "first.webp", "image/webp", validWebPContent("first image"))
+	defer firstResp.Body.Close()
+	if firstResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected first upload 200, got %d", firstResp.StatusCode)
+	}
+	firstURL := decodeLiveMediaURL(t, firstResp)
+	firstPath := liveMediaFilePath(t, srv.liveMediaDir, firstURL)
+	assertFileExists(t, firstPath)
+
+	secondResp := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", productID), merchantToken, "media", "second.webp", "image/webp", validWebPContent("second image"))
+	defer secondResp.Body.Close()
+	if secondResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected second upload 200, got %d", secondResp.StatusCode)
+	}
+	secondURL := decodeLiveMediaURL(t, secondResp)
+	if secondURL == firstURL {
+		t.Fatal("expected replacement upload to use a new URL")
+	}
+	secondPath := liveMediaFilePath(t, srv.liveMediaDir, secondURL)
+
+	assertFileRemoved(t, firstPath)
+	assertFileExists(t, secondPath)
+
+	detailResp, err := makeRequest("GET", ts.URL+fmt.Sprintf("/api/v1/products/%d", productID), merchantToken, nil)
+	if err != nil {
+		t.Fatalf("get product detail failed: %v", err)
+	}
+	defer detailResp.Body.Close()
+	if detailResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected detail 200, got %d", detailResp.StatusCode)
+	}
+	var detail map[string]interface{}
+	if err := json.NewDecoder(detailResp.Body).Decode(&detail); err != nil {
+		t.Fatalf("decode detail response: %v", err)
+	}
+	liveMedia := detail["data"].(map[string]interface{})["live_media"].(map[string]interface{})
+	if liveMedia["url"] != secondURL {
+		t.Fatalf("expected DB row to point at replacement URL %q, got %#v", secondURL, liveMedia["url"])
+	}
+}
+
+func TestProductLiveMediaDeleteRemovesFileAndKeepsImages(t *testing.T) {
+	srv := setupProductServerWithDirs(t)
+	ts := httptest.NewServer(srv.router)
+	defer ts.Close()
+
+	merchantToken := registerMerchant(t, ts)
+	productID := createLiveMediaDraftProduct(t, ts, merchantToken, "Delete Live Media")
+
+	uploadResp := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", productID), merchantToken, "media", "delete.webp", "image/webp", validWebPContent("delete image"))
+	defer uploadResp.Body.Close()
+	if uploadResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected upload 200, got %d", uploadResp.StatusCode)
+	}
+	mediaURL := decodeLiveMediaURL(t, uploadResp)
+	mediaPath := liveMediaFilePath(t, srv.liveMediaDir, mediaURL)
+	assertFileExists(t, mediaPath)
+
+	deleteResp, err := makeRequest("DELETE", ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", productID), merchantToken, nil)
+	if err != nil {
+		t.Fatalf("delete live media failed: %v", err)
+	}
+	defer deleteResp.Body.Close()
+	if deleteResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected delete 200, got %d", deleteResp.StatusCode)
+	}
+	assertFileRemoved(t, mediaPath)
+
+	detailResp, err := makeRequest("GET", ts.URL+fmt.Sprintf("/api/v1/products/%d", productID), merchantToken, nil)
+	if err != nil {
+		t.Fatalf("get product detail failed: %v", err)
+	}
+	defer detailResp.Body.Close()
+	var detail map[string]interface{}
+	if err := json.NewDecoder(detailResp.Body).Decode(&detail); err != nil {
+		t.Fatalf("decode detail response: %v", err)
+	}
+	data := detail["data"].(map[string]interface{})
+	if data["live_media"] != nil {
+		t.Fatalf("expected live_media to be absent after delete, got %#v", data["live_media"])
+	}
+	images := data["images"].([]interface{})
+	if len(images) != 1 {
+		t.Fatalf("expected one product image to remain, got %d", len(images))
+	}
+	image := images[0].(map[string]interface{})
+	if image["image_url"] != "/static/images/test.jpg" {
+		t.Fatalf("expected product image unchanged, got %#v", image["image_url"])
+	}
+}
+
+func TestDeleteDraftProductRemovesLiveMediaFile(t *testing.T) {
+	srv := setupProductServerWithDirs(t)
+	ts := httptest.NewServer(srv.router)
+	defer ts.Close()
+
+	merchantToken := registerMerchant(t, ts)
+	productID := createLiveMediaDraftProduct(t, ts, merchantToken, "Delete Product Live Media")
+
+	uploadResp := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", productID), merchantToken, "media", "product-delete.webp", "image/webp", validWebPContent("product delete"))
+	defer uploadResp.Body.Close()
+	if uploadResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected upload 200, got %d", uploadResp.StatusCode)
+	}
+	mediaURL := decodeLiveMediaURL(t, uploadResp)
+	mediaPath := liveMediaFilePath(t, srv.liveMediaDir, mediaURL)
+	assertFileExists(t, mediaPath)
+
+	deleteResp, err := makeRequest("DELETE", ts.URL+fmt.Sprintf("/api/v1/products/%d", productID), merchantToken, nil)
+	if err != nil {
+		t.Fatalf("delete product failed: %v", err)
+	}
+	defer deleteResp.Body.Close()
+	if deleteResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected delete product 200, got %d", deleteResp.StatusCode)
+	}
+	assertFileRemoved(t, mediaPath)
+}
+
+func TestProductLiveMediaOversizedFilesRejected(t *testing.T) {
+	r, _ := setupProductServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerMerchant(t, ts)
+	productID := createLiveMediaDraftProduct(t, ts, merchantToken, "Oversized Live Media")
+
+	oversizedImage := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", productID), merchantToken, "media", "large.webp", "image/webp", bytes.Repeat([]byte("i"), 2*1024*1024+1))
+	defer oversizedImage.Body.Close()
+	if oversizedImage.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected oversized image rejected, got %d", oversizedImage.StatusCode)
+	}
+
+	oversizedVideo := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", productID), merchantToken, "media", "large.mp4", "video/mp4", bytes.Repeat([]byte("v"), 20*1024*1024+1))
+	defer oversizedVideo.Body.Close()
+	if oversizedVideo.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected oversized video rejected, got %d", oversizedVideo.StatusCode)
+	}
+}
+
+func TestProductLiveMediaStaticServing(t *testing.T) {
+	srv := setupProductServerWithDirs(t)
+	ts := httptest.NewServer(srv.router)
+	defer ts.Close()
+
+	merchantToken := registerMerchant(t, ts)
+	productID := createLiveMediaDraftProduct(t, ts, merchantToken, "Served Live Media")
+	content := validWebPContent("served live media bytes")
+
+	uploadResp := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", productID), merchantToken, "media", "served.webp", "image/webp", content)
+	defer uploadResp.Body.Close()
+	if uploadResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected upload 200, got %d", uploadResp.StatusCode)
+	}
+	mediaURL := decodeLiveMediaURL(t, uploadResp)
+	assertFileExists(t, liveMediaFilePath(t, srv.liveMediaDir, mediaURL))
+
+	staticResp, err := http.Get(ts.URL + mediaURL)
+	if err != nil {
+		t.Fatalf("get static live media failed: %v", err)
+	}
+	defer staticResp.Body.Close()
+	if staticResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected static file 200, got %d", staticResp.StatusCode)
+	}
+	body, err := io.ReadAll(staticResp.Body)
+	if err != nil {
+		t.Fatalf("read static live media response: %v", err)
+	}
+	if !bytes.Equal(body, content) {
+		t.Fatalf("expected static file body %q, got %q", string(content), string(body))
+	}
+}
+
+func TestProductLiveMediaGuards(t *testing.T) {
+	r, db := setupProductServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	ownerToken := registerMerchant(t, ts)
+	otherToken := registerMerchant(t, ts)
+	productID := createLiveMediaDraftProduct(t, ts, ownerToken, "Guarded Live Media")
+
+	nonOwner := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", productID), otherToken, "media", "scene.webp", "image/webp", validWebPContent("image"))
+	defer nonOwner.Body.Close()
+	if nonOwner.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected non-owner forbidden, got %d", nonOwner.StatusCode)
+	}
+
+	badType := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", productID), ownerToken, "media", "scene.txt", "text/plain", []byte("plain"))
+	defer badType.Body.Close()
+	if badType.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected bad type rejected, got %d", badType.StatusCode)
+	}
+
+	activeProductID, activeAuctionID := createAndPublishProduct(t, ts, ownerToken, "Active Live Media", "/static/images/active-live.jpg")
+	_, err := db.Exec(
+		`UPDATE products p
+         JOIN auctions a ON a.product_id = p.id
+         SET p.status = 'active', a.status = 'active', a.started_at = NOW()
+         WHERE a.id = ?`,
+		activeAuctionID,
+	)
+	if err != nil {
+		t.Fatalf("activate live media product: %v", err)
+	}
+	active := uploadMultipartFile(t, ts.URL+fmt.Sprintf("/api/v1/products/%d/live-media", activeProductID), ownerToken, "media", "scene.webp", "image/webp", validWebPContent("image"))
+	defer active.Body.Close()
+	if active.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected active product mutation rejected, got %d", active.StatusCode)
+	}
 }
 
 func TestCreateAndPublishProduct(t *testing.T) {
@@ -183,6 +583,49 @@ func TestCreateAndPublishProduct(t *testing.T) {
 	data2 := detail["data"].(map[string]interface{})
 	if data2["auction"] == nil {
 		t.Fatal("expected auction in detail after publish")
+	}
+}
+
+func TestProductDetailIncludesLiveMedia(t *testing.T) {
+	r, db := setupProductServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerMerchant(t, ts)
+	productID, _ := createAndPublishProduct(t, ts, merchantToken, "Live Media Product", "/static/images/live-media-product.jpg")
+
+	_, err := db.Exec(`
+		INSERT INTO product_live_media (product_id, media_type, media_url, poster_url)
+		VALUES (?, 'image', '/static/live-media/live-room.webp', NULL)
+		ON DUPLICATE KEY UPDATE media_type = VALUES(media_type), media_url = VALUES(media_url), poster_url = VALUES(poster_url)
+	`, productID)
+	if err != nil {
+		t.Fatalf("insert live media: %v", err)
+	}
+
+	resp, err := makeRequest("GET", ts.URL+fmt.Sprintf("/api/v1/products/%d", productID), merchantToken, nil)
+	if err != nil {
+		t.Fatalf("get product detail failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected detail 200, got %d", resp.StatusCode)
+	}
+
+	var detail map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+		t.Fatalf("decode detail response: %v", err)
+	}
+	data := detail["data"].(map[string]interface{})
+	liveMedia, ok := data["live_media"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected live_media object, got %#v", data["live_media"])
+	}
+	if liveMedia["type"] != "image" {
+		t.Fatalf("expected image live media, got %#v", liveMedia["type"])
+	}
+	if liveMedia["url"] != "/static/live-media/live-room.webp" {
+		t.Fatalf("unexpected live media url %#v", liveMedia["url"])
 	}
 }
 

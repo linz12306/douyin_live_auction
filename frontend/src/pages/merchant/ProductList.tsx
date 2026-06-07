@@ -16,12 +16,12 @@ const TABS: { key: ProductStatus | ''; label: string }[] = [
 ];
 
 const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-gray-500/20 text-gray-300 border-gray-500',
-  pending: 'bg-yellow-500/20 text-yellow-300 border-yellow-500',
-  active: 'bg-green-500/20 text-green-300 border-green-500',
-  ended_sold: 'bg-blue-500/20 text-blue-300 border-blue-500',
-  ended_no_bid: 'bg-purple-500/20 text-purple-300 border-purple-500',
-  cancelled: 'bg-red-500/20 text-red-300 border-red-500',
+  draft: 'bg-slate-500/10 text-slate-300 border-slate-500/20',
+  pending: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+  active: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
+  ended_sold: 'bg-sky-500/10 text-sky-300 border-sky-500/20',
+  ended_no_bid: 'bg-violet-500/10 text-violet-300 border-violet-500/20',
+  cancelled: 'bg-rose-500/10 text-rose-300 border-rose-500/20',
 };
 
 const STATUS_TEXT: Record<string, string> = {
@@ -73,35 +73,41 @@ export default function ProductList() {
   usePageRefresh(loadProducts);
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-[#080b11] relative overflow-hidden text-white">
+      {/* 背景光效 */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/3 blur-[120px] pointer-events-none" />
+
+      <div className="max-w-5xl mx-auto px-4 py-8 relative z-10">
+        <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-8">
           <div>
-            <PageBackButton fallback="/profile" className="mb-3" />
-            <h1 className="text-2xl font-bold text-white">商品管理</h1>
+            <PageBackButton fallback="/profile" className="mb-3 border-white/10 bg-white/5 hover:bg-white/10" />
+            <h1 className="text-3xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent tracking-tight">商品管理</h1>
+            <p className="text-slate-400/80 text-sm mt-1">管理和创建您发布的所有竞拍品及状态</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => void loadProducts()}
               disabled={refreshing}
-              className="px-4 py-2 border border-white/20 text-white rounded-lg hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+              className="px-4 py-2 border border-white/10 bg-white/5 text-white/90 rounded-xl hover:border-white/25 hover:bg-white/10 transition duration-200 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
               {refreshing ? '刷新中...' : '刷新'}
             </button>
-            <Link to="/merchant/orders" className="px-4 py-2 border border-white/20 text-white rounded-lg hover:border-white/40">
+            <Link to="/merchant/orders" className="px-4 py-2 border border-white/10 bg-white/5 text-white/90 rounded-xl hover:border-white/25 hover:bg-white/10 transition duration-200 text-sm font-semibold flex items-center">
               订单管理
             </Link>
-            <Link to="/merchant/dashboard" className="px-4 py-2 border border-white/20 text-white rounded-lg hover:border-white/40">
+            <Link to="/merchant/dashboard" className="px-4 py-2 border border-white/10 bg-white/5 text-white/90 rounded-xl hover:border-white/25 hover:bg-white/10 transition duration-200 text-sm font-semibold flex items-center">
               运营看板
             </Link>
-            <Link to="/merchant/products/new" className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:opacity-90">
+            <Link to="/merchant/products/new" className="px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:from-violet-500 hover:to-purple-500 shadow-lg shadow-purple-500/20 transition duration-200 text-sm font-bold flex items-center">
               + 新建竞拍
             </Link>
           </div>
         </div>
 
-        <div className="flex gap-2 mb-6">
+        {/* 标签栏 */}
+        <div className="flex flex-wrap gap-1.5 mb-6 bg-slate-950/40 p-1.5 rounded-xl border border-white/5">
           {TABS.map((tab) => (
             <button
               key={tab.key}
@@ -109,10 +115,10 @@ export default function ProductList() {
                 if (activeTab !== tab.key) setLoading(true);
                 setActiveTab(tab.key);
               }}
-              className={`px-4 py-2 rounded-lg text-sm border transition ${
+              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                 activeTab === tab.key
-                  ? 'border-purple-400 bg-purple-500/20 text-white'
-                  : 'border-white/20 text-white/60 hover:border-white/40'
+                  ? 'border-purple-500/20 bg-purple-500/15 text-purple-200 font-bold shadow shadow-purple-500/5'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
               {tab.label}
@@ -121,40 +127,45 @@ export default function ProductList() {
         </div>
 
         {loading ? (
-          <p className="text-white/60 text-center py-12">加载中...</p>
+          <div className="text-slate-400/80 text-center py-20 bg-[#111422]/30 rounded-2xl border border-white/5 backdrop-blur-xl">
+            <p className="text-sm font-medium">加载列表中...</p>
+          </div>
         ) : error ? (
-          <div className="rounded-lg border border-red-400/50 bg-red-500/20 px-4 py-3 text-sm text-red-100">
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200 backdrop-blur-lg">
             {error}
           </div>
         ) : products.length === 0 ? (
-          <p className="text-white/60 text-center py-12">暂无商品</p>
+          <div className="text-slate-400/80 text-center py-20 bg-[#111422]/30 rounded-2xl border border-white/5 backdrop-blur-xl">
+            <div className="text-3xl mb-2">📦</div>
+            <p className="text-sm font-medium">该状态下暂无商品</p>
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-4 md:grid-cols-2">
             {products.map((p) => (
               <article
                 key={p.id}
-                className="rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-lg transition hover:border-purple-400"
+                className="group rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl transition-all duration-200 hover:border-purple-500/40 hover:-translate-y-0.5 shadow-lg shadow-black/20 flex flex-col justify-between"
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-white font-semibold">{p.title}</h3>
-                    <p className="text-white/50 text-sm mt-1">{p.description?.slice(0, 80) || '暂无介绍'}</p>
+                <div>
+                  <div className="flex justify-between items-start gap-3">
+                    <h3 className="text-white font-bold text-lg leading-snug group-hover:text-purple-300 transition-colors duration-200">{p.title}</h3>
+                    <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide border uppercase ${STATUS_BADGE[p.status]}`}>
+                      {STATUS_TEXT[p.status]}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs border ${STATUS_BADGE[p.status]}`}>
-                    {STATUS_TEXT[p.status]}
-                  </span>
+                  <p className="text-slate-400 text-sm mt-2 line-clamp-2 leading-relaxed">{p.description || '暂无介绍'}</p>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-5 pt-4 border-t border-white/5 flex gap-2">
                   <Link
                     to={`/merchant/products/${p.id}`}
-                    className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/75 transition hover:border-white/35 hover:text-white"
+                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-center text-xs font-semibold text-white/90 transition hover:border-white/20 hover:bg-white/10"
                   >
                     查看详情
                   </Link>
                   {p.auction_id ? (
                     <Link
                       to={`/merchant/auctions/${p.auction_id}/monitor`}
-                      className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+                      className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-2.5 text-center text-xs font-bold text-slate-950 transition hover:from-emerald-400 hover:to-teal-400 shadow-md shadow-emerald-500/10"
                     >
                       实时监控
                     </Link>

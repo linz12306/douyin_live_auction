@@ -146,6 +146,28 @@ describe('LiveAuctionRoom', () => {
     expect(new URL(FakeWebSocket.instances[0].url).searchParams.get('token')).toBe('access-token');
   });
 
+  it('renders merchant-uploaded live video as the room stage background', () => {
+    seedRoom({
+      product: {
+        id: 22,
+        title: '复古牛仔夹克',
+        description: '做旧水洗款',
+        image_urls: ['https://img.test/jacket.jpg'],
+        live_media: {
+          type: 'video',
+          url: 'https://media.test/live-room.mp4',
+          poster_url: 'https://media.test/live-room-poster.jpg',
+        },
+      },
+    });
+
+    renderRoom();
+
+    const video = screen.getByTestId('live-room-media-video');
+    expect(video).toHaveAttribute('src', 'https://media.test/live-room.mp4');
+    expect(video).toHaveAttribute('poster', 'https://media.test/live-room-poster.jpg');
+  });
+
   it('submits the next bid through REST without directly changing realtime price', async () => {
     renderRoom();
 
@@ -229,6 +251,46 @@ describe('LiveAuctionRoom', () => {
 
     expect(screen.getByRole('heading', { name: '更新后的复古牛仔夹克' })).toBeInTheDocument();
     expect(screen.getByAltText('更新后的复古牛仔夹克')).toHaveAttribute('src', 'https://img.test/jacket-updated.jpg');
+  });
+
+  it('updates the room stage background from snapshot live media', () => {
+    seedRoom({ notifications: [] });
+    renderRoom();
+
+    act(() => {
+      useLiveRoomStore.getState().applyMessage({
+        type: 'snapshot',
+        auction_id: 7,
+        version: 6,
+        server_time: '2026-05-28T10:00:03.000Z',
+        payload: {
+          product: {
+            id: 22,
+            title: '更新后的复古牛仔夹克',
+            description: '商家上传了直播间图',
+            image_urls: ['https://img.test/jacket-updated.jpg'],
+            live_media: {
+              type: 'image',
+              url: 'https://media.test/live-room.webp',
+              poster_url: null,
+            },
+          },
+          status: 'active',
+          current_price: 120,
+          highest_bidder_id: 3,
+          started_at: '2026-05-28T09:00:00.000Z',
+          ended_at: '2026-05-28T10:10:00.000Z',
+          current_extend_count: 0,
+          bid_increment_type: 'fixed',
+          bid_increment_value: 10,
+          next_bid_amount: 130,
+          rankings: [],
+        },
+      });
+    });
+
+    expect(screen.getByTestId('live-room-media-image')).toHaveAttribute('src', 'https://media.test/live-room.webp');
+    expect(screen.getByRole('heading', { name: '更新后的复古牛仔夹克' })).toBeInTheDocument();
   });
 
   it('submits a custom amount through REST', async () => {

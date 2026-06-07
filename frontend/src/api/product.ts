@@ -1,5 +1,5 @@
 import client from './client';
-import type { ProductDetail, ProductListResponse, PublishRequest } from '../types/product';
+import type { ProductDetail, ProductListResponse, ProductLiveMedia, PublishRequest } from '../types/product';
 
 export async function createProduct(title: string, description: string, imageUrls: string[]): Promise<ProductDetail> {
   const { data } = await client.post('/products', { title, description, image_urls: imageUrls });
@@ -41,4 +41,17 @@ export async function uploadProductImage(productId: number, file: File): Promise
 
 export async function deleteProductImage(productId: number, imageId: number): Promise<void> {
   await client.delete(`/products/${productId}/images/${imageId}`);
+}
+
+export async function uploadProductLiveMedia(productId: number, file: File): Promise<ProductLiveMedia> {
+  const form = new FormData();
+  form.append('media', file);
+  const { data } = await client.post(`/products/${productId}/live-media`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.data;
+}
+
+export async function deleteProductLiveMedia(productId: number): Promise<void> {
+  await client.delete(`/products/${productId}/live-media`);
 }

@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { assertExpectedRole, demoImagePath } from './demo-seed.mjs';
+import { assertExpectedRole, demoImagePath, demoLiveMediaFilename } from './demo-seed.mjs';
 
 test('demo seed uses a backend-served product image fixture', () => {
   assert.match(demoImagePath, /^\/static\/images\/.+/);
+});
+
+test('demo seed uploads a supported live room image file', () => {
+  assert.match(demoLiveMediaFilename, /\.(png|jpe?g|webp)$/);
 });
 
 test('demo seed rejects existing accounts with the wrong role', () => {

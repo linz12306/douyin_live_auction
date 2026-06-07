@@ -53,6 +53,36 @@ func TestRealtimeHandlerValidTokenConnectsAndFirstMessageIsSnapshot(t *testing.T
 	assertSnapshotEnvelope(t, msg, setup.auctionID)
 }
 
+func TestRealtimeSnapshotIncludesLiveMedia(t *testing.T) {
+	setup := setupRealtimeHandlerServer(t)
+	ts := httptest.NewServer(setup.router)
+	defer ts.Close()
+
+	insertRealtimeLiveMedia(t, setup.db, setup.auctionID)
+
+	conn := dialRealtime(t, ts.URL, setup.auctionID, setup.userAToken)
+	defer conn.Close()
+
+	msg := readEnvelope(t, conn)
+	assertSnapshotEnvelope(t, msg, setup.auctionID)
+
+	payload := msg.Payload.(map[string]interface{})
+	product := payload["product"].(map[string]interface{})
+	liveMedia, ok := product["live_media"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected product live_media object, got %T", product["live_media"])
+	}
+	if liveMedia["type"] != "video" {
+		t.Fatalf("expected video live media, got %#v", liveMedia["type"])
+	}
+	if liveMedia["url"] != "/static/live-media/realtime.mp4" {
+		t.Fatalf("unexpected live media url %#v", liveMedia["url"])
+	}
+	if liveMedia["poster_url"] != "/static/live-media/realtime-poster.jpg" {
+		t.Fatalf("unexpected live media poster_url %#v", liveMedia["poster_url"])
+	}
+}
+
 func TestRealtimeHandlerReconnectReceivesFreshSnapshot(t *testing.T) {
 	setup := setupRealtimeHandlerServer(t)
 	ts := httptest.NewServer(setup.router)
@@ -228,7 +258,7 @@ func setupRealtimeHandlerServer(t *testing.T) *realtimeHandlerSetup {
 	go hub.Run(ctx)
 
 	authH := NewAuthHandler(authSvc)
-	productH := NewProductHandler(productSvc, cfg.ImageDir)
+	productH := NewProductHandler(productSvc, cfg.ImageDir, cfg.LiveMediaDir)
 	auctionH := NewAuctionHandler(auctionSvc)
 	realtimeH := NewRealtimeHandler(hub, snapshots, cfg)
 
@@ -391,6 +421,24 @@ func updateRealtimeAuctionPrice(t *testing.T, db *sql.DB, auctionID int64, bidde
 	}
 }
 
+func insertRealtimeLiveMedia(t *testing.T, db *sql.DB, auctionID int64) {
+	t.Helper()
+
+	var productID int64
+	if err := db.QueryRow(`SELECT product_id FROM auctions WHERE id = ?`, auctionID).Scan(&productID); err != nil {
+		t.Fatalf("find realtime auction product: %v", err)
+	}
+	_, err := db.Exec(
+		`INSERT INTO product_live_media (product_id, media_type, media_url, poster_url)
+		 VALUES (?, 'video', '/static/live-media/realtime.mp4', '/static/live-media/realtime-poster.jpg')
+		 ON DUPLICATE KEY UPDATE media_type = VALUES(media_type), media_url = VALUES(media_url), poster_url = VALUES(poster_url)`,
+		productID,
+	)
+	if err != nil {
+		t.Fatalf("insert realtime live media: %v", err)
+	}
+}
+
 func realtimeRequest(t *testing.T, method, url, token string, body []byte) *http.Response {
 	t.Helper()
 
@@ -416,6 +464,7 @@ func cleanupRealtimeHandlerTestData(t *testing.T, db *sql.DB) {
 	_, _ = db.Exec("DELETE FROM auction_logs WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'rt_mer_%'))")
 	_, _ = db.Exec("DELETE FROM bids WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'rt_mer_%'))")
 	_, _ = db.Exec("DELETE FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'rt_mer_%')")
+	_, _ = db.Exec("DELETE FROM product_live_media WHERE product_id IN (SELECT id FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'rt_mer_%'))")
 	_, _ = db.Exec("DELETE FROM product_images WHERE product_id IN (SELECT id FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'rt_mer_%'))")
 	_, _ = db.Exec("DELETE FROM products WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE 'rt_mer_%')")
 	_, _ = db.Exec("DELETE FROM users WHERE username LIKE 'rt_mer_%'")

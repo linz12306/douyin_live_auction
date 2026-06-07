@@ -41,6 +41,7 @@ type AuctionSnapshotRow struct {
 	ProductTitle       string
 	ProductDescription string
 	ImageURLs          []string
+	LiveMedia          *model.ProductLiveMedia
 }
 
 type AuctionSnapshot struct {
@@ -133,6 +134,11 @@ func (r *AuctionEngineRepo) FindAuctionSnapshot(ctx context.Context, auctionID i
 		return nil, err
 	}
 	row.ImageURLs = images
+	liveMedia, err := r.findAuctionSnapshotLiveMedia(ctx, r.db, row.ProductID)
+	if err != nil {
+		return nil, err
+	}
+	row.LiveMedia = liveMedia
 	return row, nil
 }
 
@@ -153,6 +159,11 @@ func (r *AuctionEngineRepo) BuildAuctionSnapshot(ctx context.Context, auctionID 
 		return nil, err
 	}
 	row.ImageURLs = images
+	liveMedia, err := r.findAuctionSnapshotLiveMedia(ctx, tx, row.ProductID)
+	if err != nil {
+		return nil, err
+	}
+	row.LiveMedia = liveMedia
 
 	rankings, err := r.listRankings(ctx, tx, auctionID, limit)
 	if err != nil {
@@ -244,6 +255,26 @@ func (r *AuctionEngineRepo) findAuctionSnapshotImages(ctx context.Context, q auc
 		imageURLs = append(imageURLs, imageURL)
 	}
 	return imageURLs, rows.Err()
+}
+
+func (r *AuctionEngineRepo) findAuctionSnapshotLiveMedia(ctx context.Context, q auctionSnapshotQuerier, productID int64) (*model.ProductLiveMedia, error) {
+	media := &model.ProductLiveMedia{}
+	var posterURL sql.NullString
+	err := q.QueryRowContext(ctx,
+		`SELECT product_id, media_type, media_url, poster_url, created_at, updated_at
+         FROM product_live_media WHERE product_id = ?`, productID,
+	).Scan(&media.ProductID, &media.MediaType, &media.MediaURL, &posterURL, &media.CreatedAt, &media.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if posterURL.Valid {
+		value := posterURL.String
+		media.PosterURL = &value
+	}
+	return media, nil
 }
 
 func (r *AuctionEngineRepo) ListExpiredActiveAuctionIDs(ctx context.Context, tx *sql.Tx, now time.Time) ([]int64, error) {
