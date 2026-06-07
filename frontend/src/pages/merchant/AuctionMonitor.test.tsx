@@ -106,7 +106,7 @@ describe('AuctionMonitor', () => {
     expect(screen.getAllByText('¥140.00').length).toBeGreaterThan(0);
     expect(screen.getByText('阿辰')).toBeInTheDocument();
     expect(screen.getAllByText('阿辰 出价 ¥140.00').length).toBeGreaterThan(0);
-    expect(screen.getByText('最后出价后 30 秒内不可取消')).toBeInTheDocument();
+    expect(screen.getByText(/最后出价后 30 秒内不支持/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /出价/ })).not.toBeInTheDocument();
   });
 
@@ -132,7 +132,7 @@ describe('AuctionMonitor', () => {
     renderMonitor();
 
     expect(screen.getByText('竞拍已成交')).toBeInTheDocument();
-    expect(screen.getByText('成交价 ¥140.00')).toBeInTheDocument();
+    expect(screen.getByText(/成交价 ¥140.00/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '取消竞拍' })).not.toBeInTheDocument();
   });
 });

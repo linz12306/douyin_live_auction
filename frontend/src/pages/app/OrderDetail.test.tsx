@@ -72,10 +72,10 @@ describe('App OrderDetail', () => {
 
     expect(await screen.findByRole('heading', { name: '复古牛仔夹克' })).toBeInTheDocument();
     expect(screen.getByText('待确认')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '确认订单' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '取消订单' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '确认中标订单' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '申请取消订单' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '确认订单' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认中标订单' }));
 
     await waitFor(() => expect(mockedConfirmOrder).toHaveBeenCalledWith(9));
   });
@@ -87,7 +87,7 @@ describe('App OrderDetail', () => {
     renderDetail();
 
     expect(await screen.findByText('待支付')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '模拟支付' }));
+    fireEvent.click(screen.getByRole('button', { name: '立即模拟支付' }));
 
     await waitFor(() => expect(mockedPayOrder).toHaveBeenCalledWith(9));
   });
@@ -98,8 +98,8 @@ describe('App OrderDetail', () => {
     renderDetail();
 
     expect(await screen.findByText('已支付')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '确认订单' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '模拟支付' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '取消订单' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '确认中标订单' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '立即模拟支付' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '申请取消订单' })).not.toBeInTheDocument();
   });
 });

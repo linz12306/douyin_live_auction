@@ -25,6 +25,11 @@ export interface ProductSummary {
   title: string;
   description: string;
   image_urls: string[];
+  live_media?: {
+    type: 'image' | 'video';
+    url: string;
+    poster_url?: string | null;
+  } | null;
 }
 
 export interface RankingItem {

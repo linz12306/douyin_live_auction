@@ -8,6 +8,15 @@ export interface ProductImage {
   sort_order: number;
 }
 
+export interface ProductLiveMedia {
+  product_id: number;
+  type: 'image' | 'video';
+  url: string;
+  poster_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Product {
   id: number;
   merchant_id: number;
@@ -41,6 +50,7 @@ export interface ProductDetail {
   product: Product;
   images: ProductImage[];
   auction: Auction | null;
+  live_media?: ProductLiveMedia | null;
 }
 
 export interface ProductListResponse {

@@ -68,6 +68,33 @@ describe('Merchant Dashboard', () => {
           paid_at: '2026-05-30T10:08:00.000Z',
         },
       ],
+      analytics: {
+        transaction_trend: [
+          { date: '2026-05-24', paid_amount: 0, paid_order_count: 0 },
+          { date: '2026-05-25', paid_amount: 0, paid_order_count: 0 },
+          { date: '2026-05-26', paid_amount: 0, paid_order_count: 0 },
+          { date: '2026-05-27', paid_amount: 220, paid_order_count: 1 },
+          { date: '2026-05-28', paid_amount: 0, paid_order_count: 0 },
+          { date: '2026-05-29', paid_amount: 640, paid_order_count: 1 },
+          { date: '2026-05-30', paid_amount: 0, paid_order_count: 0 },
+        ],
+        bid_distribution: [
+          { bucket: '0-99', min_amount: 0, max_amount: 99, bid_count: 0 },
+          { bucket: '100-499', min_amount: 100, max_amount: 499, bid_count: 5 },
+          { bucket: '500-999', min_amount: 500, max_amount: 999, bid_count: 2 },
+          { bucket: '1000-4999', min_amount: 1000, max_amount: 4999, bid_count: 0 },
+          { bucket: '5000+', min_amount: 5000, bid_count: 0 },
+        ],
+        user_activity: [
+          { date: '2026-05-24', active_user_count: 0, bid_count: 0 },
+          { date: '2026-05-25', active_user_count: 0, bid_count: 0 },
+          { date: '2026-05-26', active_user_count: 1, bid_count: 2 },
+          { date: '2026-05-27', active_user_count: 0, bid_count: 0 },
+          { date: '2026-05-28', active_user_count: 2, bid_count: 4 },
+          { date: '2026-05-29', active_user_count: 0, bid_count: 0 },
+          { date: '2026-05-30', active_user_count: 0, bid_count: 0 },
+        ],
+      },
     });
 
     render(
@@ -78,13 +105,60 @@ describe('Merchant Dashboard', () => {
 
     expect(await screen.findByRole('heading', { name: '运营看板' })).toBeInTheDocument();
     expect(await screen.findByText('¥860.00')).toBeInTheDocument();
-    expect(screen.getByText('2 单')).toBeInTheDocument();
+    expect(screen.getByText('成交订单')).toBeInTheDocument();
     expect(screen.getByText('¥430.00')).toBeInTheDocument();
     expect(screen.getAllByText('复古夹克')).toHaveLength(2);
     expect(screen.getByText('5 次出价')).toBeInTheDocument();
     expect(screen.getByText('买家：小林')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '成交趋势' })).toBeInTheDocument();
+    expect(screen.getByText(/峰值 ¥640.00/)).toBeInTheDocument();
+    expect(screen.getByText(/合计 ¥860.00/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '出价分布区间' })).toBeInTheDocument();
+    expect(screen.getByText('100-499')).toBeInTheDocument();
+    expect(screen.getByText('5 次')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '买家用户活跃度' })).toBeInTheDocument();
+    expect(screen.getByText(/2 位活跃用户/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '商品管理' })).toHaveAttribute('href', '/merchant/products');
     expect(screen.getByRole('link', { name: '订单管理' })).toHaveAttribute('href', '/merchant/orders');
+  });
+
+  it('shows zero-data analytics states while keeping operations sections usable', async () => {
+    mockedGetMerchantDashboard.mockResolvedValue({
+      product_status_counts: [],
+      order_status_counts: [],
+      transaction_summary: {
+        total_paid_amount: 0,
+        paid_order_count: 0,
+        average_paid_price: 0,
+      },
+      active_auctions: [],
+      recent_orders: [],
+      analytics: {
+        transaction_trend: [
+          { date: '2026-05-24', paid_amount: 0, paid_order_count: 0 },
+          { date: '2026-05-25', paid_amount: 0, paid_order_count: 0 },
+        ],
+        bid_distribution: [
+          { bucket: '0-99', min_amount: 0, max_amount: 99, bid_count: 0 },
+        ],
+        user_activity: [
+          { date: '2026-05-24', active_user_count: 0, bid_count: 0 },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: '运营看板' })).toBeInTheDocument();
+    expect(screen.getByText('暂无成交趋势')).toBeInTheDocument();
+    expect(screen.getByText('暂无出价分布')).toBeInTheDocument();
+    expect(screen.getByText('暂无用户活跃数据')).toBeInTheDocument();
+    expect(screen.getByText('暂无进行中竞拍')).toBeInTheDocument();
+    expect(screen.getByText('暂无订单')).toBeInTheDocument();
   });
 
   it('shows an error state when the dashboard cannot load', async () => {

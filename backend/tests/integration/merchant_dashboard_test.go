@@ -76,6 +76,56 @@ func TestMerchantDashboardReturnsScopedOperationalSummary(t *testing.T) {
 	if !recentIDs[paidOrderID] || !recentIDs[pendingOrderID] {
 		t.Fatalf("recent orders missing scoped orders, got ids %#v", recentIDs)
 	}
+
+	analytics := data["analytics"].(map[string]interface{})
+	trend := analytics["transaction_trend"].([]interface{})
+	if len(trend) != 7 {
+		t.Fatalf("expected 7 transaction trend points, got %#v", trend)
+	}
+	var trendPaidAmount float64
+	var trendPaidOrders int
+	for _, item := range trend {
+		row := item.(map[string]interface{})
+		if row["date"] == "" {
+			t.Fatalf("expected trend date, got %#v", row)
+		}
+		trendPaidAmount += row["paid_amount"].(float64)
+		trendPaidOrders += int(row["paid_order_count"].(float64))
+	}
+	if trendPaidAmount != float64(20) || trendPaidOrders != 1 {
+		t.Fatalf("expected scoped paid trend amount/count, got amount=%v count=%v", trendPaidAmount, trendPaidOrders)
+	}
+
+	distribution := analytics["bid_distribution"].([]interface{})
+	if len(distribution) != 5 {
+		t.Fatalf("expected stable bid distribution buckets, got %#v", distribution)
+	}
+	distributionCounts := map[string]int{}
+	for _, item := range distribution {
+		row := item.(map[string]interface{})
+		distributionCounts[row["bucket"].(string)] = int(row["bid_count"].(float64))
+	}
+	if distributionCounts["0-99"] != 3 || distributionCounts["100-499"] != 0 || distributionCounts["5000+"] != 0 {
+		t.Fatalf("expected scoped bid distribution, got %#v", distributionCounts)
+	}
+
+	activity := analytics["user_activity"].([]interface{})
+	if len(activity) != 7 {
+		t.Fatalf("expected 7 user activity points, got %#v", activity)
+	}
+	var activityBidCount int
+	var activityUserCount int
+	for _, item := range activity {
+		row := item.(map[string]interface{})
+		if row["date"] == "" {
+			t.Fatalf("expected activity date, got %#v", row)
+		}
+		activityBidCount += int(row["bid_count"].(float64))
+		activityUserCount += int(row["active_user_count"].(float64))
+	}
+	if activityBidCount != 3 || activityUserCount != 1 {
+		t.Fatalf("expected scoped user activity, got bid_count=%v user_count=%v", activityBidCount, activityUserCount)
+	}
 }
 
 func TestMerchantDashboardRejectsUserRole(t *testing.T) {

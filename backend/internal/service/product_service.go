@@ -10,11 +10,12 @@ import (
 )
 
 var (
-	ErrNotOwner        = errors.New("无权操作此商品")
-	ErrStatusImmutable = errors.New("当前状态不允许此操作")
-	ErrNeedAtLeastOne  = errors.New("至少保留一张图片")
-	ErrImageLimit      = errors.New("图片不能超过9张")
-	ErrProductNotFound = errors.New("商品不存在")
+	ErrNotOwner             = errors.New("无权操作此商品")
+	ErrStatusImmutable      = errors.New("当前状态不允许此操作")
+	ErrNeedAtLeastOne       = errors.New("至少保留一张图片")
+	ErrImageLimit           = errors.New("图片不能超过9张")
+	ErrProductNotFound      = errors.New("商品不存在")
+	ErrInvalidLiveMediaType = errors.New("仅支持 jpg/png/webp/mp4/webm 格式")
 )
 
 type ProductService struct {
@@ -44,7 +45,7 @@ func (s *ProductService) Create(merchantID int64, req *dto.CreateProductRequest)
 	}
 
 	images, _ := s.productRepo.FindImages(product.ID)
-	return &dto.ProductDetailResponse{Product: *product, Images: images, Auction: nil}, nil
+	return s.detailResponse(product, images, nil)
 }
 
 func (s *ProductService) Publish(merchantID, productID int64, req *dto.PublishRequest) (*dto.ProductDetailResponse, error) {
@@ -100,7 +101,7 @@ func (s *ProductService) Publish(merchantID, productID int64, req *dto.PublishRe
 
 	product.Status = "pending"
 	images, _ = s.productRepo.FindImages(productID)
-	return &dto.ProductDetailResponse{Product: *product, Images: images, Auction: auction}, nil
+	return s.detailResponse(product, images, auction)
 }
 
 func (s *ProductService) Get(productID int64) (*dto.ProductDetailResponse, error) {
@@ -110,7 +111,7 @@ func (s *ProductService) Get(productID int64) (*dto.ProductDetailResponse, error
 	}
 	images, _ := s.productRepo.FindImages(productID)
 	auction, _ := s.auctionRepo.FindByProductID(productID)
-	return &dto.ProductDetailResponse{Product: *product, Images: images, Auction: auction}, nil
+	return s.detailResponse(product, images, auction)
 }
 
 func (s *ProductService) List(merchantID int64, query *dto.ProductListQuery) ([]model.Product, int, error) {
@@ -159,21 +160,44 @@ func (s *ProductService) Update(merchantID, productID int64, req *dto.UpdateProd
 
 	images, _ := s.productRepo.FindImages(productID)
 	auction, _ := s.auctionRepo.FindByProductID(productID)
-	return &dto.ProductDetailResponse{Product: *product, Images: images, Auction: auction}, nil
+	return s.detailResponse(product, images, auction)
 }
 
-func (s *ProductService) Delete(merchantID, productID int64) error {
+func (s *ProductService) detailResponse(product *model.Product, images []model.ProductImage, auction *model.Auction) (*dto.ProductDetailResponse, error) {
+	liveMedia, err := s.productRepo.FindLiveMedia(product.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &dto.ProductDetailResponse{
+		Product:   *product,
+		Images:    images,
+		LiveMedia: liveMedia,
+		Auction:   auction,
+	}, nil
+}
+
+func (s *ProductService) Delete(merchantID, productID int64) (*string, error) {
 	product, err := s.productRepo.FindByID(productID)
 	if err != nil || product == nil {
-		return ErrProductNotFound
+		return nil, ErrProductNotFound
 	}
 	if product.MerchantID != merchantID {
-		return ErrNotOwner
+		return nil, ErrNotOwner
 	}
 	if product.Status != "draft" {
-		return ErrStatusImmutable
+		return nil, ErrStatusImmutable
 	}
-	return s.productRepo.Delete(productID)
+	previousMedia, err := s.productRepo.FindLiveMedia(productID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.productRepo.Delete(productID); err != nil {
+		return nil, err
+	}
+	if previousMedia == nil {
+		return nil, nil
+	}
+	return &previousMedia.MediaURL, nil
 }
 
 func (s *ProductService) AddImage(merchantID, productID int64, url string) error {
@@ -210,6 +234,69 @@ func (s *ProductService) DeleteImage(merchantID, productID, imageID int64) error
 		return ErrNeedAtLeastOne
 	}
 	return s.productRepo.DeleteImage(imageID)
+}
+
+func (s *ProductService) ValidateLiveMediaUpload(merchantID, productID int64, mediaType string) error {
+	product, err := s.productRepo.FindByID(productID)
+	if err != nil || product == nil {
+		return ErrProductNotFound
+	}
+	if product.MerchantID != merchantID {
+		return ErrNotOwner
+	}
+	if product.Status != "draft" && product.Status != "pending" {
+		return ErrStatusImmutable
+	}
+	if mediaType != "image" && mediaType != "video" {
+		return ErrInvalidLiveMediaType
+	}
+	return nil
+}
+
+func (s *ProductService) ReplaceLiveMedia(merchantID, productID int64, mediaType, url string, posterURL *string) (*model.ProductLiveMedia, *string, error) {
+	if err := s.ValidateLiveMediaUpload(merchantID, productID, mediaType); err != nil {
+		return nil, nil, err
+	}
+	previousMedia, err := s.productRepo.FindLiveMedia(productID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := s.productRepo.UpsertLiveMedia(productID, mediaType, url, posterURL); err != nil {
+		return nil, nil, err
+	}
+	media, err := s.productRepo.FindLiveMedia(productID)
+	if err != nil {
+		return nil, nil, err
+	}
+	var previousURL *string
+	if previousMedia != nil {
+		previousURL = &previousMedia.MediaURL
+	}
+	return media, previousURL, nil
+}
+
+func (s *ProductService) DeleteLiveMedia(merchantID, productID int64) (*string, error) {
+	product, err := s.productRepo.FindByID(productID)
+	if err != nil || product == nil {
+		return nil, ErrProductNotFound
+	}
+	if product.MerchantID != merchantID {
+		return nil, ErrNotOwner
+	}
+	if product.Status != "draft" && product.Status != "pending" {
+		return nil, ErrStatusImmutable
+	}
+	previousMedia, err := s.productRepo.FindLiveMedia(productID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.productRepo.DeleteLiveMedia(productID); err != nil {
+		return nil, err
+	}
+	if previousMedia == nil {
+		return nil, nil
+	}
+	return &previousMedia.MediaURL, nil
 }
 
 func (s *ProductService) validateAuctionRules(req *dto.PublishRequest) error {

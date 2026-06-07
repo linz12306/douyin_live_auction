@@ -121,7 +121,7 @@ describe('ProductDetail', () => {
 
     renderDetail();
 
-    const monitorLink = await screen.findByRole('link', { name: '实时监控' });
+    const monitorLink = await screen.findByRole('link', { name: '进入实时竞拍监控台 ›' });
     expect(monitorLink).toHaveAttribute('href', '/merchant/auctions/9/monitor');
   });
 
@@ -133,7 +133,7 @@ describe('ProductDetail', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '取消竞拍' }));
     fireEvent.change(screen.getByLabelText('取消原因'), { target: { value: '库存不足' } });
-    fireEvent.click(screen.getByRole('button', { name: '确认取消' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认取消竞拍' }));
 
     await waitFor(() => expect(mocks.cancelAuction).toHaveBeenCalledWith(9, '库存不足'));
     await waitFor(() => expect(mocks.getProduct).toHaveBeenCalledTimes(2));
@@ -146,7 +146,7 @@ describe('ProductDetail', () => {
     renderDetail();
 
     fireEvent.click(await screen.findByRole('button', { name: '取消竞拍' }));
-    fireEvent.click(screen.getByRole('button', { name: '确认取消' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认取消竞拍' }));
 
     expect(mocks.cancelAuction).not.toHaveBeenCalled();
     expect(screen.getByText('请输入取消原因')).toBeInTheDocument();
@@ -162,7 +162,7 @@ describe('ProductDetail', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '取消竞拍' }));
     fireEvent.change(screen.getByLabelText('取消原因'), { target: { value: '价格异常' } });
-    fireEvent.click(screen.getByRole('button', { name: '确认取消' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认取消竞拍' }));
 
     await waitFor(() => expect(mocks.cancelAuction).toHaveBeenCalledWith(9, '价格异常'));
     expect(await screen.findByText('最后出价后30秒内不可取消')).toBeInTheDocument();

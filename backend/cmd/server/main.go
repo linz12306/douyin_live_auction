@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"douyin-live/backend/internal/config"
@@ -46,7 +47,7 @@ func main() {
 	productRepo := repository.NewProductRepo(db)
 	auctionRepo := repository.NewAuctionRepo(db)
 	productSvc := service.NewProductService(productRepo, auctionRepo)
-	productH := handler.NewProductHandler(productSvc, cfg.ImageDir)
+	productH := handler.NewProductHandler(productSvc, cfg.ImageDir, cfg.LiveMediaDir)
 
 	// Auction engine
 	auctionEngineRepo := repository.NewAuctionEngineRepo(db)
@@ -89,9 +90,16 @@ func main() {
 
 	r.GET("/healthz", healthH.Healthz)
 
+	for _, dir := range []string{cfg.AvatarDir, cfg.ImageDir, cfg.LiveMediaDir} {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			log.Fatalf("Failed to create static directory %s: %v", dir, err)
+		}
+	}
+
 	// Static file serving for avatars
 	r.Static("/static/avatars", cfg.AvatarDir)
 	r.Static("/static/images", cfg.ImageDir)
+	r.Static("/static/live-media", cfg.LiveMediaDir)
 
 	api := r.Group("/api/v1")
 	{
@@ -132,6 +140,8 @@ func main() {
 			products.DELETE("/:id", middleware.RoleGuard("merchant"), productH.Delete)
 			products.POST("/:id/images", middleware.RoleGuard("merchant"), productH.UploadImage)
 			products.DELETE("/:id/images/:image_id", middleware.RoleGuard("merchant"), productH.DeleteImage)
+			products.POST("/:id/live-media", middleware.RoleGuard("merchant"), productH.UploadLiveMedia)
+			products.DELETE("/:id/live-media", middleware.RoleGuard("merchant"), productH.DeleteLiveMedia)
 			products.POST("/:id/publish", middleware.RoleGuard("merchant"), productH.Publish)
 		}
 

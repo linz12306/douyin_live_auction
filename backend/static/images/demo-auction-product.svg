@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">Demo auction jade pendant product image</title>
+  <desc id="desc">A polished jade pendant on a dark live-auction stage.</desc>
+  <defs>
+    <linearGradient id="stage" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#13201f"/>
+      <stop offset="0.46" stop-color="#071011"/>
+      <stop offset="1" stop-color="#210a12"/>
+    </linearGradient>
+    <radialGradient id="jadeGlow" cx="50%" cy="45%" r="48%">
+      <stop offset="0" stop-color="#e8fff3"/>
+      <stop offset="0.38" stop-color="#79d7ad"/>
+      <stop offset="0.74" stop-color="#159173"/>
+      <stop offset="1" stop-color="#08392f"/>
+    </radialGradient>
+    <radialGradient id="spot" cx="50%" cy="38%" r="58%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.34"/>
+      <stop offset="0.55" stop-color="#14b8a6" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="34" stdDeviation="38" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="900" fill="url(#stage)"/>
+  <rect width="1200" height="900" fill="url(#spot)"/>
+  <path d="M108 188c210-74 400-82 570-24 163 56 273 36 414-34v132c-139 54-270 66-408 18-179-62-365-54-576 36Z" fill="#14b8a6" opacity="0.18"/>
+  <path d="M0 716c155-96 320-119 496-69 226 64 396 49 704-89v342H0Z" fill="#050708" opacity="0.62"/>
+  <g filter="url(#softShadow)">
+    <ellipse cx="600" cy="747" rx="310" ry="54" fill="#000" opacity="0.48"/>
+    <path d="M600 160c126 0 232 98 232 228 0 170-164 322-232 390-68-68-232-220-232-390 0-130 106-228 232-228Z" fill="url(#jadeGlow)"/>
+    <path d="M600 216c95 0 175 74 175 170 0 127-122 242-175 295-53-53-175-168-175-295 0-96 80-170 175-170Z" fill="none" stroke="#ecfff5" stroke-width="20" opacity="0.52"/>
+    <circle cx="600" cy="384" r="72" fill="#071011" opacity="0.78"/>
+    <circle cx="600" cy="384" r="39" fill="#caffdf" opacity="0.28"/>
+    <path d="M492 300c42-67 120-92 199-56" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" opacity="0.44"/>
+    <path d="M461 574c97 64 211 70 313 3" fill="none" stroke="#032b24" stroke-width="18" stroke-linecap="round" opacity="0.35"/>
+  </g>
+  <g fill="#fff">
+    <text x="76" y="104" font-family="Arial, sans-serif" font-size="30" font-weight="700" opacity="0.86">DEMO LIVE AUCTION</text>
+    <text x="76" y="148" font-family="Arial, sans-serif" font-size="20" opacity="0.55">product fixture served from backend static images</text>
+  </g>
+</svg>

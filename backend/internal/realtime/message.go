@@ -18,11 +18,18 @@ type Envelope struct {
 	Payload    interface{} `json:"payload"`
 }
 
+type ProductLiveMediaSummary struct {
+	Type      string  `json:"type"`
+	URL       string  `json:"url"`
+	PosterURL *string `json:"poster_url,omitempty"`
+}
+
 type ProductSummary struct {
-	ID          int64    `json:"id"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	ImageURLs   []string `json:"image_urls"`
+	ID          int64                    `json:"id"`
+	Title       string                   `json:"title"`
+	Description string                   `json:"description"`
+	ImageURLs   []string                 `json:"image_urls"`
+	LiveMedia   *ProductLiveMediaSummary `json:"live_media,omitempty"`
 }
 
 type RankingItem struct {

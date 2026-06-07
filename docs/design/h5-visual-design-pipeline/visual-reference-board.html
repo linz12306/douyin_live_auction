@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>H5 Visual Reference Board</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #151821;
+      --panel: #202432;
+      --muted: #9aa3b5;
+      --text: #f6f7fb;
+      --pink: #ff315d;
+      --pink2: #ff6a7f;
+      --gold: #ffc342;
+      --violet: #6d4cff;
+      --line: rgba(255,255,255,.12);
+      --pill: rgba(0,0,0,.48);
+      --glass: rgba(0,0,0,.38);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 0%, #333746 0, transparent 36%),
+        linear-gradient(135deg, #11131a, #1d2230 58%, #11131a);
+      color: var(--text);
+    }
+
+    main {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 30px; letter-spacing: 0; }
+    h2 { font-size: 20px; margin-bottom: 12px; }
+    h3 { font-size: 15px; }
+    p { color: var(--muted); line-height: 1.6; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      height: 28px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0 12px;
+      color: #d8deef;
+      background: rgba(255,255,255,.06);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: rgba(32,36,50,.78);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 20px 80px rgba(0,0,0,.28);
+    }
+
+    .phone {
+      position: relative;
+      width: 390px;
+      height: 844px;
+      margin: 0 auto;
+      overflow: hidden;
+      border-radius: 28px;
+      border: 1px solid rgba(255,255,255,.18);
+      background:
+        linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.08) 28%, rgba(0,0,0,.76)),
+        radial-gradient(circle at 50% 28%, rgba(255,222,190,.92), rgba(120,78,60,.42) 25%, transparent 45%),
+        linear-gradient(135deg, #4c423d, #151720 58%, #090b10);
+    }
+
+    .host {
+      position: absolute;
+      left: 14px;
+      top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 250px;
+      height: 48px;
+      padding: 5px 8px 5px 5px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.48);
+      backdrop-filter: blur(12px);
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid var(--pink);
+      background: linear-gradient(135deg, #ffe3e8, #7c5cff);
+    }
+
+    .host-title { font-weight: 800; font-size: 15px; }
+    .host-meta { font-size: 11px; color: rgba(255,255,255,.68); margin-top: 2px; }
+
+    .follow {
+      margin-left: auto;
+      border: 0;
+      border-radius: 999px;
+      height: 34px;
+      padding: 0 14px;
+      background: var(--pink);
+      color: white;
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    .top-count {
+      position: absolute;
+      right: 50px;
+      top: 21px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mini-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.72);
+      background: linear-gradient(135deg, #a7f3d0, #fb7185);
+      margin-left: -8px;
+    }
+
+    .count-pill {
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 11px;
+      margin-left: 6px;
+      border-radius: 999px;
+      background: var(--pill);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .close {
+      position: absolute;
+      right: 15px;
+      top: 20px;
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .badges {
+      position: absolute;
+      left: 14px;
+      top: 78px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      width: 270px;
+    }
+
+    .badge {
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 0 12px;
+      background: var(--pill);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .badge.hot { background: var(--pink); }
+    .badge.gold { color: #ffe6a2; }
+
+    .scene-copy {
+      position: absolute;
+      left: 70px;
+      top: 172px;
+      color: rgba(255,255,255,.92);
+      font-weight: 900;
+      font-size: 30px;
+      text-shadow: 0 4px 20px rgba(0,0,0,.55);
+    }
+
+    .product-prop {
+      position: absolute;
+      left: 112px;
+      top: 284px;
+      width: 168px;
+      height: 116px;
+      border-radius: 18px 18px 28px 28px;
+      background: linear-gradient(145deg, #fff, #b8a18b);
+      box-shadow: 0 22px 55px rgba(0,0,0,.42);
+      transform: rotate(-4deg);
+    }
+
+    .rail {
+      position: absolute;
+      right: 12px;
+      top: 255px;
+      display: grid;
+      gap: 13px;
+      justify-items: center;
+    }
+
+    .rail-item {
+      display: grid;
+      justify-items: center;
+      gap: 4px;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .rail-icon {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.08);
+      font-size: 20px;
+    }
+    .rail-icon.pink { background: linear-gradient(145deg, #ff3b65, #8b1cf6); }
+
+    .comments {
+      position: absolute;
+      left: 14px;
+      bottom: 172px;
+      width: 224px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .comment {
+      min-height: 29px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: rgba(0,0,0,.38);
+      font-size: 13px;
+      color: rgba(255,255,255,.9);
+    }
+
+    .level {
+      min-width: 34px;
+      height: 18px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #7755ff, #2bb7ff);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .name { color: #82e8ff; font-weight: 800; }
+    .system { color: #f9b1c0; }
+
+    .auction-card {
+      position: absolute;
+      right: 57px;
+      bottom: 128px;
+      width: 176px;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #f8f8fb;
+      color: #1f2330;
+      box-shadow: 0 14px 40px rgba(0,0,0,.38);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 10px 7px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .bid-count {
+      border-radius: 999px;
+      background: var(--pink);
+      color: white;
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .lot {
+      padding: 0 10px;
+      font-size: 11px;
+      color: #606474;
+    }
+
+    .card-product {
+      display: grid;
+      grid-template-columns: 46px 1fr;
+      gap: 8px;
+      padding: 8px 10px 10px;
+      align-items: center;
+    }
+    .thumb {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #eee, #b09f8d);
+      border: 1px solid #d7d9e0;
+    }
+    .title { font-size: 13px; font-weight: 900; line-height: 1.3; }
+    .sub { font-size: 11px; color: #777b8c; margin-top: 2px; }
+
+    .price-zone {
+      padding: 12px 14px;
+      color: white;
+      background: linear-gradient(135deg, #6e42ff, #4a22de);
+    }
+    .label { font-size: 12px; opacity: .86; }
+    .price { font-size: 38px; font-weight: 900; letter-spacing: 0; }
+
+    .timer-zone {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      padding: 9px 14px 12px;
+      background: white;
+    }
+    .timer { color: #ef2f55; font-size: 29px; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .bid-button {
+      height: 48px;
+      border: 0;
+      border-radius: 0;
+      background: var(--pink);
+      color: white;
+      font-size: 24px;
+      font-weight: 900;
+      width: 100%;
+    }
+
+    .bottom {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 22px;
+      display: grid;
+      grid-template-columns: 1fr repeat(4, 55px);
+      gap: 10px;
+      align-items: end;
+    }
+
+    .input {
+      height: 48px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.45);
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      color: rgba(255,255,255,.75);
+      font-size: 17px;
+    }
+
+    .bottom-action {
+      height: 55px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      background: rgba(0,0,0,.46);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .bottom-action.hot { background: var(--pink); }
+
+    .sheet-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .mini-phone {
+      min-height: 360px;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #eef2fb;
+      color: #171b28;
+      position: relative;
+      border: 1px solid rgba(255,255,255,.1);
+    }
+
+    .sheet {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      min-height: 260px;
+      background: linear-gradient(135deg, #fff7f9, #eff8ff);
+      border-radius: 22px 22px 0 0;
+      padding: 16px;
+      color: #171b28;
+    }
+
+    .sheet-title {
+      text-align: center;
+      font-weight: 900;
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+    .orange-time {
+      color: white;
+      background: #ff8a00;
+      border-radius: 6px;
+      padding: 3px 5px;
+      font-variant-numeric: tabular-nums;
+    }
+    .sheet-product {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 14px;
+      align-items: center;
+    }
+    .sheet-img {
+      width: 72px;
+      height: 72px;
+      border-radius: 10px;
+      background: linear-gradient(145deg, #fff, #c8b59c);
+    }
+    .sheet-name { font-weight: 900; line-height: 1.35; }
+    .split-bid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+      color: #7b8190;
+      font-size: 12px;
+    }
+    .split-bid strong { display: block; color: #171b28; font-size: 22px; margin-top: 3px; }
+    .amount-row {
+      display: grid;
+      grid-template-columns: 42px 1fr 42px;
+      gap: 10px;
+      align-items: center;
+      margin-top: 22px;
+    }
+    .step {
+      height: 42px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      background: #f0f1f5;
+      color: #717684;
+      font-size: 22px;
+      font-weight: 900;
+    }
+    .amount {
+      text-align: center;
+      font-size: 42px;
+      font-weight: 900;
+    }
+    .inc { text-align: center; color: #8d92a0; margin-top: -4px; }
+    .cta {
+      height: 52px;
+      margin-top: 16px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #ff6774, #ff1746);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 18px;
+    }
+    .state-chip {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 96px;
+      border-radius: 6px;
+      background: #ff6f89;
+      color: white;
+      padding: 3px 8px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .shelf {
+      margin-top: 20px;
+      display: grid;
+      gap: 10px;
+    }
+    .shelf-row {
+      display: grid;
+      grid-template-columns: 82px 1fr 92px;
+      gap: 12px;
+      align-items: center;
+      min-height: 100px;
+      border-radius: 12px;
+      padding: 10px;
+      background: #fff;
+      color: #242837;
+    }
+    .shelf-img {
+      width: 82px;
+      height: 82px;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #f2e8dd, #bfae97);
+    }
+    .status {
+      display: inline-flex;
+      height: 24px;
+      align-items: center;
+      padding: 0 8px;
+      border-radius: 5px;
+      background: var(--pink);
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .status.gray { background: #b9bcc6; }
+    .shelf-title { margin-top: 6px; font-weight: 800; }
+    .shelf-price { margin-top: 8px; color: var(--pink); font-weight: 900; }
+    .shelf-cta {
+      height: 38px;
+      border-radius: 4px;
+      display: grid;
+      place-items: center;
+      background: var(--pink);
+      color: white;
+      font-weight: 900;
+    }
+    .shelf-cta.disabled { background: #ff9aad; }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 20px;
+    }
+    .result-phone {
+      height: 520px;
+      border-radius: 18px;
+      overflow: hidden;
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,.58), rgba(0,0,0,.72)),
+        radial-gradient(circle at 50% 32%, #c1a58d, transparent 34%),
+        #111;
+    }
+    .result-card {
+      position: absolute;
+      left: 45px;
+      right: 45px;
+      top: 132px;
+      border-radius: 18px;
+      padding: 24px 20px;
+      text-align: center;
+      background: linear-gradient(135deg, #fff8f9, #f0fbff);
+      color: #202431;
+    }
+    .result-title {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 76px;
+      text-align: center;
+      color: white;
+      font-size: 28px;
+      font-weight: 900;
+      text-shadow: 0 4px 16px rgba(0,0,0,.4);
+    }
+    .final-price {
+      color: #b85b10;
+      font-size: 42px;
+      font-weight: 900;
+      margin: 12px 0 4px;
+    }
+
+    .notes {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .note {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px;
+      background: rgba(255,255,255,.04);
+    }
+    .note h3 { margin-bottom: 8px; color: white; }
+    .note p { font-size: 13px; }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .sheet-row, .result-grid, .notes { grid-template-columns: 1fr; }
+      header { align-items: start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>H5 抖音式直播竞拍视觉参考板</h1>
+        <p>Source Batch 01 的结构化可视化，不包含原图或第三方素材，只表达布局、状态和层级。</p>
+      </div>
+      <span class="tag">Route: /app/auctions/:id</span>
+    </header>
+
+    <section class="grid">
+      <div class="panel">
+        <h2>主屏目标结构 R2 优先</h2>
+        <div class="phone">
+          <div class="host">
+            <div class="avatar"></div>
+            <div>
+              <div class="host-title">潮玩拍卖馆</div>
+              <div class="host-meta">国观 8.6万</div>
+            </div>
+            <button class="follow">关注</button>
+          </div>
+          <div class="top-count">
+            <div class="mini-avatar"></div>
+            <div class="mini-avatar"></div>
+            <div class="mini-avatar"></div>
+            <div class="count-pill">8.6万</div>
+          </div>
+          <div class="close">×</div>
+          <div class="badges">
+            <div class="badge hot">直播中</div>
+            <div class="badge">球鞋专场 ›</div>
+            <div class="badge gold">古玩榜第 8 名</div>
+            <div class="badge">拍卖规则</div>
+          </div>
+          <div class="scene-copy">竞拍直播间<br>球鞋专场</div>
+          <div class="product-prop"></div>
+          <div class="rail">
+            <div class="rail-item"><div class="rail-icon pink">礼</div><span>01:23</span></div>
+            <div class="rail-item"><div class="rail-icon">心</div><span>x168</span></div>
+            <div class="rail-item"><div class="rail-icon">火</div><span>x66</span></div>
+            <div class="rail-item"><div class="rail-icon">赞</div><span>x38</span></div>
+            <div class="rail-item"><div class="rail-icon">↗</div><span>168</span></div>
+          </div>
+          <div class="comments">
+            <div class="comment"><span class="level">34</span><span>秋天的第一双鞋：主播专业</span></div>
+            <div class="comment"><span class="level">12</span><span>AAA 球鞋玩家：求求了！</span></div>
+            <div class="comment"><span class="level">21</span><span>不吃香菜：这配色太绝了</span></div>
+            <div class="comment"><span class="system">拍卖助手：</span><span>恭喜 用户_6523 出价 ¥1280</span></div>
+          </div>
+          <div class="auction-card">
+            <div class="card-head"><span>正在竞拍</span><span class="bid-count">117次出价</span></div>
+            <div class="lot">拍品编号：NO.0427</div>
+            <div class="card-product">
+              <div class="thumb"></div>
+              <div>
+                <div class="title">高帮复古篮球鞋</div>
+                <div class="sub">限量配色 稀有款</div>
+              </div>
+            </div>
+            <div class="price-zone">
+              <div class="label">当前价</div>
+              <div class="price">¥1280</div>
+            </div>
+            <div class="timer-zone">
+              <div class="label">倒计时</div>
+              <div class="timer">00:18</div>
+            </div>
+            <button class="bid-button">出价</button>
+          </div>
+          <div class="bottom">
+            <div class="input">说点什么...</div>
+            <div class="bottom-action">宝贝</div>
+            <div class="bottom-action">店铺</div>
+            <div class="bottom-action">客服</div>
+            <div class="bottom-action hot">礼物</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <section class="panel">
+          <h2>关键参考映射</h2>
+          <div class="notes">
+            <div class="note"><h3>R1 美妆直播</h3><p>参考直播密度、主播胶囊、评论层、右侧操作栏、底部商品卡。只取结构，不取人物/品牌。</p></div>
+            <div class="note"><h3>R2 球鞋竞拍</h3><p>主屏优先参考：拍卖规则、竞拍浮卡、当前价、倒计时、出价 CTA、拍卖助手消息。</p></div>
+            <div class="note"><h3>R3/R5/R6 出价面板</h3><p>顶部倒计时、当前价/我的出价分栏、大金额、步进器、状态气泡、终态禁用 CTA。</p></div>
+            <div class="note"><h3>R7 结果弹窗</h3><p>直播背景保留、赢家强 CTA、非赢家强调落槌结果，不暴露支付/确认动作。</p></div>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top:20px">
+          <h2>出价半屏状态</h2>
+          <div class="sheet-row">
+            <div class="mini-phone">
+              <div class="sheet">
+                <div class="sheet-title">距竞拍结束仅剩 <span class="orange-time">00:09:20</span></div>
+                <div class="sheet-product">
+                  <div class="sheet-img"></div>
+                  <div>
+                    <div class="sheet-name">金镶玉平安扣和田玉吊坠项链首饰</div>
+                    <div class="split-bid">
+                      <div>当前价<strong>¥850</strong></div>
+                      <div>我的出价<strong style="color:#8d92a0">暂无</strong></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="amount-row"><div class="step">−</div><div class="amount">¥900</div><div class="step">+</div></div>
+                <div class="inc">加价幅度 ¥50</div>
+                <div class="cta">立即出价</div>
+              </div>
+            </div>
+            <div class="mini-phone">
+              <div class="sheet">
+                <div class="sheet-title">距竞拍结束仅剩 <span class="orange-time">00:00:18</span></div>
+                <div class="state-chip">当前您已是最高价</div>
+                <div class="sheet-product">
+                  <div class="sheet-img"></div>
+                  <div>
+                    <div class="sheet-name">高帮复古篮球鞋</div>
+                    <div class="split-bid">
+                      <div>当前价<strong>¥900</strong></div>
+                      <div>我的出价<strong>¥900</strong></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="amount-row"><div class="step">−</div><div class="amount">¥950</div><div class="step">+</div></div>
+                <div class="inc">加价幅度 ¥50</div>
+                <div class="cta" style="background:#ff8fa2">当前您是最高价</div>
+              </div>
+            </div>
+            <div class="mini-phone">
+              <div class="sheet">
+                <div class="sheet-title">当前拍品竞拍已结束</div>
+                <div class="sheet-product">
+                  <div class="sheet-img"></div>
+                  <div>
+                    <div class="sheet-name">金镶玉平安扣和田玉吊坠项链首饰</div>
+                    <div class="split-bid">
+                      <div>成交价<strong>¥850</strong></div>
+                      <div>我的出价<strong style="color:#8d92a0">暂无</strong></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="amount-row"><div class="step">−</div><div class="amount">¥900</div><div class="step">+</div></div>
+                <div class="inc">加价幅度 ¥50</div>
+                <div class="cta" style="background:#ff9aaa">当前品拍卖已结束，5s后返回直播间</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <h2>商品橱窗状态 R4</h2>
+      <div class="shelf">
+        <div class="shelf-row">
+          <div class="shelf-img"></div>
+          <div><span class="status">竞拍中</span><div class="shelf-title">金镶玉平安扣和田玉吊坠项链首饰</div><div class="shelf-price">当前最高价 ¥7500</div></div>
+          <div class="shelf-cta">立即出价</div>
+        </div>
+        <div class="shelf-row">
+          <div class="shelf-img"></div>
+          <div><span class="status">即将开拍</span><div class="shelf-title">金镶玉平安扣和田玉吊坠项链首饰</div><div class="shelf-price">起拍价 ¥1200</div></div>
+          <div class="shelf-cta">去看看</div>
+        </div>
+        <div class="shelf-row">
+          <div class="shelf-img"></div>
+          <div><span class="status gray">竞拍结束</span><div class="shelf-title">复古篮球鞋限量款</div><div class="shelf-price">落槌价 ¥2200</div></div>
+          <div class="shelf-cta disabled">已结束</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <h2>结果弹窗 R7</h2>
+      <div class="result-grid">
+        <div class="result-phone">
+          <div class="result-title">恭喜竞拍成功</div>
+          <div class="result-card">
+            <div class="sheet-img" style="margin:0 auto 12px"></div>
+            <h3>金镶玉平安扣和田玉吊坠项链首饰</h3>
+            <div class="final-price">¥9000</div>
+            <p>保证金 · 拍品付款后退回</p>
+            <div class="cta">确认地址并支付</div>
+            <p style="margin-top:10px">距购买失效还剩 00:20:23</p>
+          </div>
+        </div>
+        <div class="result-phone">
+          <div class="result-title">落槌定音<br>恭喜成交!!</div>
+          <div class="result-card">
+            <h3>黄***</h3>
+            <p>经过3轮的激烈竞拍成功拍下</p>
+            <div class="final-price">¥7000</div>
+            <p>最终成交价</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

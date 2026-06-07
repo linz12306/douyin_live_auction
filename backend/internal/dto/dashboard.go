@@ -42,10 +42,36 @@ type DashboardRecentOrder struct {
 	CancelledAt     *time.Time `json:"cancelled_at,omitempty"`
 }
 
+type DashboardTransactionTrendPoint struct {
+	Date           string  `json:"date"`
+	PaidAmount     float64 `json:"paid_amount"`
+	PaidOrderCount int     `json:"paid_order_count"`
+}
+
+type DashboardBidDistributionBucket struct {
+	Bucket    string   `json:"bucket"`
+	MinAmount float64  `json:"min_amount"`
+	MaxAmount *float64 `json:"max_amount,omitempty"`
+	BidCount  int      `json:"bid_count"`
+}
+
+type DashboardUserActivityPoint struct {
+	Date            string `json:"date"`
+	ActiveUserCount int    `json:"active_user_count"`
+	BidCount        int    `json:"bid_count"`
+}
+
+type DashboardAnalytics struct {
+	TransactionTrend []DashboardTransactionTrendPoint `json:"transaction_trend"`
+	BidDistribution  []DashboardBidDistributionBucket `json:"bid_distribution"`
+	UserActivity     []DashboardUserActivityPoint     `json:"user_activity"`
+}
+
 type MerchantDashboardResponse struct {
 	ProductStatusCounts []DashboardStatusCount      `json:"product_status_counts"`
 	OrderStatusCounts   []DashboardStatusCount      `json:"order_status_counts"`
 	TransactionSummary  DashboardTransactionSummary `json:"transaction_summary"`
 	ActiveAuctions      []DashboardActiveAuction    `json:"active_auctions"`
 	RecentOrders        []DashboardRecentOrder      `json:"recent_orders"`
+	Analytics           DashboardAnalytics          `json:"analytics"`
 }

@@ -39,6 +39,7 @@ func (p *SnapshotProvider) Snapshot(ctx context.Context, auctionID int64) (*Enve
 			Title:       row.ProductTitle,
 			Description: row.ProductDescription,
 			ImageURLs:   row.ImageURLs,
+			LiveMedia:   toProductLiveMediaSummary(row.LiveMedia),
 		},
 		Status:             row.Status,
 		CurrentPrice:       row.CurrentPrice,
@@ -59,6 +60,17 @@ func (p *SnapshotProvider) Snapshot(ctx context.Context, auctionID int64) (*Enve
 		ServerTime: time.Now(),
 		Payload:    payload,
 	}, nil
+}
+
+func toProductLiveMediaSummary(media *model.ProductLiveMedia) *ProductLiveMediaSummary {
+	if media == nil {
+		return nil
+	}
+	return &ProductLiveMediaSummary{
+		Type:      media.MediaType,
+		URL:       media.MediaURL,
+		PosterURL: media.PosterURL,
+	}
 }
 
 func toRealtimeRankings(rankings []model.BidRanking) []RankingItem {

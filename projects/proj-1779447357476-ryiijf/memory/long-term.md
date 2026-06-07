@@ -1,6 +1,6 @@
 # 项目长期记忆
 
-> 更新时间：2026-06-01
+> 更新时间：2026-06-03
 
 ## 用户偏好
 
@@ -75,7 +75,55 @@
 
 ## 当前进行中
 
-- None recorded in this worktree after `perf-observability` archive.
+- `frontend-experience-integration`
+  - 分支：`codex/frontend-experience-integration`
+  - 已合入 `codex/auction-atmosphere-h5` 和 `codex/merchant-analytics-dashboard`，用于统一验证前端体验路线图的两个已完成包。
+
+- `auction-atmosphere`
+  - 分支：`codex/auction-atmosphere-h5`
+  - OpenSpec change：`openspec/changes/auction-atmosphere/`
+  - 已完成用户端 H5 `/app/auctions/:id` 直播间氛围改造：全屏直播间壳、主播栏、状态徽标、消息层、右侧氛围按钮、底部操作、竞拍浮卡、半屏出价面板、半屏商品橱窗和房间内结果弹层。
+  - 仍保持 WebSocket 为实时真理源；REST 出价成功不直接改当前价、排行、倒计时、延时、领先/被超越或终态。
+  - 已通过前端测试、构建、OpenSpec 校验、截图布局检查和 diff 检查；完整双买家 E2E 需在后端/MySQL/Redis 启动后再跑。
+
+- `merchant-analytics`
+  - 分支：`codex/merchant-analytics-dashboard`
+  - OpenSpec change：`openspec/changes/merchant-analytics/`
+  - 已扩展 `GET /api/v1/merchant/dashboard` 的只读 `analytics` 字段，包含成交趋势、出价分布和用户活跃度。
+  - 商家 analytics 仅统计当前商家的订单和拍品出价，不改变竞拍、钱包、订单、结算、支付、取消或 WebSocket 语义。
+  - 前端 `/merchant/dashboard` 已增加 PC 运营风格图表，保留原有汇总指标、状态桶、进行中竞拍、最近订单和导航。
+
+- `h5-visual-design-pipeline`
+  - 分支：`codex/frontend-experience-integration`
+  - OpenSpec change：`openspec/changes/h5-visual-design-pipeline/`
+  - 已锁定用户端 H5 抖音式视觉设计管线：真机截图/录屏 -> Figma 高保真拆解 -> 组件清单 -> React H5 实现 -> 动效还原 -> 移动端截图验收。
+  - 首轮只覆盖直播间全状态；个人主页、搜索页、发现/大厅扩展放到第二阶段。
+  - 用户已在聊天中提供 Source Batch 01 真机/参考素材；已创建 `source-material-teardown.md` 和 `react-h5-refinement-brief.md`，用于指导后续 React H5 精修。
+  - 已创建 `visual-reference-board.html` 作为本地可视化参考板。
+  - 已按 Source Batch 01 对 `LiveAuctionRoom` 做一轮 frontend-design 精修：竞拍浮卡、出价半屏、商品橱窗、结果弹窗更贴近抖音式竞拍直播间参考，同时保持 WebSocket 为实时真理源。
+  - 已补充 `mobile-screenshot-qa-2026-06-02.md`，记录 390x844 主屏、出价半屏、商品橱窗和桌面烟测截图验收结果；下一步建议在直播间确认后单独开启 `h5-profile-search-expansion`。
+  - 当前会话没有可调用的 Figma MCP 工具；已创建 repo-local Figma 文件结构模板和移动端截图验收模板，后续不能声称 Figma 高保真视觉完成，直到 Figma 文件实际落地。
+
+- `h5-discovery-live-feed`
+  - 分支：`codex/frontend-experience-integration`
+  - OpenSpec change：`openspec/changes/h5-discovery-live-feed/`
+  - 二期用户已选择搜索/发现优先，并确认 `直播流入口` 方案。
+  - 已锁定 `/app/auctions` 从普通竞拍大厅升级为 H5 `发现竞拍` 入口：搜索视觉、频道 chips、大直播卡、双列拍品卡、订单/我的入口。
+  - 首版只使用现有 `listAuctionLobby()` / `AuctionLobbyItem[]`；搜索和频道是本地筛选/展示能力，不新增后端搜索、热榜、WebSocket 或竞拍语义。
+  - 已创建 `docs/superpowers/plans/2026-06-02-h5-discovery-live-feed.md`，实现计划覆盖本地筛选测试、发现页视觉壳、频道 chips、hero 优先级、状态验收和移动端截图。
+  - 已实现 `/app/auctions` H5 `发现竞拍` 直播流入口：本地搜索/筛选、频道 chips、大直播卡、双列拍品卡、订单/我的入口、加载/错误/空态/本地筛选空态，以及可访问性状态。
+  - 已通过 `AuctionLobby` 测试、前端 build、OpenSpec strict、diff 检查、移动端截图 smoke、subagent spec review 和 code-quality review。
+  - 个人主页改版、真实后端搜索和真实热榜排序继续后置。
+
+- `merchant-live-media`
+  - 分支：`codex/frontend-experience-integration`
+  - OpenSpec change：`openspec/changes/merchant-live-media/`
+  - 已实现商家为每个商品配置一个直播间素材：后端 `product_live_media` 表、`/api/v1/products/:id/live-media` 上传/替换/删除、`/static/live-media` 静态服务、商品详情和 WebSocket snapshot 的可选 `live_media` 字段。
+  - 商家 `ProductForm` 已新增 `直播间素材` 区块，支持新建暂存上传、草稿编辑直接替换/删除、预览、错误提示和非草稿只读。
+  - 用户端 `LiveAuctionRoom` 已优先渲染商家上传的图片/视频作为直播间舞台背景；没有 live media 时继续使用当前 fallback staged scene。
+  - 大厅和订单摘要图仍以 `product_images` 为来源；已有 lobby/order 回归测试保护不被 live media 覆盖。
+  - Demo seed 现在通过真实上传接口注入 live media；本地预览种子 `mpxxsy9z` 创建 auction `1802`，可用 `/app/auctions/1802` 查看。
+  - 自动验证和浏览器预览已通过；commit/push 暂停等待用户确认。
 
 ## 关键业务决策
 

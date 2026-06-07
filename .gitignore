@@ -7,3 +7,4 @@ backend/static/avatars/*
 !backend/static/avatars/.gitkeep
 backend/static/images/*
 !backend/static/images/.gitkeep
+backend/static/live-media/*

@@ -59,7 +59,7 @@ func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realti
 	dashboardSvc := service.NewMerchantDashboardService(dashboardRepo)
 
 	authH := handler.NewAuthHandler(authSvc)
-	productH := handler.NewProductHandler(productSvc, cfg.ImageDir)
+	productH := handler.NewProductHandler(productSvc, cfg.ImageDir, cfg.LiveMediaDir)
 	auctionH := handler.NewAuctionHandler(auctionSvc)
 	orderH := handler.NewOrderHandler(orderSvc)
 	dashboardH := handler.NewMerchantDashboardHandler(dashboardSvc)

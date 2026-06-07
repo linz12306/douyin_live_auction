@@ -54,6 +54,6 @@ describe('Merchant OrderList', () => {
     expect(await screen.findByText('限量手袋')).toBeInTheDocument();
     expect(screen.getByText('买家：小林')).toBeInTheDocument();
     expect(screen.getByText('¥520.00')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '查看订单' })).toHaveAttribute('href', '/merchant/orders/12');
+    expect(screen.getByRole('link', { name: '详情大区 ›' })).toHaveAttribute('href', '/merchant/orders/12');
   });
 });

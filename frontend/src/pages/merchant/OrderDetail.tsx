@@ -79,70 +79,85 @@ export default function OrderDetail() {
   usePageRefresh(loadOrder, { disabled: !Number.isFinite(orderId) || orderId <= 0 });
 
   if (loading) {
-    return <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 px-4 py-10 text-center text-white/60">加载中...</div>;
+    return (
+      <div className="min-h-screen bg-[#080b11] flex items-center justify-center text-slate-400/80">
+        <p className="text-sm font-semibold">加载中...</p>
+      </div>
+    );
   }
   if (!order) {
-    return <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 px-4 py-10 text-center text-white/60">{error || '订单不存在'}</div>;
+    return (
+      <div className="min-h-screen bg-[#080b11] flex items-center justify-center text-slate-400/80">
+        <p className="text-sm font-semibold">{error || '订单不存在'}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800">
-      <main className="mx-auto max-w-4xl px-4 py-8">
-        <div className="mb-4 flex flex-wrap gap-2">
-          <PageBackButton fallback="/merchant/orders" />
+    <div className="min-h-screen bg-[#080b11] relative overflow-hidden text-white">
+      {/* 背景光效 */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/3 blur-[120px] pointer-events-none" />
+
+      <main className="mx-auto max-w-4xl px-4 py-8 relative z-10">
+        <div className="mb-6 flex flex-wrap gap-2">
+          <PageBackButton fallback="/merchant/orders" className="border-white/10 bg-white/5 hover:bg-white/10" />
           <button
             type="button"
             onClick={() => void loadOrder()}
             disabled={refreshing}
-            className="rounded-lg border border-white/20 bg-white/8 px-3 py-2 text-sm text-white/75 hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white/80 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {refreshing ? '刷新中...' : '刷新状态'}
           </button>
         </div>
 
-        <section className="rounded-lg border border-white/20 bg-white/10 p-5 backdrop-blur-lg">
-          <div className="flex items-start gap-5">
-            <div className="h-28 w-28 shrink-0 overflow-hidden rounded-lg bg-white/5">
+        <section className="rounded-2xl border border-white/8 bg-[#111422]/60 p-6 backdrop-blur-xl shadow-2xl shadow-black/40">
+          <div className="flex flex-col md:flex-row items-start gap-6 border-b border-white/5 pb-6">
+            <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-slate-950 border border-white/5 shadow-inner">
               {order.product_image_url ? (
                 <img src={order.product_image_url} alt={order.product_title} className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full items-center justify-center text-xs text-white/40">无图</div>
+                <div className="flex h-full items-center justify-center text-xs text-slate-500">暂无图</div>
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-3">
-                <h1 className="break-words text-2xl font-bold text-white">{order.product_title}</h1>
-                <span className="shrink-0 rounded border border-white/20 bg-white/10 px-2 py-1 text-xs text-white/80">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <h1 className="break-words text-2xl font-black bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent tracking-tight leading-snug">{order.product_title}</h1>
+                <span className="shrink-0 inline-block px-3 py-1 rounded-full text-xs font-black tracking-wide border uppercase border-purple-500/25 bg-purple-500/10 text-purple-300">
                   {statusText(order.status)}
                 </span>
               </div>
-              <p className="mt-2 text-sm text-white/60">{order.product_description || '暂无商品介绍'}</p>
-              <p className="mt-3 text-sm text-white/75">买家：{order.buyer_name || `用户 ${order.buyer_id}`}</p>
+              <p className="mt-2 text-sm text-slate-400 leading-relaxed">{order.product_description || '暂无商品详情介绍'}</p>
+              <p className="mt-4 text-sm text-slate-400 font-semibold">
+                {"买家：" + (order.buyer_name || `用户 ${order.buyer_id}`)}
+              </p>
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg bg-white/8 p-3">
-              <div className="text-xs text-white/45">成交金额</div>
-              <div className="mt-1 text-2xl font-bold text-green-200">{formatPrice(order.amount)}</div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">成交金额</div>
+              <div className="mt-1 text-2xl font-black text-transparent bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text tabular-nums">{formatPrice(order.amount)}</div>
             </div>
-            <div className="rounded-lg bg-white/8 p-3">
-              <div className="text-xs text-white/45">创建时间</div>
-              <div className="mt-1 text-sm text-white/85">{formatTime(order.created_at)}</div>
+            <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">创建时间</div>
+              <div className="mt-1 text-sm font-bold text-slate-200">{formatTime(order.created_at)}</div>
             </div>
-            <div className="rounded-lg bg-white/8 p-3">
-              <div className="text-xs text-white/45">确认时间</div>
-              <div className="mt-1 text-sm text-white/85">{formatTime(order.confirmed_at)}</div>
+            <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">确认时间</div>
+              <div className="mt-1 text-sm font-bold text-slate-200">{formatTime(order.confirmed_at)}</div>
             </div>
-            <div className="rounded-lg bg-white/8 p-3">
-              <div className="text-xs text-white/45">支付时间</div>
-              <div className="mt-1 text-sm text-white/85">{formatTime(order.paid_at)}</div>
+            <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">支付时间</div>
+              <div className="mt-1 text-sm font-bold text-slate-200">{formatTime(order.paid_at)}</div>
             </div>
           </div>
 
           {order.cancel_reason ? (
-            <div className="mt-4 rounded border border-red-400/40 bg-red-500/20 px-3 py-2 text-sm text-red-100">
-              取消原因：{order.cancel_reason}
+            <div className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 flex items-center gap-2">
+              <span className="shrink-0 text-rose-400 font-bold">⚠️</span>
+              <span className="font-semibold">取消原因：{order.cancel_reason}</span>
             </div>
           ) : null}
         </section>

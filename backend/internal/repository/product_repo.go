@@ -77,6 +77,26 @@ func (r *ProductRepo) FindImages(productID int64) ([]model.ProductImage, error) 
 	return images, nil
 }
 
+func (r *ProductRepo) FindLiveMedia(productID int64) (*model.ProductLiveMedia, error) {
+	media := &model.ProductLiveMedia{}
+	var posterURL sql.NullString
+	err := r.db.QueryRow(
+		`SELECT product_id, media_type, media_url, poster_url, created_at, updated_at
+         FROM product_live_media WHERE product_id = ?`, productID,
+	).Scan(&media.ProductID, &media.MediaType, &media.MediaURL, &posterURL, &media.CreatedAt, &media.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if posterURL.Valid {
+		value := posterURL.String
+		media.PosterURL = &value
+	}
+	return media, nil
+}
+
 func (r *ProductRepo) ListByMerchant(merchantID int64, status string, page, size int) ([]model.Product, int, error) {
 	var total int
 	args := []interface{}{merchantID}
@@ -178,6 +198,21 @@ func (r *ProductRepo) Update(p *model.Product) error {
 
 func (r *ProductRepo) UpdateStatus(id int64, status string) error {
 	_, err := r.db.Exec(`UPDATE products SET status = ? WHERE id = ?`, status, id)
+	return err
+}
+
+func (r *ProductRepo) UpsertLiveMedia(productID int64, mediaType, mediaURL string, posterURL *string) error {
+	_, err := r.db.Exec(
+		`INSERT INTO product_live_media (product_id, media_type, media_url, poster_url)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE media_type = VALUES(media_type), media_url = VALUES(media_url), poster_url = VALUES(poster_url)`,
+		productID, mediaType, mediaURL, posterURL,
+	)
+	return err
+}
+
+func (r *ProductRepo) DeleteLiveMedia(productID int64) error {
+	_, err := r.db.Exec(`DELETE FROM product_live_media WHERE product_id = ?`, productID)
 	return err
 }
 

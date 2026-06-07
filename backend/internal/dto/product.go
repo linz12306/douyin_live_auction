@@ -38,9 +38,10 @@ type ProductListQuery struct {
 }
 
 type ProductDetailResponse struct {
-	Product model.Product        `json:"product"`
-	Images  []model.ProductImage `json:"images"`
-	Auction *model.Auction       `json:"auction"`
+	Product   model.Product           `json:"product"`
+	Images    []model.ProductImage    `json:"images"`
+	LiveMedia *model.ProductLiveMedia `json:"live_media,omitempty"`
+	Auction   *model.Auction          `json:"auction"`
 }
 
 type AuctionLobbyItem struct {
