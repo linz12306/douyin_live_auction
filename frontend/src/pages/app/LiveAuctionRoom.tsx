@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { placeBid } from '../../api/auction';
 import heroFallback from '../../assets/hero.png';
@@ -27,6 +27,15 @@ const CONNECTION_TEXT = {
   closed: '已断开',
   error: '连接异常',
 };
+
+const LIVE_ROOM_STAGE_CLASS = 'relative mx-auto h-[100svh] min-h-[640px] w-full max-w-[430px] overflow-hidden bg-black shadow-2xl shadow-black/50 lg:h-[860px] lg:min-h-0 lg:rounded-[8px] lg:border lg:border-white/10';
+const LIVE_ROOM_TOP_CLASS = 'absolute left-0 right-0 top-0 z-30 px-3 pt-10 sm:pt-3';
+const LIVE_ROOM_MESSAGE_CLASS = 'absolute bottom-[7.25rem] left-3 z-20 w-[52%] max-w-[224px]';
+const LIVE_ROOM_FLOATING_CARD_CLASS = 'absolute bottom-[7.15rem] right-3 z-30 w-[45%] min-w-[172px] max-w-[196px]';
+const LIVE_ROOM_BOTTOM_CLASS = 'absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black via-black/82 to-transparent px-3 pb-3 pt-9';
+const PRESSABLE_CLASS = 'transition duration-150 active:scale-95 active:brightness-110 disabled:active:scale-100';
+const TILE_BUTTON_CLASS = `rounded-[8px] border border-white/12 bg-white/14 shadow-lg shadow-black/20 backdrop-blur ${PRESSABLE_CLASS}`;
+const PRIMARY_ACTION_CLASS = 'shadow-lg transition duration-150 active:scale-[0.98] disabled:active:scale-100';
 
 const SHELF_DEMO_ITEMS = [
   { title: '金镶玉平安扣吊坠', state: '即将开拍', priceLabel: '起拍价', price: '¥1200', action: '去看看', note: '演示货架' },
@@ -116,9 +125,9 @@ function ActionRailButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="group flex w-11 flex-col items-center gap-1 text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)]"
+      className="group flex w-11 flex-col items-center gap-1 text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)] transition duration-150 active:scale-95"
     >
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/38 text-xs font-black shadow-lg shadow-black/30 backdrop-blur-xl transition group-hover:scale-105">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/18 bg-white/16 text-[11px] font-black shadow-lg shadow-black/30 backdrop-blur-xl transition group-hover:bg-white/22">
         {children}
       </span>
       <span className="max-w-11 truncate rounded-full bg-black/28 px-1.5 py-0.5 text-[10px] font-semibold backdrop-blur">{value}</span>
@@ -170,6 +179,8 @@ export default function LiveAuctionRoom() {
   const [bidSheetOpen, setBidSheetOpen] = useState(false);
   const [shelfOpen, setShelfOpen] = useState(false);
   const [resultDismissed, setResultDismissed] = useState(false);
+  const [pricePulse, setPricePulse] = useState(false);
+  const [pressedAction, setPressedAction] = useState('');
   const nowTick = useClockTick();
 
   const isValidAuctionId = Number.isFinite(auctionId) && auctionId > 0;
@@ -177,6 +188,9 @@ export default function LiveAuctionRoom() {
   const roomProduct = isCurrentRoom ? product : undefined;
   const roomStatus = isCurrentRoom ? status : undefined;
   const roomCurrentPrice = isCurrentRoom ? currentPrice : 0;
+  const lastRoomPriceRef = useRef<number | null>(roomCurrentPrice);
+  const pricePulseTimerRef = useRef<ReturnType<typeof window.setTimeout> | undefined>(undefined);
+  const pressedActionTimerRef = useRef<ReturnType<typeof window.setTimeout> | undefined>(undefined);
   const roomHighestBidderId = isCurrentRoom ? highestBidderId : undefined;
   const roomEndedAt = isCurrentRoom ? endedAt : undefined;
   const roomCurrentExtendCount = isCurrentRoom ? currentExtendCount : 0;
@@ -249,7 +263,7 @@ export default function LiveAuctionRoom() {
   }, [isCurrentRoom, isLeading, isOutbid, pending, terminal]);
 
   const roomMessages = useMemo(() => {
-    const realtimeMessages = roomNotifications.slice(0, 4).map((item) => ({
+    const realtimeMessages = roomNotifications.slice(0, 3).map((item) => ({
       id: item.id,
       type: item.type,
       message: item.message,
@@ -278,6 +292,47 @@ export default function LiveAuctionRoom() {
     if (terminal) setResultDismissed(false);
   }, [auctionId, roomStatus, terminal]);
 
+  useEffect(() => {
+    if (!isCurrentRoom) {
+      lastRoomPriceRef.current = null;
+      setPricePulse(false);
+      if (pricePulseTimerRef.current) {
+        window.clearTimeout(pricePulseTimerRef.current);
+        pricePulseTimerRef.current = undefined;
+      }
+      return;
+    }
+
+    if (lastRoomPriceRef.current === null) {
+      lastRoomPriceRef.current = roomCurrentPrice;
+      return;
+    }
+
+    if (lastRoomPriceRef.current === roomCurrentPrice) return;
+
+    lastRoomPriceRef.current = roomCurrentPrice;
+    setPricePulse(true);
+    if (pricePulseTimerRef.current) window.clearTimeout(pricePulseTimerRef.current);
+    pricePulseTimerRef.current = window.setTimeout(() => {
+      setPricePulse(false);
+      pricePulseTimerRef.current = undefined;
+    }, 900);
+  }, [isCurrentRoom, roomCurrentPrice]);
+
+  useEffect(() => () => {
+    if (pricePulseTimerRef.current) window.clearTimeout(pricePulseTimerRef.current);
+    if (pressedActionTimerRef.current) window.clearTimeout(pressedActionTimerRef.current);
+  }, []);
+
+  function markPressed(action: string) {
+    setPressedAction(action);
+    if (pressedActionTimerRef.current) window.clearTimeout(pressedActionTimerRef.current);
+    pressedActionTimerRef.current = window.setTimeout(() => {
+      setPressedAction((currentAction) => (currentAction === action ? '' : currentAction));
+      pressedActionTimerRef.current = undefined;
+    }, 220);
+  }
+
   async function submitBid(amount: number) {
     if (bidDisabled || isLeading || !Number.isFinite(amount) || amount <= 0) return;
     setBidError('');
@@ -300,6 +355,7 @@ export default function LiveAuctionRoom() {
 
   function openBidSheet() {
     if (!isCurrentRoom || terminal) return;
+    markPressed('bid');
     setShelfOpen(false);
     setBidSheetOpen(true);
   }
@@ -308,7 +364,7 @@ export default function LiveAuctionRoom() {
 
   return (
     <div className="min-h-screen bg-[#07080b] text-white lg:grid lg:place-items-center lg:px-6 lg:py-6">
-      <main className="relative mx-auto h-[100svh] min-h-[640px] w-full max-w-[430px] overflow-hidden bg-black shadow-2xl shadow-black/50 lg:h-[860px] lg:min-h-0 lg:rounded-[8px] lg:border lg:border-white/10">
+      <main className={LIVE_ROOM_STAGE_CLASS}>
         {liveMedia?.type === 'video' ? (
           <video
             data-testid="live-room-media-video"
@@ -365,7 +421,7 @@ export default function LiveAuctionRoom() {
           <span className="tracking-[0.18em]">▮▮▮  WiFi  73</span>
         </div>
 
-        <header className="absolute left-0 right-0 top-0 z-30 px-3 pt-10 sm:pt-3">
+        <header className={LIVE_ROOM_TOP_CLASS}>
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1 rounded-full bg-black/36 px-2 py-2 shadow-lg shadow-black/20 backdrop-blur-xl">
               <div className="flex min-w-0 items-center gap-2">
@@ -424,7 +480,7 @@ export default function LiveAuctionRoom() {
           </div>
         </section>
 
-        <section className="absolute bottom-28 left-3 z-20 w-[58%] max-w-[258px]" aria-live="polite">
+        <section className={LIVE_ROOM_MESSAGE_CLASS} aria-live="polite">
           <h2 className="sr-only">实时消息</h2>
           <ul className="space-y-1">
             {roomMessages.map((item) => (
@@ -443,13 +499,13 @@ export default function LiveAuctionRoom() {
         </section>
 
         <aside className="absolute right-3 top-[42%] z-20 flex -translate-y-1/2 flex-col items-center gap-3">
-          <ActionRailButton label="人气榜" value="人气榜">榜</ActionRailButton>
-          <ActionRailButton label="点赞" value="12.8w">心</ActionRailButton>
-          <ActionRailButton label="礼物" value="礼物">礼</ActionRailButton>
-          <ActionRailButton label="分享" value="168">↗</ActionRailButton>
+          <ActionRailButton label="人气榜" value="人气榜">榜单</ActionRailButton>
+          <ActionRailButton label="点赞" value="12.8w">赞</ActionRailButton>
+          <ActionRailButton label="礼物" value="礼物">礼物</ActionRailButton>
+          <ActionRailButton label="分享" value="168">分享</ActionRailButton>
         </aside>
 
-        <section className="absolute bottom-28 right-3 z-30 w-[48%] min-w-[184px] max-w-[206px]">
+        <section className={LIVE_ROOM_FLOATING_CARD_CLASS}>
           <div className={`overflow-hidden rounded-[18px] bg-white/96 text-zinc-950 shadow-2xl shadow-black/45 backdrop-blur ${
             isOutbid
               ? 'ring-2 ring-rose-300/80'
@@ -477,7 +533,28 @@ export default function LiveAuctionRoom() {
             </div>
             <div className="bg-gradient-to-br from-[#315dff] to-[#7338ff] px-3 py-3 text-white">
               <div className="text-[12px] font-semibold text-white/80">{shelfPriceLabel(roomStatus, bidCount)}</div>
-              <div className="mt-1 whitespace-nowrap text-[30px] font-black leading-none tabular-nums">{formatPrice(roomCurrentPrice)}</div>
+              <div
+                className={`mt-1 whitespace-nowrap text-[26px] font-black leading-none tabular-nums transition duration-300 ${
+                  pricePulse ? 'scale-[1.03] text-amber-100 drop-shadow-[0_0_14px_rgba(255,255,255,0.72)] animate-pulse' : ''
+                }`}
+              >
+                {formatPrice(roomCurrentPrice)}
+              </div>
+              {pricePulse ? (
+                <div role="status" aria-live="polite" className="mt-1 text-[11px] font-black text-amber-100">
+                  价格已更新
+                </div>
+              ) : null}
+              {isLeading ? (
+                <div className="mt-1 rounded bg-white/16 px-2 py-1 text-[11px] font-black text-white">
+                  领先中，保持住
+                </div>
+              ) : null}
+              {isOutbid ? (
+                <div className="mt-1 rounded bg-rose-500/80 px-2 py-1 text-[11px] font-black text-white">
+                  已被超过，点出价追回
+                </div>
+              ) : null}
               <button type="button" className="mt-2 rounded-full border border-white/20 px-2 py-1 text-[11px] font-bold text-white/90">
                 出价记录 ›
               </button>
@@ -485,7 +562,7 @@ export default function LiveAuctionRoom() {
             <div className="bg-white px-3 py-2">
               <div className="flex items-end justify-between gap-2">
                 <span className="text-[12px] font-semibold text-zinc-500">倒计时</span>
-                <span className={`font-mono text-[30px] font-black leading-none tabular-nums ${urgent ? 'text-rose-500' : 'text-rose-400'}`}>
+                <span className={`font-mono text-[26px] font-black leading-none tabular-nums ${urgent ? 'text-rose-500' : 'text-rose-400'}`}>
                   {formatCountdown(countdownMs)}
                 </span>
               </div>
@@ -500,14 +577,16 @@ export default function LiveAuctionRoom() {
               aria-label="打开出价面板"
               disabled={!isCurrentRoom || terminal}
               onClick={openBidSheet}
-              className="h-14 w-full bg-gradient-to-r from-rose-500 to-red-500 px-3 text-xl font-black text-white transition hover:from-rose-400 hover:to-red-400 disabled:cursor-not-allowed disabled:from-zinc-200 disabled:to-zinc-200 disabled:text-zinc-500"
+              className={`${PRIMARY_ACTION_CLASS} h-14 w-full bg-gradient-to-r from-rose-500 to-red-500 px-3 text-xl font-black text-white hover:from-rose-400 hover:to-red-400 disabled:cursor-not-allowed disabled:from-zinc-200 disabled:to-zinc-200 disabled:text-zinc-500 ${
+                pressedAction === 'bid' ? 'scale-[0.98] brightness-110' : ''
+              }`}
             >
               {floatingActionText === '立即出价' ? '出价' : floatingActionText}
             </button>
           </div>
         </section>
 
-        <footer className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black via-black/82 to-transparent px-3 pb-3 pt-10">
+        <footer className={LIVE_ROOM_BOTTOM_CLASS}>
           <div className="flex items-center gap-2">
             <label className="min-w-0 flex-1">
               <span className="sr-only">直播间评论</span>
@@ -523,9 +602,12 @@ export default function LiveAuctionRoom() {
               aria-label="打开商品橱窗"
               onClick={() => {
                 setBidSheetOpen(false);
+                markPressed('shelf');
                 setShelfOpen(true);
               }}
-              className="relative h-12 w-12 rounded-[8px] border border-white/12 bg-white/12 text-sm font-bold text-white shadow-lg shadow-black/20 backdrop-blur"
+              className={`${TILE_BUTTON_CLASS} relative flex h-12 w-12 flex-col items-center justify-center text-[11px] font-black text-white ${
+                pressedAction === 'shelf' ? 'scale-95 ring-2 ring-white/50 brightness-110' : ''
+              }`}
             >
               <span className="absolute -right-1 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-black text-white">24</span>
               商品
@@ -535,14 +617,16 @@ export default function LiveAuctionRoom() {
               aria-label="底部竞拍入口"
               disabled={!isCurrentRoom || terminal}
               onClick={openBidSheet}
-              className="h-12 w-12 rounded-[8px] bg-amber-300 text-sm font-black text-zinc-950 shadow-lg shadow-black/20 disabled:cursor-not-allowed disabled:bg-white/18 disabled:text-white/45"
+              className={`${PRIMARY_ACTION_CLASS} flex h-12 w-12 flex-col items-center justify-center rounded-[8px] bg-gradient-to-br from-amber-200 to-rose-400 text-[11px] font-black text-zinc-950 shadow-lg shadow-black/20 disabled:cursor-not-allowed disabled:from-white/18 disabled:to-white/18 disabled:text-white/45 ${
+                pressedAction === 'bid' ? 'scale-95 ring-2 ring-white/60 brightness-110' : ''
+              }`}
             >
               竞拍
             </button>
             <Link
               to="/app/orders"
               aria-label="查看我的订单"
-              className="flex h-12 w-12 items-center justify-center rounded-[8px] border border-white/12 bg-white/12 text-sm font-bold text-white shadow-lg shadow-black/20 backdrop-blur"
+              className={`${TILE_BUTTON_CLASS} flex h-12 w-12 flex-col items-center justify-center text-[11px] font-black text-white`}
             >
               订单
             </Link>
@@ -555,7 +639,7 @@ export default function LiveAuctionRoom() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="shelf-title"
-              className="absolute bottom-0 left-0 right-0 max-h-[72vh] rounded-t-xl bg-white px-3 pb-5 pt-3 text-zinc-950 shadow-2xl"
+              className="absolute bottom-0 left-0 right-0 max-h-[76vh] overflow-y-auto rounded-t-xl bg-white px-3 pb-5 pt-3 text-zinc-950 shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -625,7 +709,7 @@ export default function LiveAuctionRoom() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="bid-sheet-title"
-              className="absolute bottom-0 left-0 right-0 max-h-[82vh] overflow-y-auto rounded-t-xl bg-gradient-to-br from-rose-50 via-white to-sky-50 px-4 pb-5 pt-4 text-zinc-950 shadow-2xl"
+              className="absolute bottom-0 left-0 right-0 max-h-[76vh] overflow-y-auto rounded-t-xl bg-gradient-to-br from-rose-50 via-white to-sky-50 px-4 pb-5 pt-4 text-zinc-950 shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -691,7 +775,7 @@ export default function LiveAuctionRoom() {
                   aria-label="减少出价金额"
                   disabled={bidDisabled || isLeading}
                   onClick={() => adjustCustomAmount(-1)}
-                  className="h-12 rounded-md border border-zinc-200 bg-white text-2xl font-black text-zinc-500 shadow-sm disabled:cursor-not-allowed disabled:opacity-35"
+                  className={`${PRESSABLE_CLASS} h-12 rounded-lg border border-zinc-200 bg-white text-2xl font-black text-zinc-600 shadow-sm disabled:cursor-not-allowed disabled:opacity-35`}
                 >
                   -
                 </button>
@@ -714,7 +798,7 @@ export default function LiveAuctionRoom() {
                   aria-label="增加出价金额"
                   disabled={bidDisabled || isLeading}
                   onClick={() => adjustCustomAmount(1)}
-                  className="h-12 rounded-md border border-zinc-200 bg-white text-2xl font-black text-zinc-600 shadow-sm disabled:cursor-not-allowed disabled:opacity-35"
+                  className={`${PRESSABLE_CLASS} h-12 rounded-lg border border-zinc-200 bg-white text-2xl font-black text-zinc-600 shadow-sm disabled:cursor-not-allowed disabled:opacity-35`}
                 >
                   +
                 </button>
@@ -724,7 +808,7 @@ export default function LiveAuctionRoom() {
                 type="button"
                 disabled={bidDisabled || isLeading}
                 onClick={() => submitBid(primaryBidAmount)}
-                className="mt-4 h-14 w-full rounded-full bg-gradient-to-r from-rose-400 to-rose-600 px-4 text-lg font-black text-white shadow-lg shadow-rose-500/25 transition hover:from-rose-300 hover:to-rose-500 disabled:cursor-not-allowed disabled:from-zinc-200 disabled:to-zinc-200 disabled:text-zinc-500 disabled:shadow-none"
+                className={`${PRIMARY_ACTION_CLASS} mt-4 h-14 w-full rounded-full bg-gradient-to-r from-rose-500 to-red-500 px-4 text-lg font-black text-white shadow-lg shadow-rose-500/25 hover:from-rose-400 hover:to-red-400 disabled:cursor-not-allowed disabled:from-zinc-200 disabled:to-zinc-200 disabled:text-zinc-500 disabled:shadow-none`}
               >
                 {sheetPrimaryText}
               </button>
@@ -733,7 +817,7 @@ export default function LiveAuctionRoom() {
                 type="button"
                 disabled={bidDisabled || isLeading || !hasCustomAmount}
                 onClick={() => submitBid(customBidAmount)}
-                className="mt-2 h-11 w-full rounded-full border border-rose-200 bg-white px-3 text-sm font-bold text-rose-500 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400"
+                className={`${PRESSABLE_CLASS} mt-2 h-11 w-full rounded-full border border-rose-200 bg-white px-3 text-sm font-bold text-rose-500 shadow-sm hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400`}
               >
                 确认自定义出价
               </button>
@@ -753,55 +837,57 @@ export default function LiveAuctionRoom() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="result-title"
-              className="relative w-full rounded-xl bg-gradient-to-br from-rose-50 via-white to-sky-50 p-5 text-center text-zinc-950 shadow-2xl"
+              className="relative w-full rounded-xl bg-gradient-to-br from-rose-50 via-white to-sky-50 text-center text-zinc-950 shadow-2xl"
             >
               <div className="absolute -top-12 left-0 right-0 text-center text-3xl font-black text-white drop-shadow-lg">
                 {isWinner ? '恭喜竞拍成功' : roomStatus === 'ended_sold' ? '落槌定音' : displayStatus}
               </div>
-              <div className="mx-auto mb-3 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700">
-                {displayStatus}
-              </div>
-              <h2 id="result-title" className="sr-only">竞拍结果</h2>
-              <p className="text-sm leading-relaxed text-zinc-600">
-                {isWinner
-                  ? '恭喜竞拍成功，请前往订单确认并完成模拟支付。'
-                  : roomStatus === 'ended_sold'
-                    ? '本场拍品已落槌，您未中标，可以继续关注其他拍品。'
-                    : roomStatus === 'ended_no_bid'
-                      ? '本场暂无有效出价，拍品已流拍。'
-                      : '本场竞拍已取消，相关冻结金额会按规则释放。'}
-              </p>
-              <div className="mt-4 rounded-xl bg-white p-4 text-left shadow-sm">
-                <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-3">
-                  <img src={heroImage} alt="" className="h-[72px] w-[72px] rounded-lg object-cover" />
-                  <div className="min-w-0">
-                    <div className="line-clamp-2 text-sm font-black">{roomProduct?.title || '竞拍商品'}</div>
-                    <div className="mt-2 text-xs text-zinc-500">{isWinner ? '保证金 · 拍品付款后退回' : '最终成交价'}</div>
-                    <div className="mt-1 text-3xl font-black text-amber-700 tabular-nums">
-                      {formatPrice(roomFinalPrice ?? roomCurrentPrice)}
+              <div className="max-h-[82vh] overflow-y-auto p-5">
+                <div className="mx-auto mb-3 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700">
+                  {displayStatus}
+                </div>
+                <h2 id="result-title" className="sr-only">竞拍结果</h2>
+                <p className="text-sm leading-relaxed text-zinc-600">
+                  {isWinner
+                    ? '恭喜竞拍成功，请前往订单确认并完成模拟支付。'
+                    : roomStatus === 'ended_sold'
+                      ? '本场拍品已落槌，您未中标，可以继续关注其他拍品。'
+                      : roomStatus === 'ended_no_bid'
+                        ? '本场暂无有效出价，拍品已流拍。'
+                        : '本场竞拍已取消，相关冻结金额会按规则释放。'}
+                </p>
+                <div className="mt-4 rounded-xl bg-white p-4 text-left shadow-sm">
+                  <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-3">
+                    <img src={heroImage} alt="" className="h-[72px] w-[72px] rounded-lg object-cover" />
+                    <div className="min-w-0">
+                      <div className="line-clamp-2 text-sm font-black">{roomProduct?.title || '竞拍商品'}</div>
+                      <div className="mt-2 text-xs text-zinc-500">{isWinner ? '保证金 · 拍品付款后退回' : '最终成交价'}</div>
+                      <div className="mt-1 text-3xl font-black text-amber-700 tabular-nums">
+                        {formatPrice(roomFinalPrice ?? roomCurrentPrice)}
+                      </div>
                     </div>
                   </div>
+                  {roomTerminalMessage ? (
+                    <div className="mt-3 rounded bg-zinc-50 px-3 py-2 text-xs text-zinc-500">{roomTerminalMessage}</div>
+                  ) : null}
                 </div>
-                {roomTerminalMessage ? (
-                  <div className="mt-3 rounded bg-zinc-50 px-3 py-2 text-xs text-zinc-500">{roomTerminalMessage}</div>
-                ) : null}
-              </div>
-              <div className="mt-4 flex gap-2">
-                {isWinner ? (
-                  <Link
-                    to="/app/orders"
-                    className="flex h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-r from-rose-400 to-rose-600 px-3 text-sm font-black text-white shadow-lg shadow-rose-500/25"
+                <div className="mt-4 flex gap-2">
+                  {isWinner ? (
+                    <Link
+                      to="/app/orders"
+                      className="flex h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-r from-rose-400 to-rose-600 px-3 text-sm font-black text-white shadow-lg shadow-rose-500/25"
+                    >
+                      查看中标订单
+                    </Link>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setResultDismissed(true)}
+                    className="h-12 flex-1 rounded-full border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-700"
                   >
-                    查看中标订单
-                  </Link>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => setResultDismissed(true)}
-                  className="h-12 flex-1 rounded-full border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-700"
-                >
-                  继续看拍品
-                </button>
+                    继续看拍品
+                  </button>
+                </div>
               </div>
             </section>
           </div>

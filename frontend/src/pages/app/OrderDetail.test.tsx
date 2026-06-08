@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cancelOrder, confirmOrder, getOrder, payOrder } from '../../api/order';
@@ -66,7 +66,10 @@ describe('App OrderDetail', () => {
 
   it('shows confirm and cancel for pending_confirm orders', async () => {
     mockedGetOrder.mockResolvedValue(order('pending_confirm'));
-    mockedConfirmOrder.mockResolvedValue(order('pending_payment'));
+    let resolveConfirm: () => void = () => {};
+    mockedConfirmOrder.mockImplementation(() => new Promise((resolve) => {
+      resolveConfirm = () => resolve(order('pending_payment'));
+    }));
 
     renderDetail();
 
@@ -75,9 +78,19 @@ describe('App OrderDetail', () => {
     expect(screen.getByRole('button', { name: '确认中标订单' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '申请取消订单' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '确认中标订单' }));
+    const confirmButton = screen.getByRole('button', { name: '确认中标订单' });
+    fireEvent.click(confirmButton);
+    await waitFor(() => expect(confirmButton).toHaveTextContent('处理中...'));
+    expect(confirmButton).toBeDisabled();
+    fireEvent.click(confirmButton);
 
-    await waitFor(() => expect(mockedConfirmOrder).toHaveBeenCalledWith(9));
+    await waitFor(() => expect(mockedConfirmOrder).toHaveBeenCalledTimes(1));
+    expect(mockedConfirmOrder).toHaveBeenCalledWith(9);
+
+    await act(async () => {
+      resolveConfirm();
+    });
+    expect(await screen.findByText('待支付')).toBeInTheDocument();
   });
 
   it('shows pay for pending_payment orders', async () => {

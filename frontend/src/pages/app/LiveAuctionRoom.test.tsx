@@ -178,6 +178,7 @@ describe('LiveAuctionRoom', () => {
     await waitFor(() => expect(mockedPlaceBid).toHaveBeenCalledWith(7, 130));
     expect(useLiveRoomStore.getState().currentPrice).toBe(120);
     expect(screen.getAllByText('¥120.00').length).toBeGreaterThan(0);
+    expect(screen.queryByText('价格已更新')).not.toBeInTheDocument();
   });
 
   it('updates current price and the next bid button from websocket price_update messages', async () => {
@@ -211,6 +212,50 @@ describe('LiveAuctionRoom', () => {
     expect(screen.getAllByText('¥140.00').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: '打开出价面板' }));
     expect(screen.getByRole('button', { name: '立即出价 ¥150.00' })).toBeEnabled();
+  });
+
+  it('marks the visible price as updated only after websocket price_update', () => {
+    seedRoom({ notifications: [] });
+    renderRoom();
+
+    expect(screen.queryByText('价格已更新')).not.toBeInTheDocument();
+
+    act(() => {
+      useLiveRoomStore.getState().applyMessage({
+        type: 'price_update',
+        auction_id: 7,
+        version: 5,
+        server_time: '2026-05-28T10:00:01.000Z',
+        payload: {
+          current_price: 140,
+          highest_bidder_id: 4,
+          rankings: [
+            {
+              rank: 1,
+              user_id: 4,
+              display_name: '阿辰',
+              avatar_url: '',
+              amount: 140,
+              status: 'winning',
+              bid_time: '2026-05-28T10:00:01.000Z',
+            },
+          ],
+        },
+      });
+    });
+
+    expect(screen.getAllByText('¥140.00').length).toBeGreaterThan(0);
+    expect(screen.getByText('价格已更新')).toBeInTheDocument();
+  });
+
+  it('keeps polished live room controls discoverable', () => {
+    renderRoom();
+
+    expect(screen.getByRole('button', { name: '打开出价面板' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '打开商品橱窗' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '查看我的订单' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '点赞' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '分享' })).toBeInTheDocument();
   });
 
   it('refreshes the room snapshot on demand after merchant-side updates', async () => {

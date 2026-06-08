@@ -24,6 +24,9 @@ const STATUS_BADGE: Record<AuctionStatus, string> = {
 const DEFAULT_STATUS_BADGE = 'border-white/30 bg-white/10 text-white/70';
 const LOBBY_REFRESH_MS = 10000;
 const ENDING_SOON_MS = 10 * 60 * 1000;
+const PRESSABLE = 'transition duration-150 active:scale-[0.98] disabled:active:scale-100';
+const GHOST_BUTTON = `${PRESSABLE} rounded-full border border-white/12 bg-white/10 px-3 py-2 text-sm font-semibold text-white/78 shadow-lg shadow-black/10 hover:border-white/30 hover:bg-white/14 hover:text-white disabled:cursor-not-allowed disabled:opacity-50`;
+const PRIMARY_LINK = `${PRESSABLE} block rounded-full bg-gradient-to-r from-rose-400 to-red-500 px-4 py-3 text-center text-sm font-black text-white shadow-lg shadow-rose-950/25 hover:from-rose-300 hover:to-red-400`;
 
 const FILTERS = [
   { key: 'recommended', label: '推荐' },
@@ -196,19 +199,19 @@ export default function AuctionLobby() {
                 type="button"
                 onClick={() => void loadLobby()}
                 disabled={refreshing}
-                className="min-w-0 rounded-full border border-white/12 bg-white/8 px-3 py-2 text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className={`min-w-0 ${GHOST_BUTTON}`}
               >
                 {refreshing ? '刷新中...' : '刷新'}
               </button>
               <Link
                 to="/app/orders"
-                className="min-w-0 rounded-full border border-white/12 bg-white/8 px-3 py-2 text-center text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white"
+                className={`min-w-0 text-center ${GHOST_BUTTON}`}
               >
                 订单
               </Link>
               <Link
                 to="/profile"
-                className="min-w-0 rounded-full border border-white/12 bg-white/8 px-3 py-2 text-center text-sm font-medium text-white/75 transition hover:border-white/30 hover:text-white"
+                className={`min-w-0 text-center ${GHOST_BUTTON}`}
               >
                 我的
               </Link>
@@ -307,7 +310,7 @@ export default function AuctionLobby() {
                   <Link
                     to={`/app/auctions/${heroItem.auction_id}`}
                     aria-label={`进入直播：${heroItem.title}`}
-                    className="block rounded-full bg-rose-400 px-4 py-3 text-center text-sm font-black text-zinc-950 transition hover:bg-rose-300"
+                    className={PRIMARY_LINK}
                   >
                     进入直播
                   </Link>
@@ -338,7 +341,7 @@ export default function AuctionLobby() {
                         <Link
                           to={`/app/auctions/${item.auction_id}`}
                           aria-label={`进入直播：${item.title}`}
-                          className="shrink-0 rounded-full border border-rose-300/60 px-3 py-1.5 text-xs font-semibold text-rose-100 transition hover:bg-rose-400 hover:text-zinc-950"
+                          className={`${PRESSABLE} shrink-0 rounded-full bg-white/12 px-3 py-1.5 text-xs font-black text-rose-100 shadow-sm shadow-black/10 ring-1 ring-rose-300/50 hover:bg-rose-400 hover:text-zinc-950`}
                         >
                           进入直播
                         </Link>

@@ -11,6 +11,9 @@ const STATUS_TEXT: Record<OrderStatus, string> = {
   paid: '已支付',
   cancelled: '已取消',
 };
+const ACTION_ROW_CLASS = 'flex flex-col gap-3 sm:flex-row sm:flex-wrap';
+const PRIMARY_ORDER_ACTION = 'min-h-12 rounded-xl px-6 py-3 text-sm font-black shadow-lg transition duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100';
+const SECONDARY_ORDER_ACTION = 'min-h-12 rounded-xl border border-white/10 bg-white/8 px-6 py-3 text-sm font-bold text-slate-200 transition duration-150 hover:bg-white/12 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100';
 
 function formatPrice(value: number) {
   return `¥${Number(value || 0).toFixed(2)}`;
@@ -194,15 +197,15 @@ export default function OrderDetail() {
                   </div>
                 ) : null}
 
-                <div className="flex flex-wrap gap-3">
+                <div className={ACTION_ROW_CLASS}>
                   {order.actions.can_confirm ? (
                     <button
                       type="button"
                       disabled={submitting}
                       onClick={() => runAction('confirm')}
-                      className="rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-6 py-3 text-sm active:scale-[0.98] transition shadow-lg shadow-emerald-500/15 disabled:opacity-50 disabled:scale-100"
+                      className={`${PRIMARY_ORDER_ACTION} w-full bg-emerald-500 text-slate-950 shadow-emerald-500/15 hover:bg-emerald-400 sm:w-auto`}
                     >
-                      确认中标订单
+                      {submitting ? '处理中...' : '确认中标订单'}
                     </button>
                   ) : null}
                   {order.actions.can_pay ? (
@@ -210,9 +213,9 @@ export default function OrderDetail() {
                       type="button"
                       disabled={submitting}
                       onClick={() => runAction('pay')}
-                      className="rounded-xl bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-400 hover:to-red-400 text-white font-black px-6 py-3 text-sm active:scale-[0.98] transition shadow-lg shadow-rose-500/20 disabled:opacity-50 disabled:scale-100"
+                      className={`${PRIMARY_ORDER_ACTION} w-full bg-gradient-to-r from-rose-500 to-red-500 text-white shadow-rose-500/20 hover:from-rose-400 hover:to-red-400 sm:w-auto`}
                     >
-                      立即模拟支付
+                      {submitting ? '处理中...' : '立即模拟支付'}
                     </button>
                   ) : null}
                   {order.actions.can_cancel ? (
@@ -220,9 +223,9 @@ export default function OrderDetail() {
                       type="button"
                       disabled={submitting}
                       onClick={() => runAction('cancel')}
-                      className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 font-bold px-6 py-3 text-sm transition"
+                      className={`${SECONDARY_ORDER_ACTION} w-full sm:w-auto`}
                     >
-                      申请取消订单
+                      {submitting ? '处理中...' : '申请取消订单'}
                     </button>
                   ) : null}
                 </div>

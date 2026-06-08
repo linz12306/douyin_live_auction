@@ -156,9 +156,9 @@ export default function OrderList() {
                       </div>
                       <Link
                         to={`/app/orders/${order.id}`}
-                        className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-500/10 hover:bg-rose-400 transition-colors duration-200"
+                        className="rounded-xl bg-gradient-to-r from-rose-500 to-red-500 px-4 py-2 text-xs font-black text-white shadow-md shadow-rose-500/15 transition duration-150 hover:from-rose-400 hover:to-red-400 active:scale-[0.98]"
                       >
-                        详情大区 ›
+                        查看详情
                       </Link>
                     </div>
                   </div>

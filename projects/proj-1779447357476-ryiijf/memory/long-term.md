@@ -1,6 +1,6 @@
 # 项目长期记忆
 
-> 更新时间：2026-06-03
+> 更新时间：2026-06-08
 
 ## 用户偏好
 
@@ -74,6 +74,13 @@
   - Scope is intentionally single-process; no Redis Pub/Sub, Prometheus, or multi-instance aggregation.
 
 ## 当前进行中
+
+- `h5-live-ui-polish`
+  - 分支：`codex/user-live-ui-optimization`
+  - OpenSpec change：`openspec/changes/h5-live-ui-polish/`
+  - 已完成用户端 H5 精修：直播间移动端防遮挡、按钮视觉升级、点击反馈、WebSocket 驱动价格更新提示、领先/被超越提示，以及大厅/订单页的窄范围按钮一致性。
+  - 保持 WebSocket/Zustand 为实时真理源；REST 出价成功不直接改价格、排行、倒计时、延时、领先/被超越或终态。
+  - 已通过 focused buyer tests、全量 frontend tests、frontend build、OpenSpec strict、diff 检查和 390x844 Playwright smoke。
 
 - `frontend-experience-integration`
   - 分支：`codex/frontend-experience-integration`
