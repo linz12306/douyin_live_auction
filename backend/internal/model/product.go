@@ -11,4 +11,5 @@ type Product struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	AuctionID   *int64    `json:"auction_id,omitempty"`
+	ImageURL    *string   `json:"image_url,omitempty"`
 }

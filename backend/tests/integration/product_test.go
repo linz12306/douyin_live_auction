@@ -792,6 +792,9 @@ func TestMerchantListsProductsWithAuctionIDs(t *testing.T) {
 		if int64(rawAuctionID) != auctionID {
 			t.Fatalf("expected auction_id %d, got %#v", auctionID, item["auction_id"])
 		}
+		if item["image_url"] != "/static/images/monitor.jpg" {
+			t.Fatalf("expected merchant list image_url, got %#v", item["image_url"])
+		}
 		return
 	}
 	t.Fatalf("expected product %d in merchant list", productID)

@@ -141,8 +141,12 @@ export default function ProductList() {
                 <div className="text-sm font-black tabular-nums text-[#596575]">{String(index + 1).padStart(2, '0')}</div>
 
                 <div className="flex min-w-0 gap-3">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md border border-[#263241] bg-[#0B1016] text-[10px] font-black text-[#384553]">
-                    无图
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#263241] bg-[#0B1016] text-[10px] font-black text-[#384553]">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.title} className="h-full w-full object-cover" />
+                    ) : (
+                      '无图'
+                    )}
                   </div>
                   <div className="min-w-0">
                     <h2 className="truncate text-sm font-black text-white">{p.title}</h2>

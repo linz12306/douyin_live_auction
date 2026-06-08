@@ -82,7 +82,7 @@ describe('ProductList', () => {
 
   it('renders products as live control rows with ids, metrics, status, and links', async () => {
     mockedListProducts.mockResolvedValue({
-      items: [{ ...baseProduct, status: 'active', auction_id: 9 }],
+      items: [{ ...baseProduct, status: 'active', auction_id: 9, image_url: '/static/images/jacket.jpg' } as Product],
       total: 1,
       page: 1,
       size: 20,
@@ -96,6 +96,7 @@ describe('ProductList', () => {
 
     expect(await screen.findByRole('heading', { name: /直播商品|商品管理/ })).toBeInTheDocument();
     expect(screen.getByText('复古夹克')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '复古夹克' })).toHaveAttribute('src', '/static/images/jacket.jpg');
     expect(screen.getByText('商品ID 12')).toBeInTheDocument();
     expect(screen.getByText('竞拍ID 9')).toBeInTheDocument();
     expect(screen.getAllByText('竞拍中').length).toBeGreaterThan(0);

@@ -110,7 +110,8 @@ func (r *ProductRepo) ListByMerchant(merchantID int64, status string, page, size
 
 	offset := (page - 1) * size
 	rows, err := r.db.Query(
-		`SELECT p.id, p.merchant_id, p.title, p.description, p.status, p.created_at, p.updated_at, a.id
+		`SELECT p.id, p.merchant_id, p.title, p.description, p.status, p.created_at, p.updated_at, a.id,
+                (SELECT pi.image_url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.sort_order, pi.id LIMIT 1) AS image_url
          FROM products p
          LEFT JOIN auctions a ON a.product_id = p.id
          `+where+`
@@ -127,11 +128,15 @@ func (r *ProductRepo) ListByMerchant(merchantID int64, status string, page, size
 	for rows.Next() {
 		var p model.Product
 		var auctionID sql.NullInt64
-		if err := rows.Scan(&p.ID, &p.MerchantID, &p.Title, &p.Description, &p.Status, &p.CreatedAt, &p.UpdatedAt, &auctionID); err != nil {
+		var imageURL sql.NullString
+		if err := rows.Scan(&p.ID, &p.MerchantID, &p.Title, &p.Description, &p.Status, &p.CreatedAt, &p.UpdatedAt, &auctionID, &imageURL); err != nil {
 			return nil, 0, err
 		}
 		if auctionID.Valid {
 			p.AuctionID = &auctionID.Int64
+		}
+		if imageURL.Valid {
+			p.ImageURL = &imageURL.String
 		}
 		products = append(products, p)
 	}
