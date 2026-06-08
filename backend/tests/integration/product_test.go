@@ -706,6 +706,56 @@ func TestUserListsActiveAuctionLobbyRows(t *testing.T) {
 	}
 }
 
+func TestUserLobbyUsesUTCComparisonForActiveAuctions(t *testing.T) {
+	r, db := setupProductServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerMerchant(t, ts)
+	userToken := registerUser(t, ts)
+
+	activeProductID, activeAuctionID := createAndPublishProduct(t, ts, merchantToken, "UTC Lobby Product", "/static/images/utc.jpg")
+
+	_, err := db.Exec(
+		`UPDATE products p
+         JOIN auctions a ON a.product_id = p.id
+         SET p.status = 'active', a.status = 'active', a.started_at = UTC_TIMESTAMP(),
+             a.ended_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 MINUTE), a.current_price = 42
+         WHERE a.id = ?`,
+		activeAuctionID,
+	)
+	if err != nil {
+		t.Fatalf("activate utc lobby auction: %v", err)
+	}
+
+	resp, err := makeRequest("GET", ts.URL+"/api/v1/products?status=active&page=1&size=20", userToken, nil)
+	if err != nil {
+		t.Fatalf("list utc lobby rows failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected list 200, got %d", resp.StatusCode)
+	}
+
+	var listResult map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&listResult); err != nil {
+		t.Fatalf("decode utc lobby list response: %v", err)
+	}
+	data := listResult["data"].(map[string]interface{})
+	items, ok := data["items"].([]interface{})
+	if !ok {
+		t.Fatalf("expected lobby items array containing UTC active product %d, got %#v", activeProductID, data["items"])
+	}
+
+	for _, rawItem := range items {
+		item := rawItem.(map[string]interface{})
+		if int64(item["product_id"].(float64)) == activeProductID {
+			return
+		}
+	}
+	t.Fatalf("expected UTC active product %d in lobby items, got %d items", activeProductID, len(items))
+}
+
 func TestMerchantListsProductsWithAuctionIDs(t *testing.T) {
 	r, _ := setupProductServer(t)
 	ts := httptest.NewServer(r)

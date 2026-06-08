@@ -139,7 +139,7 @@ func (r *ProductRepo) ListByMerchant(merchantID int64, status string, page, size
 }
 
 func (r *ProductRepo) ListAuctionLobby(page, size int) ([]dto.AuctionLobbyItem, int, error) {
-	where := `WHERE p.status = 'active' AND a.status = 'active' AND a.ended_at > NOW()`
+	where := `WHERE p.status = 'active' AND a.status = 'active' AND a.ended_at > UTC_TIMESTAMP()`
 
 	var total int
 	if err := r.db.QueryRow("SELECT COUNT(*) FROM products p JOIN auctions a ON a.product_id = p.id " + where).Scan(&total); err != nil {
