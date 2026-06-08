@@ -258,6 +258,62 @@ describe('LiveAuctionRoom', () => {
     expect(screen.getByRole('button', { name: '分享' })).toBeInTheDocument();
   });
 
+  it('deduplicates leaderboard rows by bidder before rendering the top three', () => {
+    seedRoom({
+      rankings: [
+        {
+          rank: 1,
+          user_id: 3,
+          display_name: '小林',
+          avatar_url: '',
+          amount: 160,
+          status: 'winning',
+          bid_time: '2026-05-28T10:00:03.000Z',
+        },
+        {
+          rank: 2,
+          user_id: 4,
+          display_name: '阿辰',
+          avatar_url: '',
+          amount: 150,
+          status: 'outbid',
+          bid_time: '2026-05-28T10:00:02.000Z',
+        },
+        {
+          rank: 3,
+          user_id: 3,
+          display_name: '小林',
+          avatar_url: '',
+          amount: 140,
+          status: 'outbid',
+          bid_time: '2026-05-28T10:00:01.000Z',
+        },
+      ],
+    });
+
+    renderRoom();
+
+    expect(screen.getAllByText('小林')).toHaveLength(1);
+    expect(screen.getByText('阿辰')).toBeInTheDocument();
+  });
+
+  it('renders a scrollable live message feed with historical notifications', () => {
+    seedRoom({
+      notifications: Array.from({ length: 8 }, (_, index) => ({
+        id: `history-${index}`,
+        type: index === 0 ? 'outbid' : 'bid',
+        message: `历史消息 ${index + 1}`,
+      })),
+    });
+
+    renderRoom();
+
+    const feed = screen.getByTestId('live-room-message-feed');
+    expect(feed).toHaveClass('overflow-y-auto');
+    expect(screen.getByText('历史消息 1')).toBeInTheDocument();
+    expect(screen.getByText('历史消息 8')).toBeInTheDocument();
+  });
+
   it('refreshes the room snapshot on demand after merchant-side updates', async () => {
     renderRoom();
 

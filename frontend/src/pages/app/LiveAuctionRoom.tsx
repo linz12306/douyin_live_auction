@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { placeBid } from '../../api/auction';
 import heroFallback from '../../assets/hero.png';
@@ -30,7 +30,7 @@ const CONNECTION_TEXT = {
 
 const LIVE_ROOM_STAGE_CLASS = 'relative mx-auto h-[100svh] min-h-[640px] w-full max-w-[430px] overflow-hidden bg-black shadow-2xl shadow-black/50 lg:h-[860px] lg:min-h-0 lg:rounded-[8px] lg:border lg:border-white/10';
 const LIVE_ROOM_TOP_CLASS = 'absolute left-0 right-0 top-0 z-30 px-3 pt-10 sm:pt-3';
-const LIVE_ROOM_MESSAGE_CLASS = 'absolute bottom-[7.25rem] left-3 z-20 w-[52%] max-w-[224px]';
+const LIVE_ROOM_MESSAGE_CLASS = 'absolute bottom-[7.25rem] left-3 z-20 w-[54%] max-w-[232px]';
 const LIVE_ROOM_FLOATING_CARD_CLASS = 'absolute bottom-[7.15rem] right-3 z-30 w-[45%] min-w-[172px] max-w-[196px]';
 const LIVE_ROOM_BOTTOM_CLASS = 'absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black via-black/82 to-transparent px-3 pb-3 pt-9';
 const PRESSABLE_CLASS = 'transition duration-150 active:scale-95 active:brightness-110 disabled:active:scale-100';
@@ -109,15 +109,68 @@ function safeDisplayName(item: RankingItem) {
   return item.display_name?.trim() || `用户 ${item.user_id}`;
 }
 
+function uniqueRankingsByUser(rankings: RankingItem[]) {
+  const seen = new Set<number>();
+  return rankings.filter((item) => {
+    if (seen.has(item.user_id)) return false;
+    seen.add(item.user_id);
+    return true;
+  });
+}
+
+type ActionIconName = 'trophy' | 'heart' | 'spark' | 'share';
+
+function ActionIcon({ name }: { name: ActionIconName }) {
+  if (name === 'trophy') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 4h8v4a4 4 0 0 1-8 0V4Z" />
+        <path d="M8 6H5a3 3 0 0 0 3 3" />
+        <path d="M16 6h3a3 3 0 0 1-3 3" />
+        <path d="M12 12v4" />
+        <path d="M9 20h6" />
+        <path d="M10 16h4l1 4H9l1-4Z" />
+      </svg>
+    );
+  }
+
+  if (name === 'heart') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+        <path d="M12 21s-7.2-4.3-9.4-8.5C.6 8.5 2.6 4.8 6.4 4.3c2-.2 3.5.7 4.6 2.1 1.1-1.4 2.6-2.3 4.6-2.1 3.8.5 5.8 4.2 3.8 8.2C19.2 16.7 12 21 12 21Z" />
+      </svg>
+    );
+  }
+
+  if (name === 'share') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 5l5 5-5 5" />
+        <path d="M19 10h-7a7 7 0 0 0-7 7v1" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2 9.7 8.2 4 10.6l5.7 2.3L12 20l2.3-7.1 5.7-2.3-5.7-2.4L12 2Z" />
+      <path d="M4 3v4" />
+      <path d="M2 5h4" />
+      <path d="M20 17v4" />
+      <path d="M18 19h4" />
+    </svg>
+  );
+}
+
 function ActionRailButton({
   label,
   value,
-  children,
+  icon,
   onClick,
 }: {
   label: string;
   value: string;
-  children: ReactNode;
+  icon: ActionIconName;
   onClick?: () => void;
 }) {
   return (
@@ -125,21 +178,21 @@ function ActionRailButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="group flex w-11 flex-col items-center gap-1 text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)] transition duration-150 active:scale-95"
+      className="group flex w-12 flex-col items-center gap-1 text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)] transition duration-150 active:scale-95"
     >
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/18 bg-white/16 text-[11px] font-black shadow-lg shadow-black/30 backdrop-blur-xl transition group-hover:bg-white/22">
-        {children}
+      <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/18 bg-black/34 text-white shadow-lg shadow-black/30 backdrop-blur-xl transition group-hover:border-white/35 group-hover:bg-white/18">
+        <ActionIcon name={icon} />
       </span>
-      <span className="max-w-11 truncate rounded-full bg-black/28 px-1.5 py-0.5 text-[10px] font-semibold backdrop-blur">{value}</span>
+      <span className="max-w-12 truncate rounded-full bg-black/34 px-1.5 py-0.5 text-[10px] font-semibold backdrop-blur">{value}</span>
     </button>
   );
 }
 
-function RankingPill({ item }: { item: RankingItem }) {
+function RankingPill({ item, displayRank }: { item: RankingItem; displayRank: number }) {
   return (
     <li className="flex h-8 min-w-0 items-center gap-2 rounded-full bg-black/42 px-2 pr-3 shadow-lg shadow-black/20 backdrop-blur-xl">
       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-orange-400 text-[11px] font-black text-zinc-950">
-        {item.rank}
+        {displayRank}
       </span>
       <span className="min-w-0 truncate text-xs font-semibold text-white">{safeDisplayName(item)}</span>
       <span className="shrink-0 text-xs font-bold text-emerald-200">{formatPrice(item.amount)}</span>
@@ -191,6 +244,7 @@ export default function LiveAuctionRoom() {
   const lastRoomPriceRef = useRef<number | null>(roomCurrentPrice);
   const pricePulseTimerRef = useRef<ReturnType<typeof window.setTimeout> | undefined>(undefined);
   const pressedActionTimerRef = useRef<ReturnType<typeof window.setTimeout> | undefined>(undefined);
+  const messageFeedRef = useRef<HTMLUListElement | null>(null);
   const roomHighestBidderId = isCurrentRoom ? highestBidderId : undefined;
   const roomEndedAt = isCurrentRoom ? endedAt : undefined;
   const roomCurrentExtendCount = isCurrentRoom ? currentExtendCount : 0;
@@ -198,6 +252,7 @@ export default function LiveAuctionRoom() {
   const roomBidIncrementValue = isCurrentRoom ? bidIncrementValue : 0;
   const roomNextBidAmount = isCurrentRoom ? nextBidAmount : 0;
   const roomRankings = isCurrentRoom ? rankings : [];
+  const displayedRankings = useMemo(() => uniqueRankingsByUser(roomRankings).slice(0, 3), [roomRankings]);
   const roomWinnerId = isCurrentRoom ? winnerId : undefined;
   const roomFinalPrice = isCurrentRoom ? finalPrice : undefined;
   const roomTerminalMessage = isCurrentRoom ? terminalMessage : undefined;
@@ -263,7 +318,7 @@ export default function LiveAuctionRoom() {
   }, [isCurrentRoom, isLeading, isOutbid, pending, terminal]);
 
   const roomMessages = useMemo(() => {
-    const realtimeMessages = roomNotifications.slice(0, 3).map((item) => ({
+    const realtimeMessages = [...roomNotifications].reverse().map((item) => ({
       id: item.id,
       type: item.type,
       message: item.message,
@@ -275,6 +330,12 @@ export default function LiveAuctionRoom() {
       { id: 'auctioneer', type: 'status', message: active ? '拍卖官：当前拍品正在竞拍' : '拍卖官：等待拍品状态同步' },
     ];
   }, [active, roomNotifications]);
+
+  useEffect(() => {
+    const feed = messageFeedRef.current;
+    if (!feed) return;
+    feed.scrollTop = feed.scrollHeight;
+  }, [roomMessages.length]);
 
   const refreshRoom = useCallback(() => {
     if (!isValidAuctionId || !accessToken) return;
@@ -476,13 +537,19 @@ export default function LiveAuctionRoom() {
 
         <section className="absolute left-3 right-16 top-32 z-10">
           <div className="flex max-w-full flex-col gap-1">
-            {roomRankings.slice(0, 3).map((item) => <RankingPill key={`${item.rank}-${item.user_id}-${item.amount}`} item={item} />)}
+            {displayedRankings.map((item, index) => (
+              <RankingPill key={`${item.user_id}-${item.amount}`} item={item} displayRank={index + 1} />
+            ))}
           </div>
         </section>
 
         <section className={LIVE_ROOM_MESSAGE_CLASS} aria-live="polite">
           <h2 className="sr-only">实时消息</h2>
-          <ul className="space-y-1">
+          <ul
+            ref={messageFeedRef}
+            data-testid="live-room-message-feed"
+            className="max-h-36 space-y-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
             {roomMessages.map((item) => (
               <li
                 key={item.id}
@@ -498,11 +565,11 @@ export default function LiveAuctionRoom() {
           </ul>
         </section>
 
-        <aside className="absolute right-3 top-[42%] z-20 flex -translate-y-1/2 flex-col items-center gap-3">
-          <ActionRailButton label="人气榜" value="人气榜">榜单</ActionRailButton>
-          <ActionRailButton label="点赞" value="12.8w">赞</ActionRailButton>
-          <ActionRailButton label="礼物" value="礼物">礼物</ActionRailButton>
-          <ActionRailButton label="分享" value="168">分享</ActionRailButton>
+        <aside className="absolute left-3 top-[38%] z-20 flex -translate-y-1/2 flex-col items-center gap-2">
+          <ActionRailButton label="人气榜" value="人气榜" icon="trophy" />
+          <ActionRailButton label="点赞" value="12.8w" icon="heart" />
+          <ActionRailButton label="礼物" value="礼物" icon="spark" />
+          <ActionRailButton label="分享" value="168" icon="share" />
         </aside>
 
         <section className={LIVE_ROOM_FLOATING_CARD_CLASS}>
