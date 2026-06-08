@@ -573,82 +573,136 @@ export default function LiveAuctionRoom() {
         </aside>
 
         <section className={LIVE_ROOM_FLOATING_CARD_CLASS}>
-          <div className={`overflow-hidden rounded-[18px] bg-white/96 text-zinc-950 shadow-2xl shadow-black/45 backdrop-blur ${
-            isOutbid
-              ? 'ring-2 ring-rose-300/80'
-              : urgent
-                ? 'ring-2 ring-rose-400/75'
-                : 'ring-1 ring-white/35'
-          }`}>
-            <div className="flex items-center justify-between gap-2 px-3 pb-1 pt-3">
-              <span className="text-base font-black">{roomStatus === 'active' ? '正在竞拍' : displayStatus}</span>
-              <span className="shrink-0 rounded-full bg-rose-500 px-2 py-1 text-[11px] font-black text-white">
-                {bidCount > 0 ? `${bidCount}次出价` : '等待首拍'}
-              </span>
-            </div>
-            <div className="px-3 text-[11px] font-medium text-zinc-500">拍品编号：{lotId}</div>
-            <div className="grid grid-cols-[52px_minmax(0,1fr)] gap-2 px-3 py-2">
-              <img src={heroImage} alt="" className="h-[52px] w-[52px] rounded-lg border border-zinc-200 object-cover" />
-              <div className="min-w-0">
-                <h1 className="line-clamp-2 break-words text-sm font-black leading-snug">
-                  {roomProduct?.title || (isHydrating ? '恢复登录中...' : '直播竞拍间')}
-                </h1>
-                <div className="mt-1 text-[11px] font-medium text-zinc-500">
-                  加价 {formatIncrement(roomBidIncrementType, roomBidIncrementValue, stepAmount)}
+          <div
+            data-testid="live-room-auction-card"
+            className={`overflow-hidden rounded-[20px] border text-white shadow-2xl shadow-black/55 backdrop-blur-2xl ${
+              terminal
+                ? 'border-amber-200/35 bg-black/66'
+                : isOutbid
+                  ? 'border-rose-300/70 bg-black/72 ring-2 ring-rose-400/45'
+                  : isLeading
+                    ? 'border-amber-200/65 bg-black/68 ring-2 ring-amber-200/30'
+                    : urgent
+                      ? 'border-rose-300/65 bg-black/70 ring-2 ring-rose-500/45'
+                      : 'border-white/18 bg-black/62'
+            }`}
+          >
+            <div className="px-3 pb-3 pt-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className={`inline-flex rounded-full px-2 py-1 text-[11px] font-black ${
+                    terminal
+                      ? 'bg-amber-300 text-zinc-950'
+                      : isOutbid
+                        ? 'bg-rose-500 text-white'
+                        : isLeading
+                          ? 'bg-amber-300 text-zinc-950'
+                          : 'bg-white/14 text-white'
+                  }`}>
+                    {terminal
+                      ? roomStatus === 'ended_sold' ? '落槌成交' : displayStatus
+                      : isOutbid
+                        ? '你已被超越'
+                        : isLeading
+                          ? '领先中'
+                          : '正在竞拍'}
+                  </div>
+                  <div className="mt-1 text-[11px] font-semibold text-white/54">拍品编号 {lotId}</div>
+                </div>
+                <span className="shrink-0 rounded-full border border-white/12 bg-white/10 px-2 py-1 text-[11px] font-black text-white/90">
+                  {bidCount > 0 ? `${bidCount}次` : '首拍'}
+                </span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-[58px_minmax(0,1fr)] gap-2">
+                <img src={heroImage} alt="" className="h-[58px] w-[58px] rounded-[14px] border border-white/14 object-cover shadow-lg shadow-black/35" />
+                <div className="min-w-0">
+                  <h1 className="line-clamp-2 break-words text-sm font-black leading-snug text-white">
+                    {roomProduct?.title || (isHydrating ? '恢复登录中...' : '直播竞拍间')}
+                  </h1>
+                  <div className="mt-1 text-[11px] font-semibold text-white/58">
+                    加价 {formatIncrement(roomBidIncrementType, roomBidIncrementValue, stepAmount)}
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-[#315dff] to-[#7338ff] px-3 py-3 text-white">
-              <div className="text-[12px] font-semibold text-white/80">{shelfPriceLabel(roomStatus, bidCount)}</div>
+
+            <div className={`${terminal ? 'bg-amber-300/14' : 'bg-white/[0.07]'} border-y border-white/10 px-3 py-3`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[12px] font-black text-white/62">
+                  {terminal ? '成交价' : shelfPriceLabel(roomStatus, bidCount)}
+                </span>
+                {!terminal && urgent ? (
+                  <span className="rounded-full bg-rose-500/22 px-2 py-1 text-[10px] font-black text-rose-100">最后冲刺</span>
+                ) : null}
+              </div>
               <div
-                className={`mt-1 whitespace-nowrap text-[26px] font-black leading-none tabular-nums transition duration-300 ${
-                  pricePulse ? 'scale-[1.03] text-amber-100 drop-shadow-[0_0_14px_rgba(255,255,255,0.72)] animate-pulse' : ''
+                className={`mt-1 whitespace-nowrap font-black leading-none tabular-nums transition duration-300 ${
+                  terminal
+                    ? 'text-[30px] text-amber-100'
+                    : `text-[31px] ${pricePulse ? 'scale-[1.03] text-amber-100 drop-shadow-[0_0_14px_rgba(255,214,128,0.72)] animate-pulse' : 'text-white'}`
                 }`}
               >
-                {formatPrice(roomCurrentPrice)}
+                {formatPrice(terminal ? (roomFinalPrice ?? roomCurrentPrice) : roomCurrentPrice)}
               </div>
-              {pricePulse ? (
+              {pricePulse && !terminal ? (
                 <div role="status" aria-live="polite" className="mt-1 text-[11px] font-black text-amber-100">
                   价格已更新
                 </div>
               ) : null}
-              {isLeading ? (
-                <div className="mt-1 rounded bg-white/16 px-2 py-1 text-[11px] font-black text-white">
-                  领先中，保持住
+              {isLeading && !terminal ? (
+                <div className="mt-2 rounded-md border border-amber-200/18 bg-amber-200/15 px-2 py-1 text-[11px] font-black text-amber-100">
+                  保持领先，等待落槌
                 </div>
               ) : null}
-              {isOutbid ? (
-                <div className="mt-1 rounded bg-rose-500/80 px-2 py-1 text-[11px] font-black text-white">
-                  已被超过，点出价追回
+              {isOutbid && !terminal ? (
+                <div className="mt-2 rounded-md border border-rose-200/24 bg-rose-500/26 px-2 py-1 text-[11px] font-black text-rose-50">
+                  立即追回，下一口 {formatPrice(roomNextBidAmount)}
                 </div>
               ) : null}
-              <button type="button" className="mt-2 rounded-full border border-white/20 px-2 py-1 text-[11px] font-bold text-white/90">
-                出价记录 ›
-              </button>
+              {terminal ? (
+                <div className="mt-2 rounded-md border border-white/10 bg-black/24 px-2 py-1 text-[11px] font-bold text-white/70">
+                  {isWinner ? '你已中标，前往订单确认' : roomStatus === 'ended_sold' ? '本场已落槌，继续关注下一件' : '本场竞拍已结束'}
+                </div>
+              ) : (
+                <button type="button" className="mt-2 rounded-full border border-white/18 bg-white/8 px-2 py-1 text-[11px] font-bold text-white/86">
+                  出价记录 ›
+                </button>
+              )}
             </div>
-            <div className="bg-white px-3 py-2">
-              <div className="flex items-end justify-between gap-2">
-                <span className="text-[12px] font-semibold text-zinc-500">倒计时</span>
-                <span className={`font-mono text-[26px] font-black leading-none tabular-nums ${urgent ? 'text-rose-500' : 'text-rose-400'}`}>
-                  {formatCountdown(countdownMs)}
-                </span>
+
+            {!terminal ? (
+              <div className="px-3 py-2">
+                <div className="flex items-end justify-between gap-2">
+                  <span className="text-[12px] font-semibold text-white/56">距落槌</span>
+                  <span className={`font-mono text-[26px] font-black leading-none tabular-nums ${urgent ? 'text-rose-300 animate-pulse' : 'text-amber-100'}`}>
+                    {formatCountdown(countdownMs)}
+                  </span>
+                </div>
+                {roomCurrentExtendCount > 0 ? (
+                  <div className="mt-2 rounded-md border border-amber-200/20 bg-amber-200/14 px-2 py-1 text-[11px] font-bold text-amber-100">
+                    Soft Close 已延时 {roomCurrentExtendCount} 次
+                  </div>
+                ) : null}
               </div>
-              {roomCurrentExtendCount > 0 ? (
-                <div className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">
-                  Soft Close 已延时 {roomCurrentExtendCount} 次
-                </div>
-              ) : null}
-            </div>
+            ) : null}
+
             <button
               type="button"
               aria-label="打开出价面板"
               disabled={!isCurrentRoom || terminal}
               onClick={openBidSheet}
-              className={`${PRIMARY_ACTION_CLASS} h-14 w-full bg-gradient-to-r from-rose-500 to-red-500 px-3 text-xl font-black text-white hover:from-rose-400 hover:to-red-400 disabled:cursor-not-allowed disabled:from-zinc-200 disabled:to-zinc-200 disabled:text-zinc-500 ${
-                pressedAction === 'bid' ? 'scale-[0.98] brightness-110' : ''
-              }`}
+              className={`${PRIMARY_ACTION_CLASS} h-[52px] w-full border-t border-white/10 px-3 py-3 text-lg font-black text-white hover:brightness-110 disabled:cursor-not-allowed disabled:bg-white/8 disabled:text-white/42 ${
+                terminal
+                  ? 'bg-white/8'
+                  : isLeading
+                    ? 'bg-gradient-to-r from-amber-300 to-orange-400 text-zinc-950'
+                    : isOutbid
+                      ? 'bg-gradient-to-r from-rose-500 to-red-500'
+                      : 'bg-gradient-to-r from-rose-500 to-orange-400'
+              } ${pressedAction === 'bid' ? 'scale-[0.98] brightness-110' : ''}`}
             >
-              {floatingActionText === '立即出价' ? '出价' : floatingActionText}
+              {terminal ? '竞拍已结束' : floatingActionText === '立即出价' ? '立即出价' : floatingActionText}
             </button>
           </div>
         </section>

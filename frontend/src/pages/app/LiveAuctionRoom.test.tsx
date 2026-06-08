@@ -427,6 +427,19 @@ describe('LiveAuctionRoom', () => {
     expect(screen.getByText('竞拍已成交')).toBeInTheDocument();
   });
 
+  it('renders terminal floating card as an auction result instead of a zero countdown', () => {
+    seedRoom({ status: 'ended_sold', winnerId: 3, finalPrice: 120, terminalMessage: '竞拍已成交' });
+
+    renderRoom();
+
+    const card = screen.getByTestId('live-room-auction-card');
+    expect(card).toHaveTextContent('落槌成交');
+    expect(card).toHaveTextContent('成交价');
+    expect(card).toHaveTextContent('¥120.00');
+    expect(card).not.toHaveTextContent('倒计时');
+    expect(card).not.toHaveTextContent('00:00');
+  });
+
   it('opens the product shelf shell without implying multi-item realtime bidding', () => {
     renderRoom();
 
