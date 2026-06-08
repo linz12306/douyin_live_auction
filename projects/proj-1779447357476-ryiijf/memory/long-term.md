@@ -82,6 +82,14 @@
   - 保持 WebSocket/Zustand 为实时真理源；REST 出价成功不直接改价格、排行、倒计时、延时、领先/被超越或终态。
   - 已通过 focused buyer tests、全量 frontend tests、frontend build、OpenSpec strict、diff 检查和 390x844 Playwright smoke。
 
+- `merchant-ui-optimization`
+  - 分支：`codex/merchant-ui-optimization`
+  - OpenSpec change：`openspec/changes/merchant-ui-optimization/`
+  - 已锁定并实现商家 PC 端深色横向直播商品控盘台方向：墨黑/石墨底色，青绿/琥珀/玫红/蓝色对应进行中成交/待处理/风险取消/支付信息态。
+  - 已覆盖商家运营总览、直播商品横向控盘行、商品详情/编辑/新建、成交订单列表/详情、实时竞拍监控等页面。
+  - 新增 `MerchantConsole`、`MerchantPrimitives`、`merchantStatus` 作为商家端共享展示组件；不改变后端 API、数据库、竞拍状态机、WebSocket、订单或钱包规则。
+  - 已通过前端完整测试、构建、OpenSpec strict、diff 检查；浏览器烟测受登录保护限制，只确认商家路由正确重定向登录且无 console error。
+
 - `frontend-experience-integration`
   - 分支：`codex/frontend-experience-integration`
   - 已合入 `codex/auction-atmosphere-h5` 和 `codex/merchant-analytics-dashboard`，用于统一验证前端体验路线图的两个已完成包。

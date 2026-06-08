@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   createProduct,
@@ -11,6 +11,8 @@ import {
 } from '../../api/product';
 import ImageUploader from '../../components/ImageUploader';
 import AuctionRuleForm from '../../components/AuctionRuleForm';
+import MerchantConsole from '../../components/merchant/MerchantConsole';
+import { ConsolePanel } from '../../components/merchant/MerchantPrimitives';
 import PageBackButton from '../../components/PageBackButton';
 import type { ProductLiveMedia, PublishRequest } from '../../types/product';
 
@@ -25,7 +27,11 @@ function getApiErrorMessage(err: unknown, fallback: string) {
 export default function ProductForm() {
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
+  const productId = id ? Number(id) : undefined;
+  const hasValidProductId = Number.isInteger(productId) && (productId ?? 0) > 0;
+  const isValidEditProductId = !isEdit || hasValidProductId;
   const navigate = useNavigate();
+  const liveMediaInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -47,8 +53,13 @@ export default function ProductForm() {
   const canEditMedia = status === '' || status === 'draft';
 
   useEffect(() => {
-    if (isEdit && id) {
-      getProduct(parseInt(id)).then((detail) => {
+    if (!isEdit || !isValidEditProductId || productId === undefined) return;
+
+    let ignore = false;
+
+    getProduct(productId)
+      .then((detail) => {
+        if (ignore) return;
         setTitle(detail.product.title);
         setDescription(detail.product.description);
         setImages(detail.images.map((img) => img.image_url));
@@ -65,9 +76,18 @@ export default function ProductForm() {
             max_extend_count: detail.auction.max_extend_count,
           });
         }
+      })
+      .catch(() => {
+        if (!ignore) setError('商品详情加载失败');
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
       });
-    }
-  }, [id, isEdit]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [isEdit, isValidEditProductId, productId]);
 
   useEffect(() => {
     return () => {
@@ -82,7 +102,11 @@ export default function ProductForm() {
     setLoading(true);
     try {
       if (isEdit) {
-        await updateProduct(parseInt(id!), title, description);
+        if (!hasValidProductId || productId === undefined) {
+          setError('商品不存在');
+          return;
+        }
+        await updateProduct(productId, title, description);
       } else {
         if (pendingFiles.length === 0) {
           setError('请至少上传一张商品图片');
@@ -106,12 +130,12 @@ export default function ProductForm() {
   };
 
   const handlePublish = async () => {
-    if (!id) return;
+    if (!hasValidProductId || productId === undefined) return;
     setError('');
     setLoading(true);
     try {
-      await publishProduct(parseInt(id), rules);
-      navigate(`/merchant/products/${id}`);
+      await publishProduct(productId, rules);
+      navigate(`/merchant/products/${productId}`);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, '发布失败'));
     } finally {
@@ -120,8 +144,9 @@ export default function ProductForm() {
   };
 
   const handleAddImage = async (file: File) => {
-    if (id) {
-      const url = await uploadProductImage(parseInt(id), file);
+    if (isEdit) {
+      if (!hasValidProductId || productId === undefined) throw new Error('商品不存在');
+      const url = await uploadProductImage(productId, file);
       setImages([...images, url]);
       return url;
     }
@@ -159,10 +184,14 @@ export default function ProductForm() {
     }
 
     setLiveMediaError('');
-    if (id) {
+    if (isEdit) {
+      if (!hasValidProductId || productId === undefined) {
+        setLiveMediaError('商品不存在');
+        return;
+      }
       setLiveMediaUploading(true);
       try {
-        const uploaded = await uploadProductLiveMedia(parseInt(id), file);
+        const uploaded = await uploadProductLiveMedia(productId, file);
         setLiveMedia(uploaded);
         setPendingLiveMedia(null);
         setPendingLiveMediaType(null);
@@ -192,10 +221,14 @@ export default function ProductForm() {
 
   const handleRemoveLiveMedia = async () => {
     setLiveMediaError('');
-    if (id && liveMedia) {
+    if (isEdit && liveMedia) {
+      if (!hasValidProductId || productId === undefined) {
+        setLiveMediaError('商品不存在');
+        return;
+      }
       setLiveMediaUploading(true);
       try {
-        await deleteProductLiveMedia(parseInt(id));
+        await deleteProductLiveMedia(productId);
         setLiveMedia(null);
       } catch (err: unknown) {
         setLiveMediaError(getApiErrorMessage(err, '直播间素材删除失败'));
@@ -215,48 +248,83 @@ export default function ProductForm() {
   const previewURL = liveMedia?.url ?? liveMediaPreviewURL;
   const previewType = liveMedia?.type ?? pendingLiveMediaType;
 
+  if (!isValidEditProductId) {
+    return (
+      <MerchantConsole
+        title="编辑商品"
+        eyebrow="直播商品"
+        description="未找到可编辑的商品记录"
+        actions={<PageBackButton fallback="/merchant/products" className="border-[#384553] bg-[#0F151C] hover:bg-[#182331]" />}
+      >
+        <div className="mx-auto max-w-7xl">
+          <ConsolePanel className="py-20 text-center text-[#8B97A7]">
+            <p className="text-sm font-medium">商品不存在</p>
+          </ConsolePanel>
+        </div>
+      </MerchantConsole>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#080b11] relative overflow-hidden text-white">
-      {/* 背景光效 */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/3 blur-[120px] pointer-events-none" />
-
-      <div className="max-w-2xl mx-auto px-4 py-8 relative z-10">
-        <PageBackButton fallback="/merchant/products" className="mb-4 border-white/10 bg-white/5 hover:bg-white/10" />
-        <h1 className="text-3xl font-black bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent tracking-tight mb-6">{isEdit ? '编辑商品' : '新建竞拍'}</h1>
-
+    <MerchantConsole
+      title={isEdit ? '编辑商品' : '新建竞拍'}
+      eyebrow="直播商品"
+      description={isEdit ? '更新商品信息、素材与竞拍参数' : '创建商品草稿并配置待开拍规则'}
+      actions={
+        <PageBackButton fallback="/merchant/products" className="border-[#384553] bg-[#0F151C] hover:bg-[#182331]" />
+      }
+    >
+      <div className="mx-auto max-w-7xl">
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-200 rounded-xl p-4 mb-6 text-sm flex items-center gap-2 backdrop-blur">
-            <span className="shrink-0">⚠️</span>
-            <span>{error}</span>
+          <div className="mb-4 rounded-lg border border-[#F05268]/35 bg-[#F05268]/10 p-4 text-sm font-semibold text-[#FF8A9A]">
+            {error}
           </div>
         )}
 
-        <div className="space-y-6">
-          {/* Product Info */}
-          <div className="bg-[#111422]/60 backdrop-blur-xl border border-white/8 rounded-2xl p-6 shadow-xl shadow-black/30">
-            <h3 className="text-base font-bold text-slate-200 mb-4 flex items-center gap-2">
-              <span className="text-purple-400">📦</span> 商品基本信息
-            </h3>
-            <div className="space-y-5">
-              <div>
-                <label className="text-xs text-slate-300 font-semibold mb-1.5 block">商品名称</label>
-                <input
-                  type="text" placeholder="请输入商品名称" value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-950/40 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/15 transition-all duration-200 text-sm shadow-inner shadow-black/10"
-                />
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]">
+          <div className="space-y-4">
+            <ConsolePanel className="p-4">
+              <div className="mb-4">
+                <h2 className="text-sm font-black text-white">商品身份</h2>
+                <p className="mt-1 text-xs font-medium text-[#8B97A7]">用于商品列表、详情页与直播间展示</p>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="product-title" className="mb-1.5 block text-xs font-semibold text-[#B2BECC]">
+                    商品名称
+                  </label>
+                  <input
+                    id="product-title"
+                    type="text"
+                    placeholder="请输入商品名称"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full rounded-md border border-[#384553] bg-[#0B1016] px-4 py-3 text-sm text-white outline-none placeholder:text-[#596575] focus:border-[#4BA3FF] focus:ring-2 focus:ring-[#4BA3FF]/20"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="product-description" className="mb-1.5 block text-xs font-semibold text-[#B2BECC]">
+                    商品详情介绍（可选）
+                  </label>
+                  <textarea
+                    id="product-description"
+                    placeholder="请输入商品材质、尺寸、成色等详情说明..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={4}
+                    className="w-full resize-none rounded-md border border-[#384553] bg-[#0B1016] px-4 py-3 text-sm text-white outline-none placeholder:text-[#596575] focus:border-[#4BA3FF] focus:ring-2 focus:ring-[#4BA3FF]/20"
+                  />
+                </div>
+              </div>
+            </ConsolePanel>
+
+            <ConsolePanel className="p-4">
+              <div className="mb-4">
+                <h2 className="text-sm font-black text-white">商品图库</h2>
+                <p className="mt-1 text-xs font-medium text-[#8B97A7]">最多展示 9 张商品图，草稿阶段可调整</p>
               </div>
               <div>
-                <label className="text-xs text-slate-300 font-semibold mb-1.5 block">商品详情介绍（可选）</label>
-                <textarea
-                  placeholder="请输入商品材质、尺寸、成色等详情说明..." value={description}
-                  onChange={(e) => setDescription(e.target.value)} rows={4}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-950/40 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/15 transition-all duration-200 text-sm shadow-inner shadow-black/10 resize-none"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-300 font-semibold mb-2 block">商品展示图片</label>
+                <label className="mb-2 block text-xs font-semibold text-[#B2BECC]">商品展示图片</label>
                 <ImageUploader
                   images={images}
                   onAdd={handleAddImage}
@@ -264,75 +332,98 @@ export default function ProductForm() {
                   readonly={!canEditMedia}
                 />
               </div>
-              <div className="border-t border-white/5 pt-4">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div>
-                    <label className="text-xs text-slate-200 font-bold block">直播间素材背景</label>
-                    <p className="text-slate-400 text-[11px] mt-1">用于用户端直播间背景，支持图片或短视频</p>
-                  </div>
-                  {canEditMedia && (
-                    <label className="shrink-0 px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 text-white/90 text-xs font-bold cursor-pointer hover:border-purple-400 hover:bg-white/10 transition-all duration-200">
+            </ConsolePanel>
+
+            <ConsolePanel className="p-4">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-black text-white">直播间素材</h2>
+                  <p className="mt-1 text-xs font-medium text-[#8B97A7]">用于用户端直播间背景，支持图片或短视频</p>
+                </div>
+                {canEditMedia && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => liveMediaInputRef.current?.click()}
+                      disabled={liveMediaUploading}
+                      className="shrink-0 rounded-md border border-[#384553] bg-[#0F151C] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#182331] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
                       {previewURL ? '替换素材' : '选择素材'}
-                      <input
-                        aria-label="上传直播间素材"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
-                        className="hidden"
-                        onChange={handleLiveMediaFile}
-                        disabled={liveMediaUploading}
-                      />
-                    </label>
+                    </button>
+                    <input
+                      ref={liveMediaInputRef}
+                      aria-label="上传直播间素材"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
+                      className="hidden"
+                      onChange={handleLiveMediaFile}
+                      disabled={liveMediaUploading}
+                    />
+                  </>
+                )}
+              </div>
+              {previewURL ? (
+                <div className="relative aspect-video max-w-2xl overflow-hidden rounded-md border border-[#263241] bg-[#0B1016]">
+                  {previewType === 'video' ? (
+                    <video src={previewURL} poster={liveMedia?.poster_url ?? undefined} className="h-full w-full object-cover" controls muted />
+                  ) : (
+                    <img src={previewURL} alt="直播间素材预览" className="h-full w-full object-cover" />
+                  )}
+                  {canEditMedia && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveLiveMedia}
+                      disabled={liveMediaUploading}
+                      className="absolute right-2 top-2 rounded-md bg-[#F05268] px-3 py-1.5 text-[11px] font-bold text-white shadow-lg shadow-black/45 transition hover:bg-[#FF6B7D] disabled:opacity-50"
+                    >
+                      删除素材
+                    </button>
                   )}
                 </div>
-                {previewURL ? (
-                  <div className="relative overflow-hidden rounded-xl border border-white/5 bg-slate-950 aspect-video max-w-md shadow-inner">
-                    {previewType === 'video' ? (
-                      <video src={previewURL} poster={liveMedia?.poster_url ?? undefined} className="h-full w-full object-cover" controls muted />
-                    ) : (
-                      <img src={previewURL} alt="直播间素材预览" className="h-full w-full object-cover" />
-                    )}
-                    {canEditMedia && (
-                      <button
-                        type="button"
-                        onClick={handleRemoveLiveMedia}
-                        disabled={liveMediaUploading}
-                        className="absolute top-2 right-2 rounded-xl bg-red-600/90 hover:bg-red-500 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg shadow-black/45 backdrop-blur transition-colors duration-200 disabled:opacity-50"
-                      >
-                        删除素材
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-slate-950/20 px-4 py-5 text-xs text-slate-500/90 leading-relaxed">
-                    未上传自定义素材时将使用系统预设直播间场景。上传后，用户进入直播间将优先看到您配置的高清画面/视频。
-                  </div>
-                )}
-                {liveMediaError && <p className="text-rose-400 text-xs mt-2 font-semibold">⚠️ {liveMediaError}</p>}
+              ) : (
+                <div className="rounded-md border border-dashed border-[#263241] bg-[#0B1016] px-4 py-6 text-xs leading-relaxed text-[#8B97A7]">
+                  未上传自定义素材时将使用系统预设直播间场景。上传后，用户进入直播间将优先看到您配置的高清画面/视频。
+                </div>
+              )}
+              {liveMediaError && <p className="mt-2 text-xs font-semibold text-[#FF8A9A]">{liveMediaError}</p>}
+            </ConsolePanel>
+          </div>
+
+          <div className="space-y-4">
+            <ConsolePanel className="p-4">
+              <AuctionRuleForm value={rules} onChange={setRules} />
+            </ConsolePanel>
+
+            <ConsolePanel className="p-4">
+              <div className="mb-3">
+                <h2 className="text-sm font-black text-white">动作</h2>
+                <p className="mt-1 text-xs font-medium text-[#8B97A7]">保存商品信息或将草稿发布为待开拍</p>
               </div>
-            </div>
-          </div>
-
-          {/* Auction Rules */}
-          <div className="bg-[#111422]/60 backdrop-blur-xl border border-white/8 rounded-2xl p-6 shadow-xl shadow-black/30">
-            <AuctionRuleForm value={rules} onChange={setRules} />
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            {isEdit && status === 'draft' ? (
-              <button onClick={handlePublish} disabled={loading}
-                className="flex-1 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black rounded-xl hover:from-emerald-400 hover:to-teal-400 active:scale-[0.98] transition-all duration-200 text-sm disabled:opacity-50 disabled:scale-100 shadow-lg shadow-emerald-500/10">
-                发布到待开拍
-              </button>
-            ) : null}
-            <button onClick={handleSave} disabled={loading}
-              className="flex-1 py-3.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold rounded-xl hover:from-violet-500 hover:to-purple-500 active:scale-[0.98] transition-all duration-200 text-sm disabled:opacity-50 disabled:scale-100 shadow-lg shadow-purple-500/15">
-              {isEdit ? '保存修改' : '创建草稿'}
-            </button>
+              <div className="flex flex-col gap-2 sm:flex-row xl:flex-col">
+                {isEdit && status === 'draft' ? (
+                  <button
+                    type="button"
+                    onClick={handlePublish}
+                    disabled={loading}
+                    className="flex-1 rounded-md bg-[#21D19F] px-4 py-3 text-sm font-black text-[#07100D] transition hover:bg-[#76F2CD] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    发布到待开拍
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="flex-1 rounded-md border border-[#4BA3FF]/35 bg-[#4BA3FF]/10 px-4 py-3 text-sm font-black text-[#9CCBFF] transition hover:bg-[#4BA3FF]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isEdit ? '保存修改' : '创建草稿'}
+                </button>
+              </div>
+            </ConsolePanel>
           </div>
         </div>
       </div>
-    </div>
+    </MerchantConsole>
   );
 }
 

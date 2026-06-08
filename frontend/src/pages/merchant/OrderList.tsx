@@ -1,34 +1,38 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listOrders } from '../../api/order';
+import MerchantConsole from '../../components/merchant/MerchantConsole';
+import {
+  ConsolePanel,
+  EmptyState,
+  MetricCell,
+  StatusBadge,
+} from '../../components/merchant/MerchantPrimitives';
+import { ORDER_STATUS_TEXT, orderStatusTone } from '../../components/merchant/merchantStatus';
 import PageBackButton from '../../components/PageBackButton';
 import { usePageRefresh } from '../../hooks/usePageRefresh';
-import type { OrderListItem, OrderStatus } from '../../types/order';
-
-const STATUS_TEXT: Record<OrderStatus, string> = {
-  pending_confirm: '待确认',
-  pending_payment: '待支付',
-  paid: '已支付',
-  cancelled: '已取消',
-};
-
-const STATUS_BADGE: Record<OrderStatus, string> = {
-  pending_confirm: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
-  pending_payment: 'bg-sky-500/10 text-sky-300 border-sky-500/20',
-  paid: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
-  cancelled: 'bg-rose-500/10 text-rose-300 border-rose-500/20',
-};
+import type { OrderListItem } from '../../types/order';
 
 function formatPrice(value: number) {
   return `¥${Number(value || 0).toFixed(2)}`;
 }
 
-function statusText(status: string) {
-  return STATUS_TEXT[status as OrderStatus] || status;
+function formatTime(value?: string) {
+  if (!value) return '未记录';
+  return new Date(value).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
-function statusBadge(status: string) {
-  return STATUS_BADGE[status as OrderStatus] || 'bg-white/10 text-white/70 border-white/20';
+function secondaryTime(order: OrderListItem) {
+  if (order.status === 'paid') return { label: '支付时间', value: order.paid_at };
+  if (order.status === 'pending_payment') return { label: '确认时间', value: order.confirmed_at };
+  if (order.status === 'cancelled') return { label: '取消时间', value: order.cancelled_at };
+  if (order.confirm_deadline) return { label: '待确认截止', value: order.confirm_deadline };
+  return { label: '更新时间', value: order.updated_at };
 }
 
 export default function OrderList() {
@@ -72,90 +76,97 @@ export default function OrderList() {
   usePageRefresh(loadOrders);
 
   return (
-    <div className="min-h-screen bg-[#080b11] relative overflow-hidden text-white">
-      {/* 背景光效 */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/3 blur-[120px] pointer-events-none" />
-
-      <main className="mx-auto max-w-5xl px-4 py-8 relative z-10">
-        <header className="mb-8 flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
-          <div>
-            <PageBackButton fallback="/merchant/products" className="mb-3 border-white/10 bg-white/5 hover:bg-white/10" />
-            <h1 className="text-3xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent tracking-tight">订单管理</h1>
-            <p className="mt-1 text-sm text-slate-400/80">查看买家中立竞拍成交后生成的订单与支付状态</p>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => void loadOrders()}
-              disabled={refreshing}
-              className="px-4 py-2 border border-white/10 bg-white/5 text-white/90 rounded-xl hover:border-white/25 hover:bg-white/10 transition duration-200 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {refreshing ? '刷新中...' : '刷新'}
-            </button>
-            <Link to="/merchant/products" className="px-4 py-2 border border-white/10 bg-white/5 text-white/90 rounded-xl hover:border-white/25 hover:bg-white/10 transition duration-200 text-sm font-semibold flex items-center">
-              商品管理
-            </Link>
-            <Link to="/merchant/dashboard" className="px-4 py-2 border border-white/10 bg-white/5 text-white/90 rounded-xl hover:border-white/25 hover:bg-white/10 transition duration-200 text-sm font-semibold flex items-center">
-              运营看板
-            </Link>
-          </div>
-        </header>
-
+    <MerchantConsole
+      title="成交订单"
+      eyebrow="商家控盘台"
+      description="按商品、买家、金额、状态和时间扫描成交后的订单流转"
+      actions={
+        <>
+          <PageBackButton fallback="/merchant/products" className="border-[#384553] bg-[#0F151C] hover:bg-[#182331]" />
+          <button
+            type="button"
+            onClick={() => void loadOrders()}
+            disabled={refreshing}
+            className="rounded-md border border-[#384553] bg-[#0F151C] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#182331] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {refreshing ? '刷新中...' : '刷新'}
+          </button>
+          <Link
+            to="/merchant/products"
+            className="rounded-md border border-[#384553] bg-[#0F151C] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#182331]"
+          >
+            商品管理
+          </Link>
+          <Link
+            to="/merchant/dashboard"
+            className="rounded-md border border-[#384553] bg-[#0F151C] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#182331]"
+          >
+            运营看板
+          </Link>
+        </>
+      }
+    >
+      <div className="mx-auto max-w-7xl">
         {loading ? (
-          <div className="text-slate-400/80 text-center py-20 bg-[#111422]/30 rounded-2xl border border-white/5 backdrop-blur-xl">
+          <ConsolePanel className="py-20 text-center text-[#8B97A7]">
             <p className="text-sm font-medium">加载订单中...</p>
-          </div>
+          </ConsolePanel>
         ) : error ? (
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200 backdrop-blur-lg">
+          <div className="rounded-lg border border-[#F05268]/35 bg-[#F05268]/10 p-4 text-sm text-[#FF8A9A]">
             {error}
           </div>
         ) : orders.length === 0 ? (
-          <div className="text-slate-400/80 text-center py-20 bg-[#111422]/30 rounded-2xl border border-white/5 backdrop-blur-xl">
-            <div className="text-3xl mb-2">📋</div>
-            <p className="text-sm font-medium">暂无成交订单</p>
-          </div>
+          <EmptyState title="暂无成交订单" description="竞拍成交后生成的订单会展示在这里。" />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {orders.map((order) => (
-              <article
-                key={order.id}
-                className="group rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl transition-all duration-200 hover:border-purple-500/40 hover:-translate-y-0.5 shadow-lg shadow-black/20"
-              >
-                <div className="flex gap-4">
-                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-900 border border-white/5">
-                    {order.product_image_url ? (
-                      <img src={order.product_image_url} alt={order.product_title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-[10px] font-semibold text-slate-500">暂无图</div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start gap-3">
-                        <h2 className="break-words font-bold text-slate-200 text-sm leading-snug group-hover:text-purple-300 transition-colors duration-200 line-clamp-1">{order.product_title}</h2>
-                        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black tracking-wide uppercase ${statusBadge(order.status)}`}>
-                          {statusText(order.status)}
+          <div className="space-y-3">
+            {orders.map((order) => {
+              const time = secondaryTime(order);
+
+              return (
+                <article
+                  key={order.id}
+                  aria-label={`订单 ${order.id}`}
+                  className="grid gap-4 rounded-lg border border-[#263241] bg-[#131B24] p-3 transition hover:border-[#3B4B5D] hover:bg-[#182331] xl:grid-cols-[minmax(0,1fr)_minmax(8rem,11rem)_8rem_7rem_9rem_9rem_5rem] xl:items-center"
+                >
+                  <div className="flex min-w-0 gap-3">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#263241] bg-[#0B1016] text-[10px] font-black text-[#384553]">
+                      {order.product_image_url ? <img src={order.product_image_url} alt={order.product_title} className="h-full w-full object-cover" /> : '无图'}
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="truncate text-sm font-black text-white">{order.product_title}</h2>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <span className="rounded-md border border-[#263241] px-2 py-1 text-[11px] font-bold text-[#8B97A7]">
+                          订单ID {order.id}
+                        </span>
+                        <span className="rounded-md border border-[#263241] px-2 py-1 text-[11px] font-bold text-[#8B97A7]">
+                          商品ID {order.product_id}
+                        </span>
+                        <span className="rounded-md border border-[#263241] px-2 py-1 text-[11px] font-bold text-[#8B97A7]">
+                          竞拍ID {order.auction_id}
                         </span>
                       </div>
-                      <p className="mt-1 text-[11px] text-slate-400">买家：{order.buyer_name || `用户 ${order.buyer_id}`}</p>
-                    </div>
-                    <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between gap-3">
-                      <div className="text-lg font-black text-transparent bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text tabular-nums">{formatPrice(order.amount)}</div>
-                      <Link
-                        to={`/merchant/orders/${order.id}`}
-                        className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-purple-500/15 hover:from-violet-500 hover:to-purple-500 transition duration-200"
-                      >
-                        详情大区 ›
-                      </Link>
                     </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                  <MetricCell label="买家" value={order.buyer_name || `用户 ${order.buyer_id}`} />
+                  <MetricCell label="成交金额" value={formatPrice(order.amount)} tone="sold" />
+                  <div className="min-w-0">
+                    <StatusBadge label={ORDER_STATUS_TEXT[order.status]} tone={orderStatusTone(order.status)} />
+                  </div>
+                  <MetricCell label="创建时间" value={formatTime(order.created_at)} />
+                  <MetricCell label={time.label} value={formatTime(time.value)} />
+                  <Link
+                    to={`/merchant/orders/${order.id}`}
+                    aria-label={`查看订单 ${order.id} 详情`}
+                    className="rounded-md border border-[#384553] bg-[#0F151C] px-3 py-2 text-center text-xs font-bold text-white transition hover:bg-[#182331]"
+                  >
+                    详情
+                  </Link>
+                </article>
+              );
+            })}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </MerchantConsole>
   );
 }

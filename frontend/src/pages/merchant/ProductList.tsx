@@ -1,6 +1,14 @@
 import { useCallback, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { listProducts } from '../../api/product';
+import MerchantConsole from '../../components/merchant/MerchantConsole';
+import {
+  ConsolePanel,
+  EmptyState,
+  MetricCell,
+  StatusBadge,
+} from '../../components/merchant/MerchantPrimitives';
+import { PRODUCT_STATUS_TEXT, productStatusTone } from '../../components/merchant/merchantStatus';
 import PageBackButton from '../../components/PageBackButton';
 import { usePageRefresh } from '../../hooks/usePageRefresh';
 import type { Product, ProductStatus } from '../../types/product';
@@ -14,20 +22,6 @@ const TABS: { key: ProductStatus | ''; label: string }[] = [
   { key: 'ended_no_bid', label: '流拍' },
   { key: 'cancelled', label: '已取消' },
 ];
-
-const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-slate-500/10 text-slate-300 border-slate-500/20',
-  pending: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
-  active: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
-  ended_sold: 'bg-sky-500/10 text-sky-300 border-sky-500/20',
-  ended_no_bid: 'bg-violet-500/10 text-violet-300 border-violet-500/20',
-  cancelled: 'bg-rose-500/10 text-rose-300 border-rose-500/20',
-};
-
-const STATUS_TEXT: Record<string, string> = {
-  draft: '草稿', pending: '待开拍', active: '进行中',
-  ended_sold: '已成交', ended_no_bid: '流拍', cancelled: '已取消',
-};
 
 export default function ProductList() {
   const [activeTab, setActiveTab] = useState<typeof TABS[number]['key']>('');
@@ -73,99 +67,122 @@ export default function ProductList() {
   usePageRefresh(loadProducts);
 
   return (
-    <div className="min-h-screen bg-[#080b11] relative overflow-hidden text-white">
-      {/* 背景光效 */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/3 blur-[120px] pointer-events-none" />
-
-      <div className="max-w-5xl mx-auto px-4 py-8 relative z-10">
-        <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-8">
-          <div>
-            <PageBackButton fallback="/profile" className="mb-3 border-white/10 bg-white/5 hover:bg-white/10" />
-            <h1 className="text-3xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent tracking-tight">商品管理</h1>
-            <p className="text-slate-400/80 text-sm mt-1">管理和创建您发布的所有竞拍品及状态</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void loadProducts()}
-              disabled={refreshing}
-              className="px-4 py-2 border border-white/10 bg-white/5 text-white/90 rounded-xl hover:border-white/25 hover:bg-white/10 transition duration-200 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {refreshing ? '刷新中...' : '刷新'}
-            </button>
-            <Link to="/merchant/orders" className="px-4 py-2 border border-white/10 bg-white/5 text-white/90 rounded-xl hover:border-white/25 hover:bg-white/10 transition duration-200 text-sm font-semibold flex items-center">
-              订单管理
-            </Link>
-            <Link to="/merchant/dashboard" className="px-4 py-2 border border-white/10 bg-white/5 text-white/90 rounded-xl hover:border-white/25 hover:bg-white/10 transition duration-200 text-sm font-semibold flex items-center">
-              运营看板
-            </Link>
-            <Link to="/merchant/products/new" className="px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:from-violet-500 hover:to-purple-500 shadow-lg shadow-purple-500/20 transition duration-200 text-sm font-bold flex items-center">
-              + 新建竞拍
-            </Link>
-          </div>
-        </div>
-
+    <MerchantConsole
+      title="直播商品"
+      eyebrow="商家控盘台"
+      description="管理和创建您发布的所有竞拍品及状态"
+      actions={
+        <>
+          <PageBackButton fallback="/profile" className="border-[#384553] bg-[#0F151C] hover:bg-[#182331]" />
+          <button
+            type="button"
+            onClick={() => void loadProducts()}
+            disabled={refreshing}
+            className="rounded-md border border-[#384553] bg-[#0F151C] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#182331] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {refreshing ? '刷新中...' : '刷新'}
+          </button>
+          <Link
+            to="/merchant/dashboard"
+            className="rounded-md border border-[#384553] bg-[#0F151C] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#182331]"
+          >
+            运营看板
+          </Link>
+          <Link
+            to="/merchant/products/new"
+            className="rounded-md bg-[#21D19F] px-4 py-2 text-sm font-black text-[#07100D] transition hover:bg-[#76F2CD]"
+          >
+            新建竞拍
+          </Link>
+        </>
+      }
+    >
+      <div className="mx-auto max-w-7xl">
         {/* 标签栏 */}
-        <div className="flex flex-wrap gap-1.5 mb-6 bg-slate-950/40 p-1.5 rounded-xl border border-white/5">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => {
-                if (activeTab !== tab.key) setLoading(true);
-                setActiveTab(tab.key);
-              }}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                activeTab === tab.key
-                  ? 'border-purple-500/20 bg-purple-500/15 text-purple-200 font-bold shadow shadow-purple-500/5'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <ConsolePanel className="mb-6 p-1.5">
+          <div className="flex flex-wrap gap-1.5">
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  if (activeTab !== tab.key) setLoading(true);
+                  setActiveTab(tab.key);
+                }}
+                className={`rounded-md px-4 py-2 text-xs font-semibold transition-all duration-200 ${
+                  activeTab === tab.key
+                    ? 'bg-[#182331] text-white ring-1 ring-[#263241]'
+                    : 'border-transparent text-[#8B97A7] hover:bg-[#131B24] hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </ConsolePanel>
 
         {loading ? (
-          <div className="text-slate-400/80 text-center py-20 bg-[#111422]/30 rounded-2xl border border-white/5 backdrop-blur-xl">
+          <ConsolePanel className="py-20 text-center text-[#8B97A7]">
             <p className="text-sm font-medium">加载列表中...</p>
-          </div>
+          </ConsolePanel>
         ) : error ? (
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200 backdrop-blur-lg">
+          <div className="rounded-lg border border-[#F05268]/35 bg-[#F05268]/10 p-4 text-sm text-[#FF8A9A]">
             {error}
           </div>
         ) : products.length === 0 ? (
-          <div className="text-slate-400/80 text-center py-20 bg-[#111422]/30 rounded-2xl border border-white/5 backdrop-blur-xl">
-            <div className="text-3xl mb-2">📦</div>
-            <p className="text-sm font-medium">该状态下暂无商品</p>
-          </div>
+          <EmptyState title="该状态下暂无商品" description="发布竞拍后，商品会按状态展示在这里。" />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {products.map((p) => (
+          <div className="space-y-3">
+            {products.map((p, index) => (
               <article
                 key={p.id}
-                className="group rounded-2xl border border-white/8 bg-[#111422]/60 p-5 backdrop-blur-xl transition-all duration-200 hover:border-purple-500/40 hover:-translate-y-0.5 shadow-lg shadow-black/20 flex flex-col justify-between"
+                aria-label={`商品 ${p.title}`}
+                className="grid gap-4 rounded-lg border border-[#263241] bg-[#131B24] p-3 transition hover:border-[#3B4B5D] hover:bg-[#182331] xl:grid-cols-[3rem_minmax(0,1fr)_minmax(22rem,30rem)_minmax(12rem,14rem)] xl:items-center"
               >
-                <div>
-                  <div className="flex justify-between items-start gap-3">
-                    <h3 className="text-white font-bold text-lg leading-snug group-hover:text-purple-300 transition-colors duration-200">{p.title}</h3>
-                    <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide border uppercase ${STATUS_BADGE[p.status]}`}>
-                      {STATUS_TEXT[p.status]}
-                    </span>
+                <div className="text-sm font-black tabular-nums text-[#596575]">{String(index + 1).padStart(2, '0')}</div>
+
+                <div className="flex min-w-0 gap-3">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md border border-[#263241] bg-[#0B1016] text-[10px] font-black text-[#384553]">
+                    无图
                   </div>
-                  <p className="text-slate-400 text-sm mt-2 line-clamp-2 leading-relaxed">{p.description || '暂无介绍'}</p>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-sm font-black text-white">{p.title}</h2>
+                    <p className="mt-1 line-clamp-1 text-xs leading-relaxed text-[#8B97A7]">{p.description || '暂无介绍'}</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <StatusBadge label={PRODUCT_STATUS_TEXT[p.status]} tone={productStatusTone(p.status)} />
+                      <span className="rounded-md border border-[#263241] px-2 py-1 text-[11px] font-bold text-[#8B97A7]">
+                        商品ID {p.id}
+                      </span>
+                      {p.auction_id ? (
+                        <span className="rounded-md border border-[#263241] px-2 py-1 text-[11px] font-bold text-[#8B97A7]">
+                          竞拍ID {p.auction_id}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-5 pt-4 border-t border-white/5 flex gap-2">
+
+                <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">
+                  <MetricCell label="起拍价" value="详情查看" />
+                  <MetricCell label="加价规则" value="详情查看" />
+                  <MetricCell label="封顶价" value="详情查看" />
+                  <MetricCell
+                    label={p.status === 'ended_sold' ? '成交结果' : '当前状态'}
+                    value={PRODUCT_STATUS_TEXT[p.status]}
+                    tone={productStatusTone(p.status)}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
                   <Link
                     to={`/merchant/products/${p.id}`}
-                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-center text-xs font-semibold text-white/90 transition hover:border-white/20 hover:bg-white/10"
+                    className="rounded-md border border-[#384553] bg-[#0F151C] px-3 py-2 text-center text-xs font-bold text-white transition hover:bg-[#182331]"
                   >
-                    查看详情
+                    详情
                   </Link>
                   {p.auction_id ? (
                     <Link
                       to={`/merchant/auctions/${p.auction_id}/monitor`}
-                      className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-2.5 text-center text-xs font-bold text-slate-950 transition hover:from-emerald-400 hover:to-teal-400 shadow-md shadow-emerald-500/10"
+                      className="rounded-md bg-[#21D19F] px-3 py-2 text-center text-xs font-black text-[#07100D] transition hover:bg-[#76F2CD]"
                     >
                       实时监控
                     </Link>
@@ -176,6 +193,6 @@ export default function ProductList() {
           </div>
         )}
       </div>
-    </div>
+    </MerchantConsole>
   );
 }

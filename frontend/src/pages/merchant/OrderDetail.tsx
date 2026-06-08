@@ -1,23 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getOrder } from '../../api/order';
+import MerchantConsole from '../../components/merchant/MerchantConsole';
+import {
+  ConsolePanel,
+  MetricCell,
+  StatusBadge,
+} from '../../components/merchant/MerchantPrimitives';
+import { ORDER_STATUS_TEXT, orderStatusTone } from '../../components/merchant/merchantStatus';
 import PageBackButton from '../../components/PageBackButton';
 import { usePageRefresh } from '../../hooks/usePageRefresh';
-import type { OrderDetail as OrderDetailType, OrderStatus } from '../../types/order';
-
-const STATUS_TEXT: Record<OrderStatus, string> = {
-  pending_confirm: '待确认',
-  pending_payment: '待支付',
-  paid: '已支付',
-  cancelled: '已取消',
-};
+import type { OrderDetail as OrderDetailType } from '../../types/order';
 
 function formatPrice(value: number) {
   return `¥${Number(value || 0).toFixed(2)}`;
-}
-
-function statusText(status?: string) {
-  return status ? STATUS_TEXT[status as OrderStatus] || status : '加载中';
 }
 
 function formatTime(value?: string) {
@@ -33,17 +29,14 @@ function formatTime(value?: string) {
 export default function OrderDetail() {
   const { id } = useParams();
   const orderId = Number(id);
+  const isValidOrderId = Number.isFinite(orderId) && orderId > 0;
   const [order, setOrder] = useState<OrderDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   const loadOrder = useCallback(async () => {
-    if (!Number.isFinite(orderId) || orderId <= 0) {
-      setError('订单不存在');
-      setLoading(false);
-      return;
-    }
+    if (!isValidOrderId) return;
 
     setRefreshing(true);
     setError('');
@@ -56,10 +49,10 @@ export default function OrderDetail() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [orderId]);
+  }, [isValidOrderId, orderId]);
 
   useEffect(() => {
-    if (!Number.isFinite(orderId) || orderId <= 0) return;
+    if (!isValidOrderId) return;
     let mounted = true;
     getOrder(orderId)
       .then((nextOrder) => {
@@ -74,94 +67,118 @@ export default function OrderDetail() {
     return () => {
       mounted = false;
     };
-  }, [orderId]);
+  }, [isValidOrderId, orderId]);
 
-  usePageRefresh(loadOrder, { disabled: !Number.isFinite(orderId) || orderId <= 0 });
+  usePageRefresh(loadOrder, { disabled: !isValidOrderId });
 
+  if (!isValidOrderId) {
+    return (
+      <MerchantConsole title="成交详情" eyebrow="商家控盘台" description="查看订单金额、状态和关键流转时间">
+        <div className="rounded-lg border border-[#F05268]/35 bg-[#F05268]/10 p-4 text-sm text-[#FF8A9A]">
+          订单不存在
+        </div>
+      </MerchantConsole>
+    );
+  }
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#080b11] flex items-center justify-center text-slate-400/80">
-        <p className="text-sm font-semibold">加载中...</p>
-      </div>
+      <MerchantConsole title="成交详情" eyebrow="商家控盘台" description="查看订单金额、状态和关键流转时间">
+        <ConsolePanel className="py-20 text-center text-[#8B97A7]">
+          <p className="text-sm font-semibold">加载中...</p>
+        </ConsolePanel>
+      </MerchantConsole>
     );
   }
   if (!order) {
     return (
-      <div className="min-h-screen bg-[#080b11] flex items-center justify-center text-slate-400/80">
-        <p className="text-sm font-semibold">{error || '订单不存在'}</p>
-      </div>
+      <MerchantConsole title="成交详情" eyebrow="商家控盘台" description="查看订单金额、状态和关键流转时间">
+        <div className="rounded-lg border border-[#F05268]/35 bg-[#F05268]/10 p-4 text-sm text-[#FF8A9A]">
+          {error || '订单不存在'}
+        </div>
+      </MerchantConsole>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#080b11] relative overflow-hidden text-white">
-      {/* 背景光效 */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-600/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/3 blur-[120px] pointer-events-none" />
+  const timeline = [
+    { label: '创建时间', value: order.created_at },
+    { label: '确认时间', value: order.confirmed_at },
+    { label: '支付时间', value: order.paid_at },
+    { label: '取消时间', value: order.cancelled_at },
+  ];
 
-      <main className="mx-auto max-w-4xl px-4 py-8 relative z-10">
-        <div className="mb-6 flex flex-wrap gap-2">
-          <PageBackButton fallback="/merchant/orders" className="border-white/10 bg-white/5 hover:bg-white/10" />
+  return (
+    <MerchantConsole
+      title="成交详情"
+      eyebrow="商家控盘台"
+      description="只读查看成交订单的商品、买家、金额、状态和关键流转时间"
+      actions={
+        <>
+          <PageBackButton fallback="/merchant/orders" className="border-[#384553] bg-[#0F151C] hover:bg-[#182331]" />
           <button
             type="button"
             onClick={() => void loadOrder()}
             disabled={refreshing}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white/80 transition hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md border border-[#384553] bg-[#0F151C] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#182331] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {refreshing ? '刷新中...' : '刷新状态'}
           </button>
-        </div>
-
-        <section className="rounded-2xl border border-white/8 bg-[#111422]/60 p-6 backdrop-blur-xl shadow-2xl shadow-black/40">
-          <div className="flex flex-col md:flex-row items-start gap-6 border-b border-white/5 pb-6">
-            <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-slate-950 border border-white/5 shadow-inner">
-              {order.product_image_url ? (
-                <img src={order.product_image_url} alt={order.product_title} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-slate-500">暂无图</div>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <h1 className="break-words text-2xl font-black bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent tracking-tight leading-snug">{order.product_title}</h1>
-                <span className="shrink-0 inline-block px-3 py-1 rounded-full text-xs font-black tracking-wide border uppercase border-purple-500/25 bg-purple-500/10 text-purple-300">
-                  {statusText(order.status)}
-                </span>
+        </>
+      }
+    >
+      <div className="mx-auto max-w-5xl space-y-4">
+        <ConsolePanel className="p-4">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start">
+            <div className="flex min-w-0 flex-col gap-4 sm:flex-row">
+              <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#263241] bg-[#0B1016] text-xs font-black text-[#384553]">
+                {order.product_image_url ? (
+                  <img src={order.product_image_url} alt={order.product_title} className="h-full w-full object-cover" />
+                ) : (
+                  '无图'
+                )}
               </div>
-              <p className="mt-2 text-sm text-slate-400 leading-relaxed">{order.product_description || '暂无商品详情介绍'}</p>
-              <p className="mt-4 text-sm text-slate-400 font-semibold">
-                {"买家：" + (order.buyer_name || `用户 ${order.buyer_id}`)}
-              </p>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="break-words text-xl font-black text-white">{order.product_title}</h2>
+                  <StatusBadge label={ORDER_STATUS_TEXT[order.status]} tone={orderStatusTone(order.status)} />
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-[#8B97A7]">{order.product_description || '暂无商品详情介绍'}</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <MetricCell label="买家" value={order.buyer_name || `用户 ${order.buyer_id}`} />
+                  <MetricCell label="买家ID" value={order.buyer_id} />
+                  <MetricCell label="订单ID" value={order.id} />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[#263241] bg-[#0B1016] p-4">
+              <div className="text-[11px] font-semibold text-[#596575]">成交金额</div>
+              <div className="mt-2 text-3xl font-black tabular-nums text-[#D9F99D]">{formatPrice(order.amount)}</div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <MetricCell label="商品ID" value={order.product_id} />
+                <MetricCell label="竞拍ID" value={order.auction_id} />
+              </div>
             </div>
           </div>
+        </ConsolePanel>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">成交金额</div>
-              <div className="mt-1 text-2xl font-black text-transparent bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text tabular-nums">{formatPrice(order.amount)}</div>
-            </div>
-            <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">创建时间</div>
-              <div className="mt-1 text-sm font-bold text-slate-200">{formatTime(order.created_at)}</div>
-            </div>
-            <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">确认时间</div>
-              <div className="mt-1 text-sm font-bold text-slate-200">{formatTime(order.confirmed_at)}</div>
-            </div>
-            <div className="rounded-xl bg-slate-950/40 p-4 border border-white/5 shadow-inner">
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">支付时间</div>
-              <div className="mt-1 text-sm font-bold text-slate-200">{formatTime(order.paid_at)}</div>
-            </div>
+        <ConsolePanel className="p-4">
+          <h2 className="text-sm font-black text-white">订单时间线</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {timeline.map((item) => (
+              <div key={item.label} className="rounded-md border border-[#263241] bg-[#131B24] p-3">
+                <div className="text-[11px] font-semibold text-[#596575]">{item.label}</div>
+                <div className="mt-1 text-sm font-black tabular-nums text-[#F5F7FA]">{formatTime(item.value)}</div>
+              </div>
+            ))}
           </div>
 
           {order.cancel_reason ? (
-            <div className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 flex items-center gap-2">
-              <span className="shrink-0 text-rose-400 font-bold">⚠️</span>
+            <div className="mt-4 rounded-md border border-[#F05268]/35 bg-[#F05268]/10 px-4 py-3 text-sm text-[#FF8A9A]">
               <span className="font-semibold">取消原因：{order.cancel_reason}</span>
             </div>
           ) : null}
-        </section>
-      </main>
-    </div>
+        </ConsolePanel>
+      </div>
+    </MerchantConsole>
   );
 }

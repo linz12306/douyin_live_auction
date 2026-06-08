@@ -1,0 +1,128 @@
+# Tasks: merchant-ui-optimization
+
+- [x] 1. Preflight and planning lock
+  - Read `AGENTS.md`.
+  - Read `projects/proj-1779447357476-ryiijf/outputs/requirements-v3.md`.
+  - Read `projects/proj-1779447357476-ryiijf/outputs/current-source-of-truth.md`.
+  - Read existing merchant frontend pages and tests.
+  - Confirm this is full workflow rather than fast lane because it updates a multi-page merchant visual system and acceptance criteria.
+  - Create `docs/superpowers/specs/2026-06-08-merchant-ui-optimization-exploration.md`.
+  - Create OpenSpec proposal, design, tasks, and spec delta.
+  - Run `openspec validate merchant-ui-optimization --strict --no-interactive` or the repository's `npx -y @fission-ai/openspec@latest validate merchant-ui-optimization --strict --no-interactive` fallback.
+  - Verification:
+    - `npx -y @fission-ai/openspec@latest validate merchant-ui-optimization --strict --no-interactive` passed with `Change 'merchant-ui-optimization' is valid`.
+    - `git diff --check` passed.
+    - No implementation code was changed before approval.
+
+- [ ] 2. Create Superpowers execution plan
+  - Create `docs/superpowers/plans/2026-06-08-merchant-ui-optimization.md`.
+  - Translate these tasks into small frontend implementation slices.
+  - Define whether implementation is inline or subagent-driven.
+  - Include focused verification commands for each slice.
+  - Wait for user approval before starting implementation.
+
+- [x] 3. Shared merchant console frame and visual primitives
+  - Scope:
+    - Add reusable merchant layout/frame or styling helpers if they reduce duplication.
+    - Define shared status badge, action button, metric label, empty/error/loading, and row-surface patterns where practical.
+    - Scope usage to merchant pages only.
+  - Likely files:
+    - `frontend/src/components/`
+    - `frontend/src/pages/merchant/`
+    - `frontend/src/index.css` if shared CSS variables/classes are useful.
+  - Verification:
+    - `cd frontend && npm run test -- src/pages/merchant/ProductList.test.tsx` passed.
+    - `cd frontend && npm run build` passed.
+    - Targeted lint on touched files passed; full lint still has unrelated pre-existing app page warnings.
+    - `git diff --check` passed.
+    - Spec compliance and code quality reviews approved.
+
+- [x] 4. Product management horizontal live product rows
+  - Scope:
+    - Replace `/merchant/products` two-column cards with horizontal live product control rows.
+    - Preserve status filtering, refresh, product detail navigation, monitor navigation, dashboard/order/publish navigation, and empty/error/loading states.
+    - Show only fields available from the existing product list API; do not add backend fields.
+  - Files:
+    - `frontend/src/pages/merchant/ProductList.tsx`
+    - `frontend/src/pages/merchant/ProductList.test.tsx`
+    - Shared merchant components if introduced.
+  - Verification:
+    - `cd frontend && npm run test -- src/pages/merchant/ProductList.test.tsx` passed with 5 tests.
+    - `cd frontend && npm run build` passed.
+    - `git diff --check` passed.
+    - Spec compliance and code quality reviews approved.
+    - Browser responsive sanity check remains for final verification.
+
+- [x] 5. Merchant order deal-flow list and detail timeline
+  - Scope:
+    - Update `/merchant/orders` into scan-friendly transaction rows.
+    - Update `/merchant/orders/:id` with a clearer amount/status/timeline presentation.
+    - Preserve merchant read-only order behavior.
+  - Files:
+    - `frontend/src/pages/merchant/OrderList.tsx`
+    - `frontend/src/pages/merchant/OrderList.test.tsx`
+    - `frontend/src/pages/merchant/OrderDetail.tsx`
+    - `frontend/src/pages/merchant/OrderDetail.test.tsx`
+  - Verification:
+    - `cd frontend && npm run test -- src/pages/merchant/OrderList.test.tsx src/pages/merchant/OrderDetail.test.tsx` passed.
+    - `cd frontend && npm run build` passed.
+    - Focused eslint on touched order files passed.
+    - `git diff --check` passed.
+    - Spec compliance and code quality reviews approved.
+
+- [x] 6. Dashboard console alignment
+  - Scope:
+    - Align `/merchant/dashboard` KPI, chart, active-auction, recent-order, status bucket, loading, empty, and error surfaces with the console visual system.
+    - Preserve current dashboard API usage and chart data handling.
+  - Files:
+    - `frontend/src/pages/merchant/Dashboard.tsx`
+    - `frontend/src/pages/merchant/Dashboard.test.tsx`
+    - Shared merchant components if introduced.
+  - Verification:
+    - `cd frontend && npm run test -- src/pages/merchant/Dashboard.test.tsx` passed.
+    - `cd frontend && npm run build` passed.
+    - Focused eslint and TypeScript checks on dashboard files passed.
+    - `git diff --check` passed.
+    - Spec compliance and code quality reviews approved.
+
+- [x] 7. Realtime auction monitor visual hierarchy
+  - Scope:
+    - Align `/merchant/auctions/:id/monitor` with control-room visual hierarchy.
+    - Preserve WebSocket-backed state, ranking, event feed, cancellation reason, backend error display, terminal-state disabling, refresh behavior, and navigation.
+  - Files:
+    - `frontend/src/pages/merchant/AuctionMonitor.tsx`
+    - `frontend/src/pages/merchant/AuctionMonitor.test.tsx`
+  - Verification:
+    - `cd frontend && npm run test -- src/pages/merchant/AuctionMonitor.test.tsx` passed.
+    - `cd frontend && npm run build` passed.
+    - Focused eslint and TypeScript checks on monitor files passed.
+    - `git diff --check` passed.
+    - Spec compliance and code quality reviews approved.
+
+- [x] 8. Product form and detail console polish
+  - Scope:
+    - Align product create/edit/detail with the merchant console style.
+    - Preserve all current fields, upload behavior, publish/update/delete/activate/cancel/monitor actions, and error handling.
+  - Files:
+    - `frontend/src/pages/merchant/ProductForm.tsx`
+    - `frontend/src/pages/merchant/ProductForm.test.tsx`
+    - `frontend/src/pages/merchant/ProductDetail.tsx`
+    - `frontend/src/pages/merchant/ProductDetail.test.tsx`
+    - `frontend/src/components/AuctionRuleForm.tsx`
+    - `frontend/src/components/ImageUploader.tsx` only if needed for visual alignment.
+  - Verification:
+    - `cd frontend && npm run test -- src/pages/merchant/ProductDetail.test.tsx src/pages/merchant/ProductForm.test.tsx` passed with 12 tests.
+    - `cd frontend && npm run build` passed.
+    - Focused eslint on product detail/form, product tests, `AuctionRuleForm`, and `ImageUploader` passed.
+    - `git diff --check` passed.
+    - Spec compliance review approved; code quality findings for invalid route IDs and upload control accessibility were fixed and re-verified.
+
+- [x] 9. Final verification and closeout
+  - `cd frontend && npm run test` passed with 16 test files and 82 tests.
+  - `cd frontend && npm run build` passed.
+  - `git diff --check` passed.
+  - `npx -y @fission-ai/openspec@latest validate merchant-ui-optimization --strict --no-interactive` passed with `Change 'merchant-ui-optimization' is valid`.
+  - Browser smoke started Vite at `http://127.0.0.1:3000/`; merchant routes redirected to `/login` through route protection with no console errors. Auth/backend session was unavailable, so authenticated merchant screenshots were not captured.
+  - Backend tests were not run because backend files were not touched.
+  - This OpenSpec task file, the Superpowers execution plan, and memory files were updated with decisions, risks, verification, and next step.
+  - Commit/push state is reported in the final response.

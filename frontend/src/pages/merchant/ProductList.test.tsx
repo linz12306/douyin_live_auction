@@ -30,6 +30,23 @@ describe('ProductList', () => {
 
   afterEach(() => cleanup());
 
+  it('exposes merchant navigation and product actions', async () => {
+    mockedListProducts.mockResolvedValue({ items: [baseProduct], total: 1, page: 1, size: 20 });
+
+    render(
+      <MemoryRouter>
+        <ProductList />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: /直播商品|商品管理/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /新建竞拍|添加商品/ })).toHaveAttribute('href', '/merchant/products/new');
+    expect(screen.getByRole('link', { name: /运营看板/ })).toHaveAttribute('href', '/merchant/dashboard');
+    expect(screen.getAllByRole('link', { name: /订单管理|成交订单/ })).toEqual(
+      expect.arrayContaining([expect.objectContaining({ href: expect.stringContaining('/merchant/orders') })]),
+    );
+  });
+
   it('refreshes merchant products when the page becomes visible again', async () => {
     mockedListProducts
       .mockResolvedValueOnce({ items: [baseProduct], total: 1, page: 1, size: 20 })
@@ -48,6 +65,7 @@ describe('ProductList', () => {
     );
 
     expect(await screen.findByText('复古夹克')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '全部' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '待开拍' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '进行中' })).toBeInTheDocument();
 
@@ -57,9 +75,37 @@ describe('ProductList', () => {
     });
 
     expect(await screen.findByText('更新后的复古夹克')).toBeInTheDocument();
-    expect(screen.getAllByText('进行中').length).toBeGreaterThan(1);
+    expect(screen.getAllByText('竞拍中').length).toBeGreaterThan(0);
     expect(mockedListProducts).toHaveBeenCalledTimes(2);
     visibilitySpy.mockRestore();
+  });
+
+  it('renders products as live control rows with ids, metrics, status, and links', async () => {
+    mockedListProducts.mockResolvedValue({
+      items: [{ ...baseProduct, status: 'active', auction_id: 9 }],
+      total: 1,
+      page: 1,
+      size: 20,
+    });
+
+    render(
+      <MemoryRouter>
+        <ProductList />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: /直播商品|商品管理/ })).toBeInTheDocument();
+    expect(screen.getByText('复古夹克')).toBeInTheDocument();
+    expect(screen.getByText('商品ID 12')).toBeInTheDocument();
+    expect(screen.getByText('竞拍ID 9')).toBeInTheDocument();
+    expect(screen.getAllByText('竞拍中').length).toBeGreaterThan(0);
+    expect(screen.getByText('起拍价')).toBeInTheDocument();
+    expect(screen.getByText('加价规则')).toBeInTheDocument();
+    expect(screen.getByText('封顶价')).toBeInTheDocument();
+    expect(screen.getByText('当前状态')).toBeInTheDocument();
+
+    expect(screen.getByRole('link', { name: /详情/ })).toHaveAttribute('href', '/merchant/products/12');
+    expect(screen.getByRole('link', { name: /实时监控/ })).toHaveAttribute('href', '/merchant/auctions/9/monitor');
   });
 
   it('uses separate filters for pending and active products', async () => {
