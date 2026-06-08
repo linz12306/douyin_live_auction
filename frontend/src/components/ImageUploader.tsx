@@ -40,30 +40,34 @@ export default function ImageUploader({ images, onAdd, onRemove, readonly }: Pro
     <div>
       <div className="grid grid-cols-3 gap-3 mb-3">
         {images.map((url, i) => (
-          <div key={i} className="relative group aspect-square rounded-lg overflow-hidden bg-white/5 border border-white/20">
+          <div key={i} className="group relative aspect-square overflow-hidden rounded-md border border-[#263241] bg-[#0B1016]">
             <img src={url} alt="" className="w-full h-full object-cover" />
             {!readonly && (
               <button
                 type="button"
+                aria-label={`删除第 ${i + 1} 张商品图片`}
                 onClick={() => onRemove(i)}
-                className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full text-white text-xs opacity-0 group-hover:opacity-100 transition"
+                className="absolute right-1 top-1 h-6 w-6 rounded-md bg-[#F05268] text-xs font-black text-white opacity-0 transition hover:bg-[#FF6B7D] focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-[#FFB4BE] group-hover:opacity-100"
               >
-                ×
+                <span aria-hidden="true">×</span>
               </button>
             )}
           </div>
         ))}
         {!readonly && images.length < 9 && (
-          <div
+          <button
+            type="button"
+            aria-label="添加商品图片"
             onClick={() => inputRef.current?.click()}
-            className="aspect-square rounded-lg border-2 border-dashed border-white/30 flex items-center justify-center cursor-pointer hover:border-purple-400 transition bg-white/5"
+            disabled={uploading}
+            className="flex aspect-square items-center justify-center rounded-md border border-dashed border-[#384553] bg-[#0B1016] transition hover:border-[#4BA3FF] hover:bg-[#131B24] focus:border-[#4BA3FF] focus:outline-none focus:ring-2 focus:ring-[#4BA3FF]/25 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <span className="text-white/40 text-3xl">{uploading ? '...' : '+'}</span>
-          </div>
+            <span aria-hidden="true" className="text-3xl font-light text-[#596575]">{uploading ? '...' : '+'}</span>
+          </button>
         )}
       </div>
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-xs font-semibold text-[#FF8A9A]">{error}</p>}
     </div>
   );
 }

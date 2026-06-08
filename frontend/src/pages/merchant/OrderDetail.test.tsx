@@ -24,7 +24,7 @@ const detail: OrderDetailType = {
   product_image_url: 'https://img.test/bag.jpg',
   buyer_name: '小林',
   buyer_avatar_url: '',
-  amount: 520,
+  amount: 960,
   status: 'paid',
   created_at: '2026-05-29T11:00:00.000Z',
   updated_at: '2026-05-29T11:10:00.000Z',
@@ -49,11 +49,17 @@ describe('Merchant OrderDetail', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('heading', { name: '限量手袋' })).toBeInTheDocument();
-    expect(screen.getByText('买家：小林')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /订单详情|成交详情/ })).toBeInTheDocument();
+    expect(screen.getByText('限量手袋')).toBeInTheDocument();
+    expect(screen.getByText('买家')).toBeInTheDocument();
+    expect(screen.getByText('小林')).toBeInTheDocument();
     expect(screen.getByText('已支付')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '确认订单' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '模拟支付' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '取消订单' })).not.toBeInTheDocument();
+    expect(screen.getByText('成交金额')).toBeInTheDocument();
+    expect(screen.getByText('¥960.00')).toBeInTheDocument();
+    expect(screen.getByText('创建时间')).toBeInTheDocument();
+    expect(screen.getByText('确认时间')).toBeInTheDocument();
+    expect(screen.getByText('支付时间')).toBeInTheDocument();
+    expect(screen.getByText('取消时间')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /确认订单|模拟支付|取消订单/ })).not.toBeInTheDocument();
   });
 });

@@ -113,7 +113,20 @@ describe('ProductDetail', () => {
 
     await waitFor(() => expect(mocks.activateAuction).toHaveBeenCalledWith(9));
     await waitFor(() => expect(mocks.getProduct).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText('进行中')).toBeInTheDocument();
+    expect(await screen.findByText('竞拍中')).toBeInTheDocument();
+  });
+
+  it('shows product copy and auction rule labels', async () => {
+    mocks.getProduct.mockResolvedValueOnce(pendingDetail);
+
+    renderDetail();
+
+    expect(await screen.findByRole('heading', { name: '复古夹克' })).toBeInTheDocument();
+    expect(screen.getByText('商品介绍')).toBeInTheDocument();
+    expect(screen.getByText('水洗牛仔')).toBeInTheDocument();
+    expect(screen.getByText('竞拍规则')).toBeInTheDocument();
+    expect(screen.getByText('起拍价')).toBeInTheDocument();
+    expect(screen.getByText('加价幅度')).toBeInTheDocument();
   });
 
   it('links the auction detail to the merchant realtime monitor', async () => {
@@ -121,7 +134,7 @@ describe('ProductDetail', () => {
 
     renderDetail();
 
-    const monitorLink = await screen.findByRole('link', { name: '进入实时竞拍监控台 ›' });
+    const monitorLink = await screen.findByRole('link', { name: /实时竞拍监控|进入实时竞拍监控台/ });
     expect(monitorLink).toHaveAttribute('href', '/merchant/auctions/9/monitor');
   });
 

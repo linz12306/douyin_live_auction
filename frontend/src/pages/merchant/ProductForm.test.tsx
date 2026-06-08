@@ -71,6 +71,16 @@ describe('ProductForm live media', () => {
     vi.unstubAllGlobals();
   });
 
+  it('renders core product and auction rule controls for a new product', () => {
+    renderForm('/merchant/products/new');
+
+    expect(screen.getByLabelText(/商品名称/)).toBeInTheDocument();
+    expect(screen.getByText(/竞拍规则配置/)).toBeInTheDocument();
+    expect(screen.getByText(/固定金额/)).toBeInTheDocument();
+    expect(screen.getByText(/百分比/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '创建草稿' })).toBeInTheDocument();
+  });
+
   it('uploads pending live media after creating a new product', async () => {
     mocks.createProduct.mockResolvedValueOnce({
       ...draftDetail,

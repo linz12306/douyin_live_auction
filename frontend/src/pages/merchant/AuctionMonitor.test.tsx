@@ -99,26 +99,33 @@ describe('AuctionMonitor', () => {
     localStorage.clear();
   });
 
-  it('renders realtime price, ranking, bid events, and cancellation restrictions', () => {
+  it('renders console monitor hierarchy while preserving realtime auction state', async () => {
     renderMonitor();
 
-    expect(screen.getByRole('heading', { name: '复古牛仔夹克' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /实时竞拍监控/ })).toBeInTheDocument();
+    expect(screen.getByText('复古牛仔夹克')).toBeInTheDocument();
     expect(screen.getAllByText('¥140.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/出价排行榜|排行榜/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/事件流|实时监控日志/).length).toBeGreaterThan(0);
     expect(screen.getByText('阿辰')).toBeInTheDocument();
     expect(screen.getAllByText('阿辰 出价 ¥140.00').length).toBeGreaterThan(0);
-    expect(screen.getByText(/最后出价后 30 秒内不支持/)).toBeInTheDocument();
+    expect(screen.getByText(/30 秒/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /出价/ })).not.toBeInTheDocument();
   });
 
   it('cancels a merchant auction with a reason and refreshes the realtime room', async () => {
     renderMonitor();
+    const connect = vi.mocked(useLiveRoomStore.getState().connect);
+
+    await waitFor(() => expect(connect).toHaveBeenCalledWith(7, 'access-token'));
+    connect.mockClear();
 
     fireEvent.click(screen.getByRole('button', { name: '取消竞拍' }));
     fireEvent.change(screen.getByLabelText('取消原因'), { target: { value: '库存异常' } });
     fireEvent.click(screen.getByRole('button', { name: '确认取消' }));
 
     await waitFor(() => expect(mockedCancelAuction).toHaveBeenCalledWith(7, '库存异常'));
-    await waitFor(() => expect(useLiveRoomStore.getState().connect).toHaveBeenCalledWith(7, 'access-token'));
+    await waitFor(() => expect(connect).toHaveBeenCalledWith(7, 'access-token'));
   });
 
   it('shows terminal auction state without cancellation controls', () => {
