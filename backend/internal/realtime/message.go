@@ -3,11 +3,12 @@ package realtime
 import "time"
 
 const (
-	MessageSnapshot    = "snapshot"
-	MessagePriceUpdate = "price_update"
-	MessageExtended    = "extended"
-	MessageAuctionEnd  = "auction_end"
-	MessageOutbid      = "outbid"
+	MessageSnapshot     = "snapshot"
+	MessagePriceUpdate  = "price_update"
+	MessageExtended     = "extended"
+	MessageAuctionEnd   = "auction_end"
+	MessageOutbid       = "outbid"
+	MessageAICommentary = "ai_commentary"
 )
 
 type Envelope struct {
@@ -79,4 +80,9 @@ type OutbidPayload struct {
 	PreviousAmount float64 `json:"previous_amount"`
 	NewAmount      float64 `json:"new_amount"`
 	NewBidderID    int64   `json:"new_bidder_id"`
+}
+
+type AICommentaryPayload struct {
+	Event      string `json:"event"`
+	Commentary string `json:"commentary"`
 }

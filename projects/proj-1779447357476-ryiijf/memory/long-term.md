@@ -1,6 +1,6 @@
 # 项目长期记忆
 
-> 更新时间：2026-06-08
+> 更新时间：2026-06-09
 
 ## 用户偏好
 
@@ -74,6 +74,16 @@
   - Scope is intentionally single-process; no Redis Pub/Sub, Prometheus, or multi-instance aggregation.
 
 ## 当前进行中
+
+- `ai-merchant-assistant`
+  - 分支：`codex/ai-auction-assistant`
+  - OpenSpec change：`openspec/changes/ai-merchant-assistant/`
+  - 已实现商家 AI 助手 V1：商品表单 AI 文案草稿、竞拍中 `ai_commentary` 实时解说、商家监控终态 AI 竞拍分析报告。
+  - 后端新增 OpenAI-compatible 配置 `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` / `AI_TIMEOUT_MS` / `AI_MAX_TOKENS`，使用 `/v1/chat/completions` 兼容形态。
+  - 新增 `ai_generation_records` 保存 product-copy 和 auction-report；realtime commentary 不持久化。
+  - AI 内容必须来自模型：直接 API 缺配置或模型失败会明确失败，实时解说失败则跳过，不用本地模板伪装。
+  - 不改变竞拍、钱包、订单、结算、取消、排行或 WebSocket 真理源语义。
+  - 已通过 OpenSpec strict、后端全量测试、前端全量测试、前端 build、diff 检查；尚未 commit/push。
 
 - `h5-live-ui-polish`
   - 分支：`codex/user-live-ui-optimization`

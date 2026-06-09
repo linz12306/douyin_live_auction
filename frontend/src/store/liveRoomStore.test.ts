@@ -252,6 +252,28 @@ describe('useLiveRoomStore', () => {
     expect(state.notifications[0]?.type).toBe('status');
   });
 
+  it('applies ai_commentary messages as non-authoritative notifications', () => {
+    useLiveRoomStore.getState().applyMessage(snapshot(3));
+    useLiveRoomStore.getState().applyMessage({
+      type: 'ai_commentary',
+      auction_id: 7,
+      version: 3,
+      server_time: '2026-05-28T10:00:02.000Z',
+      payload: {
+        event: 'first_bid',
+        commentary: '第一口出价来了，拍场开始升温！',
+      },
+    });
+
+    const state = useLiveRoomStore.getState();
+    expect(state.version).toBe(3);
+    expect(state.currentPrice).toBe(120);
+    expect(state.notifications[0]).toMatchObject({
+      type: 'ai',
+      message: 'AI解说：第一口出价来了，拍场开始升温！',
+    });
+  });
+
   it('applies same-version auction_end terminal messages', () => {
     useLiveRoomStore.getState().applyMessage(snapshot(3));
     useLiveRoomStore.getState().applyMessage({

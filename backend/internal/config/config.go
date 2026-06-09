@@ -2,6 +2,8 @@ package config
 
 import (
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -15,13 +17,22 @@ type Config struct {
 	AvatarDir    string
 	ImageDir     string
 	LiveMediaDir string
+	AI           AIConfig
+}
+
+type AIConfig struct {
+	BaseURL   string
+	APIKey    string
+	Model     string
+	Timeout   time.Duration
+	MaxTokens int
 }
 
 func Load() *Config {
 	_ = godotenv.Load()
 
 	return &Config{
-		DBDSN:        getEnv("DB_DSN", "root:auction123@tcp(127.0.0.1:3307)/auction_db?parseTime=true&loc=Local&charset=utf8mb4"),
+		DBDSN:        getEnv("DB_DSN", "root:auction123@tcp(127.0.0.1:3307)/auction_db?parseTime=true&loc=UTC&charset=utf8mb4"),
 		RedisAddr:    getEnv("REDIS_ADDR", "127.0.0.1:16380"),
 		RedisPass:    getEnv("REDIS_PASSWORD", ""),
 		JWTSecret:    getEnv("JWT_SECRET", "dev-secret-change-me"),
@@ -29,6 +40,13 @@ func Load() *Config {
 		AvatarDir:    getEnv("AVATAR_DIR", "./static/avatars"),
 		ImageDir:     getEnv("IMAGE_DIR", "./static/images"),
 		LiveMediaDir: getEnv("LIVE_MEDIA_DIR", "./static/live-media"),
+		AI: AIConfig{
+			BaseURL:   getEnv("AI_BASE_URL", ""),
+			APIKey:    getEnv("AI_API_KEY", ""),
+			Model:     getEnv("AI_MODEL", ""),
+			Timeout:   time.Duration(getEnvInt("AI_TIMEOUT_MS", 10000)) * time.Millisecond,
+			MaxTokens: getEnvInt("AI_MAX_TOKENS", 700),
+		},
 	}
 }
 
@@ -37,4 +55,16 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(v)
+	if err != nil || parsed <= 0 {
+		return fallback
+	}
+	return parsed
 }

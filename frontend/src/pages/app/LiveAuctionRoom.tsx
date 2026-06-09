@@ -556,6 +556,8 @@ export default function LiveAuctionRoom() {
                 className={`rounded-full px-3 py-1.5 text-sm leading-relaxed shadow-lg backdrop-blur-xl ${
                   item.type === 'outbid'
                     ? 'border border-rose-300/50 bg-rose-500/28 text-rose-50'
+                    : item.type === 'ai'
+                      ? 'border border-cyan-200/35 bg-cyan-400/18 text-cyan-50'
                     : 'bg-black/38 text-white/86'
                 }`}
               >

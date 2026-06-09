@@ -59,6 +59,12 @@ func main() {
 	auctionSvc := service.NewAuctionServiceWithMetrics(auctionEngineRepo, rdb, eventBus, auctionMetrics)
 	auctionH := handler.NewAuctionHandler(auctionSvc)
 	realtimeH := handler.NewRealtimeHandler(realtimeHub, snapshotProvider, cfg)
+	aiRepo := repository.NewAIRepo(db)
+	aiClient := service.NewChatCompletionClient(cfg.AI.BaseURL, cfg.AI.APIKey, cfg.AI.Model, cfg.AI.Timeout, cfg.AI.MaxTokens)
+	aiSvc := service.NewAIService(aiRepo, aiClient, cfg.AI.Model)
+	aiH := handler.NewAIHandler(aiSvc)
+	aiCommentarySvc := service.NewAICommentaryService(eventBus, aiSvc)
+	go aiCommentarySvc.Run(context.Background())
 	healthSvc := service.NewHealthService(db, rdb, service.EngineStatsProviderFunc(func() service.EngineStats {
 		hubStats := realtimeHub.Stats()
 		metricsSnapshot := auctionMetrics.Snapshot()
@@ -171,6 +177,9 @@ func main() {
 		merchant.Use(middleware.JWTAuth(cfg))
 		{
 			merchant.GET("/dashboard", middleware.RoleGuard("merchant"), dashboardH.Get)
+			merchant.POST("/ai/product-copy", middleware.RoleGuard("merchant"), aiH.GenerateProductCopy)
+			merchant.POST("/ai/auctions/:id/report", middleware.RoleGuard("merchant"), aiH.GenerateAuctionReport)
+			merchant.GET("/ai/auctions/:id/report", middleware.RoleGuard("merchant"), aiH.LatestAuctionReport)
 		}
 	}
 

@@ -146,6 +146,16 @@ describe('LiveAuctionRoom', () => {
     expect(new URL(FakeWebSocket.instances[0].url).searchParams.get('token')).toBe('access-token');
   });
 
+  it('renders AI commentary in the live message feed', () => {
+    seedRoom({
+      notifications: [{ id: 'ai-1', type: 'ai', message: 'AI解说：价格突破关键位，竞拍热度升温' }],
+    });
+
+    renderRoom();
+
+    expect(screen.getByText('AI解说：价格突破关键位，竞拍热度升温')).toBeInTheDocument();
+  });
+
   it('renders merchant-uploaded live video as the room stage background', () => {
     seedRoom({
       product: {
