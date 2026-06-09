@@ -248,6 +248,118 @@ describe('LiveAuctionRoom', () => {
     expect(screen.getByText('价格已更新')).toBeInTheDocument();
   });
 
+  it('does not show bid success animation from REST bid success alone', async () => {
+    seedRoom({ notifications: [] });
+    renderRoom();
+
+    fireEvent.click(screen.getByRole('button', { name: '打开出价面板' }));
+    fireEvent.click(screen.getByRole('button', { name: '立即出价 ¥130.00' }));
+
+    await waitFor(() => expect(mockedPlaceBid).toHaveBeenCalledWith(7, 130));
+    expect(screen.queryByTestId('live-room-bid-success-burst')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('live-room-leading-accent')).not.toBeInTheDocument();
+    expect(screen.queryByText('出价已确认，您正在领先')).not.toBeInTheDocument();
+    expect(screen.queryByText('价格已更新')).not.toBeInTheDocument();
+  });
+
+  it('shows Motion price feedback after websocket price_update', () => {
+    seedRoom({ notifications: [] });
+    renderRoom();
+
+    act(() => {
+      useLiveRoomStore.getState().applyMessage({
+        type: 'price_update',
+        auction_id: 7,
+        version: 5,
+        server_time: '2026-05-28T10:00:01.000Z',
+        payload: {
+          current_price: 140,
+          highest_bidder_id: 4,
+          rankings: [
+            {
+              rank: 1,
+              user_id: 4,
+              display_name: '阿辰',
+              avatar_url: '',
+              amount: 140,
+              status: 'winning',
+              bid_time: '2026-05-28T10:00:01.000Z',
+            },
+          ],
+        },
+      });
+    });
+
+    expect(screen.getByTestId('live-room-price-feedback')).toHaveTextContent('价格已更新');
+  });
+
+  it('shows bid success and leading feedback only after websocket confirms the buyer is highest bidder', () => {
+    seedRoom({ notifications: [] });
+    renderRoom();
+
+    expect(screen.queryByTestId('live-room-bid-success-burst')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('live-room-leading-accent')).not.toBeInTheDocument();
+
+    act(() => {
+      useLiveRoomStore.getState().applyMessage({
+        type: 'price_update',
+        auction_id: 7,
+        version: 5,
+        server_time: '2026-05-28T10:00:01.000Z',
+        payload: {
+          current_price: 140,
+          highest_bidder_id: buyerUser.id,
+          rankings: [
+            {
+              rank: 1,
+              user_id: buyerUser.id,
+              display_name: 'Buyer',
+              avatar_url: '',
+              amount: 140,
+              status: 'winning',
+              bid_time: '2026-05-28T10:00:01.000Z',
+            },
+          ],
+        },
+      });
+    });
+
+    expect(screen.getByTestId('live-room-bid-success-burst')).toHaveTextContent('出价已确认，您正在领先');
+    expect(screen.getByTestId('live-room-leading-accent')).toBeInTheDocument();
+  });
+
+  it('shows outbid warning feedback from private websocket notification', () => {
+    seedRoom({ notifications: [] });
+    renderRoom();
+
+    act(() => {
+      useLiveRoomStore.getState().applyMessage({
+        type: 'outbid',
+        auction_id: 7,
+        version: 4,
+        server_time: '2026-05-28T10:00:02.000Z',
+        payload: {
+          previous_amount: 120,
+          new_amount: 140,
+          new_bidder_id: 4,
+        },
+      });
+    });
+
+    expect(screen.getByTestId('live-room-outbid-warning')).toHaveTextContent('您已被超过，立即追回');
+  });
+
+  it('shows heartbeat urgency when the server-corrected countdown is in the last ten seconds', () => {
+    seedRoom({
+      endedAt: new Date(Date.now() + 8_000).toISOString(),
+      notifications: [],
+    });
+
+    renderRoom();
+
+    expect(screen.getByTestId('live-room-countdown-urgency')).toHaveTextContent('最后冲刺');
+  });
+
   it('keeps polished live room controls discoverable', () => {
     renderRoom();
 
@@ -425,6 +537,9 @@ describe('LiveAuctionRoom', () => {
     expect(screen.getByText('恭喜竞拍成功，请前往订单确认并完成模拟支付。')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '查看中标订单' })).toHaveAttribute('href', '/app/orders');
     expect(screen.getByText('竞拍已成交')).toBeInTheDocument();
+    expect(screen.queryByTestId('live-room-bid-success-burst')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('live-room-outbid-warning')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('live-room-countdown-urgency')).not.toBeInTheDocument();
   });
 
   it('renders terminal floating card as an auction result instead of a zero countdown', () => {

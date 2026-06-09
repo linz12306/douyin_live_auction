@@ -1,6 +1,6 @@
 # 项目长期记忆
 
-> 更新时间：2026-06-08
+> 更新时间：2026-06-09
 
 ## 用户偏好
 
@@ -74,6 +74,14 @@
   - Scope is intentionally single-process; no Redis Pub/Sub, Prometheus, or multi-instance aggregation.
 
 ## 当前进行中
+
+- `h5-live-animations`
+  - 分支：`codex/frontend-live-animations`
+  - OpenSpec change：`openspec/changes/h5-live-animations/`
+  - 已为用户端 H5 `/app/auctions/:id` 增加 Motion for React 动效：价格更新、WebSocket 确认出价成功金币、领先暖色强调、私有 outbid 警告、最后十秒心跳倒计时。
+  - 仍保持 WebSocket/Zustand 为实时真理源；REST 出价成功不触发成交/领先庆祝，也不直接改价格、排行、倒计时或终态。
+  - 已通过 TDD red/green、focused live-room tests、全量 frontend tests、frontend build、OpenSpec strict、diff 检查和 390x844 Playwright smoke。
+  - 当前未提交/未推送；等待用户明确要求。
 
 - `h5-live-ui-polish`
   - 分支：`codex/user-live-ui-optimization`

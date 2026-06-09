@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Link, useParams } from 'react-router-dom';
 import { placeBid } from '../../api/auction';
 import heroFallback from '../../assets/hero.png';
@@ -200,6 +201,48 @@ function RankingPill({ item, displayRank }: { item: RankingItem; displayRank: nu
   );
 }
 
+const COIN_BURST_PARTICLES = [
+  { id: 'coin-1', x: -58, y: -64, rotate: -24, delay: 0 },
+  { id: 'coin-2', x: -28, y: -86, rotate: 18, delay: 0.04 },
+  { id: 'coin-3', x: 2, y: -74, rotate: -8, delay: 0.08 },
+  { id: 'coin-4', x: 34, y: -92, rotate: 28, delay: 0.12 },
+  { id: 'coin-5', x: 62, y: -58, rotate: 42, delay: 0.16 },
+];
+
+function CoinBurst({ reduceMotion }: { reduceMotion: boolean }) {
+  return (
+    <motion.div
+      role="status"
+      aria-live="polite"
+      data-testid="live-room-bid-success-burst"
+      className="pointer-events-none absolute -top-16 left-0 right-0 z-50 flex justify-center"
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.92 }}
+      animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.96 }}
+      transition={{ duration: reduceMotion ? 0.12 : 0.28, ease: 'easeOut' }}
+    >
+      {!reduceMotion ? (
+        <span aria-hidden="true" className="absolute left-1/2 top-4 h-24 w-32 -translate-x-1/2">
+          {COIN_BURST_PARTICLES.map((coin) => (
+            <motion.span
+              key={coin.id}
+              className="absolute left-1/2 top-1/2 flex h-5 w-5 items-center justify-center rounded-full border border-amber-100/80 bg-gradient-to-br from-amber-100 via-yellow-300 to-orange-400 text-[10px] font-black text-amber-950 shadow-lg shadow-amber-500/30"
+              initial={{ opacity: 0, x: 0, y: 0, rotate: 0, scale: 0.4 }}
+              animate={{ opacity: [0, 1, 1, 0], x: coin.x, y: coin.y, rotate: coin.rotate, scale: [0.4, 1.08, 0.96] }}
+              transition={{ duration: 1.18, delay: coin.delay, ease: [0.2, 0.86, 0.28, 1] }}
+            >
+              ¥
+            </motion.span>
+          ))}
+        </span>
+      ) : null}
+      <span className="relative rounded-full border border-amber-100/45 bg-amber-200 px-3 py-1.5 text-xs font-black text-zinc-950 shadow-xl shadow-amber-500/25">
+        出价已确认，您正在领先
+      </span>
+    </motion.div>
+  );
+}
+
 export default function LiveAuctionRoom() {
   const { id } = useParams();
   const auctionId = Number(id);
@@ -235,6 +278,7 @@ export default function LiveAuctionRoom() {
   const [pricePulse, setPricePulse] = useState(false);
   const [pressedAction, setPressedAction] = useState('');
   const nowTick = useClockTick();
+  const reduceMotion = Boolean(useReducedMotion());
 
   const isValidAuctionId = Number.isFinite(auctionId) && auctionId > 0;
   const isCurrentRoom = isValidAuctionId && storeAuctionId === auctionId;
@@ -244,7 +288,11 @@ export default function LiveAuctionRoom() {
   const lastRoomPriceRef = useRef<number | null>(roomCurrentPrice);
   const pricePulseTimerRef = useRef<ReturnType<typeof window.setTimeout> | undefined>(undefined);
   const pressedActionTimerRef = useRef<ReturnType<typeof window.setTimeout> | undefined>(undefined);
+  const bidSuccessTimerRef = useRef<ReturnType<typeof window.setTimeout> | undefined>(undefined);
+  const lastLeadingStateRef = useRef<boolean | null>(null);
+  const lastOutbidIdRef = useRef<string | undefined>(undefined);
   const messageFeedRef = useRef<HTMLUListElement | null>(null);
+  const [bidSuccessBurstKey, setBidSuccessBurstKey] = useState(0);
   const roomHighestBidderId = isCurrentRoom ? highestBidderId : undefined;
   const roomEndedAt = isCurrentRoom ? endedAt : undefined;
   const roomCurrentExtendCount = isCurrentRoom ? currentExtendCount : 0;
@@ -380,9 +428,47 @@ export default function LiveAuctionRoom() {
     }, 900);
   }, [isCurrentRoom, roomCurrentPrice]);
 
+  useEffect(() => {
+    if (!isCurrentRoom || terminal || !active) {
+      lastLeadingStateRef.current = null;
+      if (bidSuccessTimerRef.current) {
+        window.clearTimeout(bidSuccessTimerRef.current);
+        bidSuccessTimerRef.current = undefined;
+      }
+      setBidSuccessBurstKey(0);
+      return;
+    }
+
+    if (lastLeadingStateRef.current === null) {
+      lastLeadingStateRef.current = isLeading;
+      return;
+    }
+
+    if (!lastLeadingStateRef.current && isLeading) {
+      setBidSuccessBurstKey((currentKey) => currentKey + 1);
+      if (bidSuccessTimerRef.current) window.clearTimeout(bidSuccessTimerRef.current);
+      bidSuccessTimerRef.current = window.setTimeout(() => {
+        setBidSuccessBurstKey(0);
+        bidSuccessTimerRef.current = undefined;
+      }, 1_650);
+    }
+
+    lastLeadingStateRef.current = isLeading;
+  }, [active, isCurrentRoom, isLeading, terminal]);
+
+  useEffect(() => {
+    if (!isOutbid || !latestOutbid?.id || latestOutbid.id === lastOutbidIdRef.current) return;
+    lastOutbidIdRef.current = latestOutbid.id;
+
+    if ('vibrate' in navigator && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(60);
+    }
+  }, [isOutbid, latestOutbid?.id]);
+
   useEffect(() => () => {
     if (pricePulseTimerRef.current) window.clearTimeout(pricePulseTimerRef.current);
     if (pressedActionTimerRef.current) window.clearTimeout(pressedActionTimerRef.current);
+    if (bidSuccessTimerRef.current) window.clearTimeout(bidSuccessTimerRef.current);
   }, []);
 
   function markPressed(action: string) {
@@ -572,8 +658,45 @@ export default function LiveAuctionRoom() {
           <ActionRailButton label="分享" value="168" icon="share" />
         </aside>
 
-        <section className={LIVE_ROOM_FLOATING_CARD_CLASS}>
-          <div
+        <section className={`${LIVE_ROOM_FLOATING_CARD_CLASS} pointer-events-auto`}>
+          <AnimatePresence>
+            {bidSuccessBurstKey > 0 && isLeading && !terminal ? (
+              <CoinBurst key={bidSuccessBurstKey} reduceMotion={reduceMotion} />
+            ) : null}
+          </AnimatePresence>
+          <AnimatePresence>
+            {isOutbid && !terminal ? (
+              <motion.div
+                key={latestOutbid?.id ?? 'outbid'}
+                data-testid="live-room-outbid-warning"
+                role="status"
+                aria-live="assertive"
+                className="pointer-events-none absolute -top-10 left-0 right-0 z-40 flex justify-center"
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.94 }}
+                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: [1, 1.04, 1] }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.98 }}
+                transition={{ duration: reduceMotion ? 0.12 : 0.46, ease: 'easeOut' }}
+              >
+                <span className="rounded-full border border-rose-100/55 bg-rose-500 px-3 py-1.5 text-xs font-black text-white shadow-xl shadow-rose-500/35">
+                  您已被超过，立即追回
+                </span>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+          <AnimatePresence>
+            {isLeading && !terminal ? (
+              <motion.div
+                data-testid="live-room-leading-accent"
+                aria-hidden="true"
+                className="pointer-events-none absolute -inset-1.5 z-0 rounded-[24px] border border-amber-100/55 shadow-[0_0_28px_rgba(252,211,77,0.32)]"
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={reduceMotion ? { opacity: 0.85, scale: 1 } : { opacity: [0.55, 1, 0.72], scale: [0.985, 1.018, 1] }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={reduceMotion ? { duration: 0.16 } : { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            ) : null}
+          </AnimatePresence>
+          <motion.div
             data-testid="live-room-auction-card"
             className={`overflow-hidden rounded-[20px] border text-white shadow-2xl shadow-black/55 backdrop-blur-2xl ${
               terminal
@@ -586,6 +709,14 @@ export default function LiveAuctionRoom() {
                       ? 'border-rose-300/65 bg-black/70 ring-2 ring-rose-500/45'
                       : 'border-white/18 bg-black/62'
             }`}
+            animate={
+              isOutbid && !terminal && !reduceMotion
+                ? { x: [0, -2, 2, -1, 0] }
+                : isLeading && !terminal && !reduceMotion
+                  ? { y: [0, -3, 0] }
+                  : { x: 0, y: 0 }
+            }
+            transition={isLeading && !terminal && !reduceMotion ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.36 }}
           >
             <div className="px-3 pb-3 pt-3">
               <div className="flex items-start justify-between gap-2">
@@ -633,23 +764,47 @@ export default function LiveAuctionRoom() {
                   {terminal ? '成交价' : shelfPriceLabel(roomStatus, bidCount)}
                 </span>
                 {!terminal && urgent ? (
-                  <span className="rounded-full bg-rose-500/22 px-2 py-1 text-[10px] font-black text-rose-100">最后冲刺</span>
+                  <motion.span
+                    data-testid="live-room-countdown-urgency"
+                    className="rounded-full bg-rose-500/22 px-2 py-1 text-[10px] font-black text-rose-100"
+                    animate={reduceMotion ? { opacity: 1 } : { scale: [1, 1.08, 1], opacity: [0.82, 1, 0.9] }}
+                    transition={reduceMotion ? { duration: 0.1 } : { duration: 0.72, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    最后冲刺
+                  </motion.span>
                 ) : null}
               </div>
-              <div
+              <motion.div
                 className={`mt-1 whitespace-nowrap font-black leading-none tabular-nums transition duration-300 ${
                   terminal
                     ? 'text-[30px] text-amber-100'
-                    : `text-[31px] ${pricePulse ? 'scale-[1.03] text-amber-100 drop-shadow-[0_0_14px_rgba(255,214,128,0.72)] animate-pulse' : 'text-white'}`
+                    : `text-[31px] ${pricePulse ? 'text-amber-100 drop-shadow-[0_0_14px_rgba(255,214,128,0.72)]' : 'text-white'}`
                 }`}
+                animate={
+                  pricePulse && !terminal && !reduceMotion
+                    ? { scale: [1, 1.055, 1], textShadow: ['0 0 0 rgba(255,214,128,0)', '0 0 18px rgba(255,214,128,0.88)', '0 0 0 rgba(255,214,128,0)'] }
+                    : { scale: 1, textShadow: '0 0 0 rgba(255,214,128,0)' }
+                }
+                transition={{ duration: 0.72, ease: 'easeOut' }}
               >
                 {formatPrice(terminal ? (roomFinalPrice ?? roomCurrentPrice) : roomCurrentPrice)}
-              </div>
-              {pricePulse && !terminal ? (
-                <div role="status" aria-live="polite" className="mt-1 text-[11px] font-black text-amber-100">
-                  价格已更新
-                </div>
-              ) : null}
+              </motion.div>
+              <AnimatePresence>
+                {pricePulse && !terminal ? (
+                  <motion.div
+                    role="status"
+                    aria-live="polite"
+                    data-testid="live-room-price-feedback"
+                    className="mt-1 text-[11px] font-black text-amber-100"
+                    initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
+                    animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                    exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -3 }}
+                    transition={{ duration: reduceMotion ? 0.1 : 0.2 }}
+                  >
+                    价格已更新
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
               {isLeading && !terminal ? (
                 <div className="mt-2 rounded-md border border-amber-200/18 bg-amber-200/15 px-2 py-1 text-[11px] font-black text-amber-100">
                   保持领先，等待落槌
@@ -675,9 +830,13 @@ export default function LiveAuctionRoom() {
               <div className="px-3 py-2">
                 <div className="flex items-end justify-between gap-2">
                   <span className="text-[12px] font-semibold text-white/56">距落槌</span>
-                  <span className={`font-mono text-[26px] font-black leading-none tabular-nums ${urgent ? 'text-rose-300 animate-pulse' : 'text-amber-100'}`}>
+                  <motion.span
+                    className={`font-mono text-[26px] font-black leading-none tabular-nums ${urgent ? 'text-rose-300' : 'text-amber-100'}`}
+                    animate={urgent && !reduceMotion ? { scale: [1, 1.1, 1], textShadow: ['0 0 0 rgba(251,113,133,0)', '0 0 16px rgba(251,113,133,0.78)', '0 0 0 rgba(251,113,133,0)'] } : { scale: 1, textShadow: '0 0 0 rgba(251,113,133,0)' }}
+                    transition={urgent && !reduceMotion ? { duration: 0.62, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.18 }}
+                  >
                     {formatCountdown(countdownMs)}
-                  </span>
+                  </motion.span>
                 </div>
                 {roomCurrentExtendCount > 0 ? (
                   <div className="mt-2 rounded-md border border-amber-200/20 bg-amber-200/14 px-2 py-1 text-[11px] font-bold text-amber-100">
@@ -704,7 +863,7 @@ export default function LiveAuctionRoom() {
             >
               {terminal ? '竞拍已结束' : floatingActionText === '立即出价' ? '立即出价' : floatingActionText}
             </button>
-          </div>
+          </motion.div>
         </section>
 
         <footer className={LIVE_ROOM_BOTTOM_CLASS}>
