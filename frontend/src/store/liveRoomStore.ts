@@ -3,6 +3,7 @@ import { computeServerOffset } from '../pages/app/liveRoomUtils';
 import type {
   AuctionEndPayload,
   AuctionStatus,
+  BidCommandPayload,
   ExtendedPayload,
   OutbidPayload,
   PriceUpdatePayload,
@@ -258,7 +259,7 @@ export const useLiveRoomStore = create<LiveRoomState>((set, get) => ({
       return;
     }
 
-    if (message.type !== 'outbid' && message.version < state.version) {
+    if (message.type !== 'outbid' && message.type !== 'bid_command' && message.version < state.version) {
       return;
     }
 
@@ -341,6 +342,23 @@ export const useLiveRoomStore = create<LiveRoomState>((set, get) => ({
         set((current: LiveRoomState) => ({
           serverTimeOffsetMs,
           notifications: withNotification(current, item),
+        }));
+        return;
+      }
+      case 'bid_command': {
+        const payload = asPayload<BidCommandPayload>(message);
+        const labelByStatus: Record<BidCommandPayload['status'], string> = {
+          queued: `出价 ${formatPrice(payload.amount)} 已排队`,
+          processing: `出价 ${formatPrice(payload.amount)} 正在处理`,
+          accepted: `出价 ${formatPrice(payload.amount)} 已接受`,
+          rejected: payload.failure_reason || '出价未被接受',
+          failed: payload.failure_reason || '出价处理失败',
+        };
+        const item = notification('status', labelByStatus[payload.status] ?? '出价状态已更新', message.server_time);
+        set((current: LiveRoomState) => ({
+          serverTimeOffsetMs,
+          notifications: withNotification(current, item),
+          error: payload.status === 'failed' || payload.status === 'rejected' ? item.message : undefined,
         }));
         return;
       }

@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -36,6 +38,7 @@ func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realti
 		t.Fatalf("Failed to connect to MySQL: %v", err)
 	}
 	acquireMySQLTestLock(t, db)
+	ensureAuctionCommandTestSchema(t, db)
 
 	cleanupAuctionTestData(t, db)
 
@@ -82,6 +85,8 @@ func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realti
 	auctions.Use(middleware.JWTAuth(cfg))
 	{
 		auctions.POST("/:id/bid", middleware.RoleGuard("user"), auctionH.PlaceBid)
+		auctions.POST("/:id/bid/async", middleware.RoleGuard("user"), auctionH.EnqueueBidCommand)
+		auctions.GET("/:id/bid-commands/:command_id", middleware.RoleGuard("user"), auctionH.GetBidCommand)
 		auctions.GET("/:id/rankings", auctionH.Rankings)
 		auctions.POST("/:id/activate", middleware.RoleGuard("merchant"), auctionH.Activate)
 		auctions.DELETE("/:id", middleware.RoleGuard("merchant"), auctionH.Cancel)
@@ -106,11 +111,30 @@ func setupAuctionServerWithEventBus(t *testing.T) (*gin.Engine, *sql.DB, *realti
 	return r, db, eventBus
 }
 
+func ensureAuctionCommandTestSchema(t *testing.T, db *sql.DB) {
+	t.Helper()
+
+	for _, path := range []string{
+		"../../migrations/009_create_auction_bid_requests.sql",
+		"../../migrations/010_create_auction_bid_commands.sql",
+	} {
+		ddl, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read migration %s: %v", path, err)
+		}
+		if _, err := db.Exec(string(ddl)); err != nil {
+			t.Fatalf("apply migration %s: %v", path, err)
+		}
+	}
+}
+
 func cleanupAuctionTestData(t *testing.T, db *sql.DB) {
 	t.Helper()
 
 	merchantLike := auctionMerchantPrefix(t) + "%"
 	userLike := auctionUserPrefix(t) + "%"
+	_, _ = db.Exec("DELETE FROM auction_bid_commands WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?))", merchantLike)
+	_, _ = db.Exec("DELETE FROM auction_bid_requests WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?))", merchantLike)
 	_, _ = db.Exec("DELETE FROM orders WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?))", merchantLike)
 	_, _ = db.Exec("DELETE FROM auction_logs WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?))", merchantLike)
 	_, _ = db.Exec("DELETE FROM bids WHERE auction_id IN (SELECT id FROM auctions WHERE merchant_id IN (SELECT id FROM users WHERE username LIKE ?))", merchantLike)
@@ -336,6 +360,522 @@ func requestBid(t *testing.T, ts *httptest.Server, auctionID int64, userToken st
 		t.Fatalf("place bid failed: %v", err)
 	}
 	return resp
+}
+
+func requestBidWithIdempotencyKey(t *testing.T, ts *httptest.Server, auctionID int64, userToken string, amount float64, key string) *http.Response {
+	t.Helper()
+
+	body, _ := json.Marshal(map[string]float64{"amount": amount})
+	req, err := http.NewRequest("POST", ts.URL+fmt.Sprintf("/api/v1/auctions/%d/bid", auctionID), bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("build keyed bid request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+userToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Idempotency-Key", key)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("keyed bid request failed: %v", err)
+	}
+	return resp
+}
+
+func decodeBidResponse(t *testing.T, resp *http.Response) map[string]interface{} {
+	t.Helper()
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected bid 200, got %d: %s", resp.StatusCode, string(body))
+	}
+	return decodeAPIData(t, resp)
+}
+
+func requestAsyncBid(t *testing.T, ts *httptest.Server, auctionID int64, userToken string, amount float64, key string) *http.Response {
+	t.Helper()
+
+	body, _ := json.Marshal(map[string]float64{"amount": amount})
+	req, err := http.NewRequest("POST", ts.URL+fmt.Sprintf("/api/v1/auctions/%d/bid/async", auctionID), bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("build async bid request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+userToken)
+	req.Header.Set("Content-Type", "application/json")
+	if key != "" {
+		req.Header.Set("X-Idempotency-Key", key)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("async bid request failed: %v", err)
+	}
+	return resp
+}
+
+func decodeCommandResponse(t *testing.T, resp *http.Response, wantStatus int) map[string]interface{} {
+	t.Helper()
+
+	defer resp.Body.Close()
+	if resp.StatusCode != wantStatus {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected command response %d, got %d: %s", wantStatus, resp.StatusCode, string(body))
+	}
+	return decodeAPIData(t, resp)
+}
+
+func getBidCommand(t *testing.T, ts *httptest.Server, auctionID int64, commandID string, userToken string) *http.Response {
+	t.Helper()
+
+	resp, err := makeRequest("GET", ts.URL+fmt.Sprintf("/api/v1/auctions/%d/bid-commands/%s", auctionID, commandID), userToken, nil)
+	if err != nil {
+		t.Fatalf("get bid command failed: %v", err)
+	}
+	return resp
+}
+
+func TestAsyncBidCommandEnqueueAndQuery(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, _ := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	command := decodeCommandResponse(t, requestAsyncBid(t, ts, auctionID, userToken, 10, ""), http.StatusAccepted)
+	if command["command_id"] == "" {
+		t.Fatalf("expected command_id, got %#v", command)
+	}
+	if command["status"] != "queued" {
+		t.Fatalf("expected queued command, got %#v", command)
+	}
+	if command["auction_id"] != float64(auctionID) || command["amount"] != float64(10) {
+		t.Fatalf("unexpected command body: %#v", command)
+	}
+
+	fetched := decodeCommandResponse(t, getBidCommand(t, ts, auctionID, command["command_id"].(string), userToken), http.StatusOK)
+	if fetched["command_id"] != command["command_id"] || fetched["status"] != "queued" {
+		t.Fatalf("unexpected fetched command: %#v", fetched)
+	}
+}
+
+func TestAsyncBidCommandEnqueueDoesNotPublishQueuedRealtimeEvent(t *testing.T) {
+	r, db, events := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, _ := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	eventStream, unsubscribe := events.Subscribe()
+	defer unsubscribe()
+
+	command := decodeCommandResponse(t, requestAsyncBid(t, ts, auctionID, userToken, 10, ""), http.StatusAccepted)
+	if command["status"] != "queued" {
+		t.Fatalf("expected HTTP command status queued, got %#v", command)
+	}
+
+	select {
+	case event := <-eventStream:
+		t.Fatalf("expected no queued realtime event on enqueue, got %+v", event)
+	case <-time.After(100 * time.Millisecond):
+	}
+}
+
+func TestAsyncBidCommandIdempotencyReturnsExistingCommand(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, _ := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	first := decodeCommandResponse(t, requestAsyncBid(t, ts, auctionID, userToken, 10, "async-idem-key"), http.StatusAccepted)
+	second := decodeCommandResponse(t, requestAsyncBid(t, ts, auctionID, userToken, 10, "async-idem-key"), http.StatusAccepted)
+	if first["command_id"] != second["command_id"] {
+		t.Fatalf("expected duplicate key to return command %v, got %v", first["command_id"], second["command_id"])
+	}
+
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM auction_bid_commands WHERE auction_id = ? AND idempotency_key = ?", auctionID, "async-idem-key").Scan(&count); err != nil {
+		t.Fatalf("query command count: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected one command for duplicate key, got %d", count)
+	}
+}
+
+func TestAsyncBidCommandQueryIsOwnerScoped(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	ownerToken, _ := registerAuctionUser(t, ts)
+	otherToken, _ := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	command := decodeCommandResponse(t, requestAsyncBid(t, ts, auctionID, ownerToken, 10, ""), http.StatusAccepted)
+	resp := getBidCommand(t, ts, auctionID, command["command_id"].(string), otherToken)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected non-owner command query 404, got %d: %s", resp.StatusCode, string(body))
+	}
+}
+
+func TestAsyncBidCommandWorkerAcceptsAndRejectsCommands(t *testing.T) {
+	r, db, events := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	firstToken, firstUserID := registerAuctionUser(t, ts)
+	secondToken, secondUserID := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	accepted := decodeCommandResponse(t, requestAsyncBid(t, ts, auctionID, firstToken, 10, "async-worker-accept"), http.StatusAccepted)
+	rejected := decodeCommandResponse(t, requestAsyncBid(t, ts, auctionID, secondToken, 5, "async-worker-reject"), http.StatusAccepted)
+
+	auctionRepo := repository.NewAuctionEngineRepo(db)
+	rdb, err := config.NewRedis(config.Load().RedisAddr, config.Load().RedisPass)
+	if err != nil {
+		t.Fatalf("connect redis: %v", err)
+	}
+	auctionSvc := service.NewAuctionServiceWithEvents(auctionRepo, rdb, events)
+	if err := auctionSvc.ProcessBidCommandForTest(context.Background(), accepted["command_id"].(string)); err != nil {
+		t.Fatalf("process accepted command: %v", err)
+	}
+	if err := auctionSvc.ProcessBidCommandForTest(context.Background(), rejected["command_id"].(string)); err != nil {
+		t.Fatalf("process rejected command: %v", err)
+	}
+
+	acceptedNow := decodeCommandResponse(t, getBidCommand(t, ts, auctionID, accepted["command_id"].(string), firstToken), http.StatusOK)
+	rejectedNow := decodeCommandResponse(t, getBidCommand(t, ts, auctionID, rejected["command_id"].(string), secondToken), http.StatusOK)
+	if acceptedNow["status"] != "accepted" || rejectedNow["status"] != "rejected" {
+		t.Fatalf("expected accepted/rejected statuses, got accepted=%#v rejected=%#v", acceptedNow, rejectedNow)
+	}
+
+	var activeCount int
+	var activeUserID int64
+	var activeAmount float64
+	if err := db.QueryRow("SELECT COUNT(*) FROM bids WHERE auction_id = ? AND status = 'active'", auctionID).Scan(&activeCount); err != nil {
+		t.Fatalf("query active count: %v", err)
+	}
+	if err := db.QueryRow("SELECT user_id, amount FROM bids WHERE auction_id = ? AND status = 'active'", auctionID).Scan(&activeUserID, &activeAmount); err != nil {
+		t.Fatalf("query active bid: %v", err)
+	}
+	if activeCount != 1 || activeUserID != firstUserID || activeAmount != 10 {
+		t.Fatalf("unexpected active bid count/user/amount: %d/%d/%.2f", activeCount, activeUserID, activeAmount)
+	}
+
+	var secondBidCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM bids WHERE auction_id = ? AND user_id = ?", auctionID, secondUserID).Scan(&secondBidCount); err != nil {
+		t.Fatalf("query rejected user bids: %v", err)
+	}
+	if secondBidCount != 0 {
+		t.Fatalf("expected rejected command to create no bid, got %d", secondBidCount)
+	}
+}
+
+func TestAsyncBidCommandWorkerReentryDoesNotDuplicateSideEffects(t *testing.T) {
+	r, db, events := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, userID := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	command := decodeCommandResponse(t, requestAsyncBid(t, ts, auctionID, userToken, 10, "async-reentry"), http.StatusAccepted)
+	auctionRepo := repository.NewAuctionEngineRepo(db)
+	rdb, err := config.NewRedis(config.Load().RedisAddr, config.Load().RedisPass)
+	if err != nil {
+		t.Fatalf("connect redis: %v", err)
+	}
+	auctionSvc := service.NewAuctionServiceWithEvents(auctionRepo, rdb, events)
+	for i := 0; i < 2; i++ {
+		if err := auctionSvc.ProcessBidCommandForTest(context.Background(), command["command_id"].(string)); err != nil {
+			t.Fatalf("process command attempt %d: %v", i+1, err)
+		}
+	}
+
+	var bidCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM bids WHERE auction_id = ? AND user_id = ?", auctionID, userID).Scan(&bidCount); err != nil {
+		t.Fatalf("query bid count: %v", err)
+	}
+	if bidCount != 1 {
+		t.Fatalf("expected one bid after reentry, got %d", bidCount)
+	}
+	balance, frozen := readUserWallet(t, db, userID)
+	if balance != 999990 || frozen != 10 {
+		t.Fatalf("expected one freeze after reentry, got %.2f/%.2f", balance, frozen)
+	}
+}
+
+func TestAsyncBidCommandWorkerDrainsSameAuctionInQueueOrder(t *testing.T) {
+	r, db, events := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	firstToken, firstUserID := registerAuctionUser(t, ts)
+	secondToken, secondUserID := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	first := decodeCommandResponse(t, requestAsyncBid(t, ts, auctionID, firstToken, 10, "async-order-1"), http.StatusAccepted)
+	second := decodeCommandResponse(t, requestAsyncBid(t, ts, auctionID, secondToken, 20, "async-order-2"), http.StatusAccepted)
+
+	auctionRepo := repository.NewAuctionEngineRepo(db)
+	rdb, err := config.NewRedis(config.Load().RedisAddr, config.Load().RedisPass)
+	if err != nil {
+		t.Fatalf("connect redis: %v", err)
+	}
+	auctionSvc := service.NewAuctionServiceWithEvents(auctionRepo, rdb, events)
+	if err := auctionSvc.DrainBidCommandsForAuctionForTest(context.Background(), auctionID); err != nil {
+		t.Fatalf("drain commands: %v", err)
+	}
+
+	firstNow := decodeCommandResponse(t, getBidCommand(t, ts, auctionID, first["command_id"].(string), firstToken), http.StatusOK)
+	secondNow := decodeCommandResponse(t, getBidCommand(t, ts, auctionID, second["command_id"].(string), secondToken), http.StatusOK)
+	if firstNow["status"] != "accepted" || secondNow["status"] != "accepted" {
+		t.Fatalf("expected both commands accepted, got first=%#v second=%#v", firstNow, secondNow)
+	}
+
+	var activeUserID int64
+	var activeAmount float64
+	if err := db.QueryRow("SELECT user_id, amount FROM bids WHERE auction_id = ? AND status = 'active'", auctionID).Scan(&activeUserID, &activeAmount); err != nil {
+		t.Fatalf("query active bid: %v", err)
+	}
+	if activeUserID != secondUserID || activeAmount != 20 {
+		t.Fatalf("expected second queued command to win, got user=%d amount=%.2f", activeUserID, activeAmount)
+	}
+
+	var firstStatus string
+	if err := db.QueryRow("SELECT status FROM bids WHERE auction_id = ? AND user_id = ?", auctionID, firstUserID).Scan(&firstStatus); err != nil {
+		t.Fatalf("query first bid status: %v", err)
+	}
+	if firstStatus != "outbid" {
+		t.Fatalf("expected first queued command bid outbid, got %s", firstStatus)
+	}
+}
+
+func TestAsyncBidCommandWorkerCanDrainDifferentAuctionsIndependently(t *testing.T) {
+	r, db, events := setupAuctionServerWithEventBus(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	firstToken, firstUserID := registerAuctionUser(t, ts)
+	secondToken, secondUserID := registerAuctionUser(t, ts)
+	_, firstAuctionID := publishPendingAuction(t, ts, merchantToken)
+	_, secondAuctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, firstAuctionID)
+	activateAuction(t, db, secondAuctionID)
+
+	_ = decodeCommandResponse(t, requestAsyncBid(t, ts, firstAuctionID, firstToken, 10, "async-parallel-1"), http.StatusAccepted)
+	_ = decodeCommandResponse(t, requestAsyncBid(t, ts, secondAuctionID, secondToken, 10, "async-parallel-2"), http.StatusAccepted)
+
+	auctionRepo := repository.NewAuctionEngineRepo(db)
+	rdb, err := config.NewRedis(config.Load().RedisAddr, config.Load().RedisPass)
+	if err != nil {
+		t.Fatalf("connect redis: %v", err)
+	}
+	auctionSvc := service.NewAuctionServiceWithEvents(auctionRepo, rdb, events)
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 2)
+	for _, auctionID := range []int64{firstAuctionID, secondAuctionID} {
+		wg.Add(1)
+		go func(auctionID int64) {
+			defer wg.Done()
+			errs <- auctionSvc.DrainBidCommandsForAuctionForTest(context.Background(), auctionID)
+		}(auctionID)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("parallel drain failed: %v", err)
+		}
+	}
+
+	for _, want := range []struct {
+		auctionID int64
+		userID    int64
+	}{
+		{firstAuctionID, firstUserID},
+		{secondAuctionID, secondUserID},
+	} {
+		var activeUserID int64
+		if err := db.QueryRow("SELECT user_id FROM bids WHERE auction_id = ? AND status = 'active'", want.auctionID).Scan(&activeUserID); err != nil {
+			t.Fatalf("query active bid for auction %d: %v", want.auctionID, err)
+		}
+		if activeUserID != want.userID {
+			t.Fatalf("auction %d active user = %d, want %d", want.auctionID, activeUserID, want.userID)
+		}
+	}
+}
+
+func TestBidIdempotencyKeyReplaysAcceptedResultWithoutWalletMutation(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, userID := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	first := decodeBidResponse(t, requestBidWithIdempotencyKey(t, ts, auctionID, userToken, 10, "auction-idem-replay"))
+	balanceAfterFirst, frozenAfterFirst := readUserWallet(t, db, userID)
+	second := decodeBidResponse(t, requestBidWithIdempotencyKey(t, ts, auctionID, userToken, 10, "auction-idem-replay"))
+	balanceAfterSecond, frozenAfterSecond := readUserWallet(t, db, userID)
+
+	if first["bid_id"] != second["bid_id"] {
+		t.Fatalf("expected replayed bid id %v, got %v", first["bid_id"], second["bid_id"])
+	}
+	if balanceAfterSecond != balanceAfterFirst || frozenAfterSecond != frozenAfterFirst {
+		t.Fatalf("expected replay to preserve wallet %.2f/%.2f, got %.2f/%.2f", balanceAfterFirst, frozenAfterFirst, balanceAfterSecond, frozenAfterSecond)
+	}
+
+	var bidCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM bids WHERE auction_id = ? AND user_id = ?", auctionID, userID).Scan(&bidCount); err != nil {
+		t.Fatalf("query bid count: %v", err)
+	}
+	if bidCount != 1 {
+		t.Fatalf("expected one bid after replay, got %d", bidCount)
+	}
+}
+
+func TestConcurrentBidsLeaveOneActiveBidAndConsistentWallets(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+
+	type bidder struct {
+		token string
+		id    int64
+	}
+	bidders := make([]bidder, 0, 24)
+	for i := 0; i < 24; i++ {
+		token, userID := registerAuctionUser(t, ts)
+		bidders = append(bidders, bidder{token: token, id: userID})
+	}
+
+	var wg sync.WaitGroup
+	for i, bidderInfo := range bidders {
+		wg.Add(1)
+		go func(i int, bidderInfo bidder) {
+			defer wg.Done()
+			resp := requestBid(t, ts, auctionID, bidderInfo.token, float64(10+i*10))
+			resp.Body.Close()
+		}(i, bidderInfo)
+	}
+	wg.Wait()
+
+	var activeCount int
+	var activeUserID int64
+	var activeAmount float64
+	if err := db.QueryRow("SELECT COUNT(*) FROM bids WHERE auction_id = ? AND status = 'active'", auctionID).Scan(&activeCount); err != nil {
+		t.Fatalf("query active bid count: %v", err)
+	}
+	if activeCount != 1 {
+		t.Fatalf("expected one active bid, got %d", activeCount)
+	}
+	if err := db.QueryRow("SELECT user_id, amount FROM bids WHERE auction_id = ? AND status = 'active'", auctionID).Scan(&activeUserID, &activeAmount); err != nil {
+		t.Fatalf("query active bid: %v", err)
+	}
+
+	var highestBidderID int64
+	var currentPrice float64
+	if err := db.QueryRow("SELECT highest_bidder_id, current_price FROM auctions WHERE id = ?", auctionID).Scan(&highestBidderID, &currentPrice); err != nil {
+		t.Fatalf("query auction highest: %v", err)
+	}
+	if highestBidderID != activeUserID || currentPrice != activeAmount {
+		t.Fatalf("auction highest %d/%.2f does not match active bid %d/%.2f", highestBidderID, currentPrice, activeUserID, activeAmount)
+	}
+
+	rankingResp, err := makeRequest("GET", ts.URL+fmt.Sprintf("/api/v1/auctions/%d/rankings", auctionID), bidders[0].token, nil)
+	if err != nil {
+		t.Fatalf("ranking request failed: %v", err)
+	}
+	defer rankingResp.Body.Close()
+	if rankingResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected rankings 200, got %d", rankingResp.StatusCode)
+	}
+	rankingData := decodeAPIData(t, rankingResp)
+	items := rankingData["items"].([]interface{})
+	if len(items) == 0 {
+		t.Fatal("expected rankings to include accepted bids")
+	}
+	top := items[0].(map[string]interface{})
+	if int64(top["user_id"].(float64)) != activeUserID || top["amount"].(float64) != activeAmount {
+		t.Fatalf("ranking top does not match active bid: top=%#v active=%d/%.2f", top, activeUserID, activeAmount)
+	}
+
+	for _, bidder := range bidders {
+		var balance, frozen float64
+		if err := db.QueryRow("SELECT balance, frozen_amount FROM users WHERE id = ?", bidder.id).Scan(&balance, &frozen); err != nil {
+			t.Fatalf("query wallet for user %d: %v", bidder.id, err)
+		}
+		if balance < 0 || frozen < 0 {
+			t.Fatalf("wallet should be non-negative for user %d, got %.2f/%.2f", bidder.id, balance, frozen)
+		}
+	}
+}
+
+func TestConcurrentSettlementCreatesOneOrderAndOneWonBid(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, _ := registerAuctionUser(t, ts)
+	_, auctionID := publishPendingAuction(t, ts, merchantToken)
+	activateAuction(t, db, auctionID)
+	placeBid(t, ts, auctionID, userToken, 10)
+	expireOnlyAuctionForSettlement(t, db, auctionID)
+
+	auctionSvc := service.NewAuctionService(repository.NewAuctionEngineRepo(db), nil)
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = auctionSvc.SettleExpired(context.Background())
+		}()
+	}
+	wg.Wait()
+
+	var orderCount, wonCount int
+	var status string
+	if err := db.QueryRow("SELECT COUNT(*) FROM orders WHERE auction_id = ?", auctionID).Scan(&orderCount); err != nil {
+		t.Fatalf("query order count: %v", err)
+	}
+	if err := db.QueryRow("SELECT COUNT(*) FROM bids WHERE auction_id = ? AND status = 'won'", auctionID).Scan(&wonCount); err != nil {
+		t.Fatalf("query won count: %v", err)
+	}
+	if err := db.QueryRow("SELECT status FROM auctions WHERE id = ?", auctionID).Scan(&status); err != nil {
+		t.Fatalf("query auction status: %v", err)
+	}
+	if orderCount != 1 || wonCount != 1 || status != "ended_sold" {
+		t.Fatalf("expected one order, one won bid, ended_sold; got orders=%d won=%d status=%s", orderCount, wonCount, status)
+	}
 }
 
 func TestMerchantCanCancelPendingAuction(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"douyin-live/backend/internal/model"
@@ -48,6 +49,22 @@ type AuctionSnapshot struct {
 	Row      *AuctionSnapshotRow
 	Rankings []model.BidRanking
 }
+
+type BidRequestRecord struct {
+	AuctionID       int64
+	UserID          int64
+	IdempotencyKey  string
+	BidID           int64
+	Amount          float64
+	CurrentPrice    float64
+	HighestBidderID int64
+	ResponseStatus  string
+	Extended        bool
+	Settled         bool
+	OrderID         *int64
+}
+
+type BidCommandRecord = model.BidCommand
 
 type auctionSnapshotQuerier interface {
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
@@ -121,6 +138,41 @@ func (r *AuctionEngineRepo) FindAuctionForUpdate(ctx context.Context, tx *sql.Tx
 		a.CancelledAt = &value
 	}
 	return a, nil
+}
+
+func (r *AuctionEngineRepo) FindBidRequest(ctx context.Context, auctionID, userID int64, key string) (*BidRequestRecord, error) {
+	return r.findBidRequest(ctx, r.db, auctionID, userID, key)
+}
+
+func (r *AuctionEngineRepo) FindBidRequestForUpdate(ctx context.Context, tx *sql.Tx, auctionID, userID int64, key string) (*BidRequestRecord, error) {
+	return r.findBidRequest(ctx, tx, auctionID, userID, key)
+}
+
+func (r *AuctionEngineRepo) findBidRequest(ctx context.Context, q auctionSnapshotQuerier, auctionID, userID int64, key string) (*BidRequestRecord, error) {
+	record := &BidRequestRecord{}
+	var orderID sql.NullInt64
+	err := q.QueryRowContext(ctx,
+		`SELECT auction_id, user_id, idempotency_key, bid_id, amount, current_price,
+                highest_bidder_id, response_status, extended, settled, order_id
+         FROM auction_bid_requests
+         WHERE auction_id = ? AND user_id = ? AND idempotency_key = ?`,
+		auctionID, userID, key,
+	).Scan(
+		&record.AuctionID, &record.UserID, &record.IdempotencyKey, &record.BidID,
+		&record.Amount, &record.CurrentPrice, &record.HighestBidderID, &record.ResponseStatus,
+		&record.Extended, &record.Settled, &orderID,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if orderID.Valid {
+		value := orderID.Int64
+		record.OrderID = &value
+	}
+	return record, nil
 }
 
 func (r *AuctionEngineRepo) FindAuctionSnapshot(ctx context.Context, auctionID int64) (*AuctionSnapshotRow, error) {
@@ -500,12 +552,229 @@ func (r *AuctionEngineRepo) CreateOrder(ctx context.Context, tx *sql.Tx, order *
 	return nil
 }
 
+func (r *AuctionEngineRepo) CreateBidRequest(ctx context.Context, tx *sql.Tx, record *BidRequestRecord) error {
+	_, err := tx.ExecContext(ctx,
+		`INSERT INTO auction_bid_requests
+            (auction_id, user_id, idempotency_key, bid_id, amount, current_price,
+             highest_bidder_id, response_status, extended, settled, order_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		record.AuctionID, record.UserID, record.IdempotencyKey, record.BidID, record.Amount,
+		record.CurrentPrice, record.HighestBidderID, record.ResponseStatus, record.Extended,
+		record.Settled, record.OrderID,
+	)
+	return err
+}
+
+func (r *AuctionEngineRepo) CreateOrFindBidCommand(ctx context.Context, command *model.BidCommand) (*model.BidCommand, error) {
+	if command.IdempotencyKey != nil && *command.IdempotencyKey != "" {
+		existing, err := r.FindBidCommandByIdempotencyKey(ctx, command.AuctionID, command.UserID, *command.IdempotencyKey)
+		if err != nil {
+			return nil, err
+		}
+		if existing != nil {
+			return existing, nil
+		}
+	}
+
+	var idempotencyKey any
+	if command.IdempotencyKey != nil && *command.IdempotencyKey != "" {
+		idempotencyKey = *command.IdempotencyKey
+	}
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO auction_bid_commands
+            (command_id, auction_id, user_id, idempotency_key, core_idempotency_key, amount, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'queued')`,
+		command.CommandID, command.AuctionID, command.UserID, idempotencyKey, command.CoreIdempotencyKey, command.Amount,
+	)
+	if err != nil {
+		if command.IdempotencyKey != nil && strings.Contains(err.Error(), "Duplicate entry") {
+			return r.FindBidCommandByIdempotencyKey(ctx, command.AuctionID, command.UserID, *command.IdempotencyKey)
+		}
+		return nil, err
+	}
+	return r.FindBidCommandByID(ctx, command.CommandID)
+}
+
+func (r *AuctionEngineRepo) FindBidCommandByIdempotencyKey(ctx context.Context, auctionID, userID int64, key string) (*model.BidCommand, error) {
+	return r.findBidCommand(ctx,
+		`SELECT id, command_id, auction_id, user_id, idempotency_key, core_idempotency_key, amount,
+                status, failure_reason, bid_id, order_id, auction_version, attempts,
+                processing_started_at, processed_at, created_at, updated_at
+         FROM auction_bid_commands
+         WHERE auction_id = ? AND user_id = ? AND idempotency_key = ?`,
+		auctionID, userID, key,
+	)
+}
+
+func (r *AuctionEngineRepo) FindBidCommandByID(ctx context.Context, commandID string) (*model.BidCommand, error) {
+	return r.findBidCommand(ctx,
+		`SELECT id, command_id, auction_id, user_id, idempotency_key, core_idempotency_key, amount,
+                status, failure_reason, bid_id, order_id, auction_version, attempts,
+                processing_started_at, processed_at, created_at, updated_at
+         FROM auction_bid_commands
+         WHERE command_id = ?`,
+		commandID,
+	)
+}
+
+func (r *AuctionEngineRepo) FindBidCommandForOwner(ctx context.Context, auctionID, userID int64, commandID string) (*model.BidCommand, error) {
+	return r.findBidCommand(ctx,
+		`SELECT id, command_id, auction_id, user_id, idempotency_key, core_idempotency_key, amount,
+                status, failure_reason, bid_id, order_id, auction_version, attempts,
+                processing_started_at, processed_at, created_at, updated_at
+         FROM auction_bid_commands
+         WHERE auction_id = ? AND user_id = ? AND command_id = ?`,
+		auctionID, userID, commandID,
+	)
+}
+
+func (r *AuctionEngineRepo) ListQueuedBidCommandsForAuction(ctx context.Context, auctionID int64, limit int) ([]model.BidCommand, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, command_id, auction_id, user_id, idempotency_key, core_idempotency_key, amount,
+                status, failure_reason, bid_id, order_id, auction_version, attempts,
+                processing_started_at, processed_at, created_at, updated_at
+         FROM auction_bid_commands
+         WHERE auction_id = ? AND status = 'queued'
+         ORDER BY id ASC
+         LIMIT ?`,
+		auctionID, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var commands []model.BidCommand
+	for rows.Next() {
+		command, err := scanBidCommand(rows)
+		if err != nil {
+			return nil, err
+		}
+		commands = append(commands, *command)
+	}
+	return commands, rows.Err()
+}
+
+func (r *AuctionEngineRepo) MarkBidCommandProcessing(ctx context.Context, commandID string, now time.Time) (bool, error) {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE auction_bid_commands
+         SET status = 'processing', attempts = attempts + 1, processing_started_at = ?, failure_reason = NULL
+         WHERE command_id = ? AND status = 'queued'`,
+		now, commandID,
+	)
+	if err != nil {
+		return false, err
+	}
+	affected, err := result.RowsAffected()
+	return affected > 0, err
+}
+
+func (r *AuctionEngineRepo) MarkBidCommandAccepted(ctx context.Context, commandID string, bidID int64, orderID *int64, auctionVersion int64, now time.Time) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE auction_bid_commands
+         SET status = 'accepted', failure_reason = NULL, bid_id = ?, order_id = ?, auction_version = ?, processed_at = ?
+         WHERE command_id = ?`,
+		bidID, orderID, auctionVersion, now, commandID,
+	)
+	return err
+}
+
+func (r *AuctionEngineRepo) MarkBidCommandRejected(ctx context.Context, commandID string, reason string, now time.Time) error {
+	if len(reason) > 500 {
+		reason = reason[:500]
+	}
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE auction_bid_commands
+         SET status = 'rejected', failure_reason = ?, processed_at = ?
+         WHERE command_id = ?`,
+		reason, now, commandID,
+	)
+	return err
+}
+
+func (r *AuctionEngineRepo) MarkBidCommandFailed(ctx context.Context, commandID string, reason string, now time.Time) error {
+	if len(reason) > 500 {
+		reason = reason[:500]
+	}
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE auction_bid_commands
+         SET status = 'failed', failure_reason = ?, processed_at = ?
+         WHERE command_id = ?`,
+		reason, now, commandID,
+	)
+	return err
+}
+
+func (r *AuctionEngineRepo) findBidCommand(ctx context.Context, query string, args ...interface{}) (*model.BidCommand, error) {
+	command, err := scanBidCommand(r.db.QueryRowContext(ctx, query, args...))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return command, err
+}
+
 func (r *AuctionEngineRepo) InsertAuditLog(ctx context.Context, tx *sql.Tx, auctionID, userID int64, action, detail string) error {
 	_, err := tx.ExecContext(ctx,
 		`INSERT INTO auction_logs (auction_id, action, user_id, detail) VALUES (?, ?, ?, ?)`,
 		auctionID, action, userID, detail,
 	)
 	return err
+}
+
+type bidCommandScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanBidCommand(scanner bidCommandScanner) (*model.BidCommand, error) {
+	command := &model.BidCommand{}
+	var idempotencyKey sql.NullString
+	var failureReason sql.NullString
+	var bidID sql.NullInt64
+	var orderID sql.NullInt64
+	var auctionVersion sql.NullInt64
+	var processingStartedAt sql.NullTime
+	var processedAt sql.NullTime
+
+	err := scanner.Scan(
+		&command.ID, &command.CommandID, &command.AuctionID, &command.UserID, &idempotencyKey, &command.CoreIdempotencyKey,
+		&command.Amount, &command.Status, &failureReason, &bidID, &orderID, &auctionVersion, &command.Attempts,
+		&processingStartedAt, &processedAt, &command.CreatedAt, &command.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if idempotencyKey.Valid {
+		value := idempotencyKey.String
+		command.IdempotencyKey = &value
+	}
+	if failureReason.Valid {
+		value := failureReason.String
+		command.FailureReason = &value
+	}
+	if bidID.Valid {
+		value := bidID.Int64
+		command.BidID = &value
+	}
+	if orderID.Valid {
+		value := orderID.Int64
+		command.OrderID = &value
+	}
+	if auctionVersion.Valid {
+		value := auctionVersion.Int64
+		command.AuctionVersion = &value
+	}
+	if processingStartedAt.Valid {
+		value := processingStartedAt.Time
+		command.ProcessingStartedAt = &value
+	}
+	if processedAt.Valid {
+		value := processedAt.Time
+		command.ProcessedAt = &value
+	}
+	return command, nil
 }
 
 func (r *AuctionEngineRepo) ListRankings(ctx context.Context, auctionID int64, limit int) ([]model.BidRanking, error) {

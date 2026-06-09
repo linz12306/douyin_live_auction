@@ -57,16 +57,22 @@ func TestHealthServiceReportsHealthyComponents(t *testing.T) {
 		fakeDBChecker{},
 		fakeRedisChecker{},
 		fakeEngineStatsProvider{stats: EngineStats{
-			ActiveRooms:          2,
-			ConnectedClients:     3,
-			DroppedEvents:        4,
-			BidRequestsTotal:     10,
-			BidSuccessTotal:      8,
-			BidFailureTotal:      2,
-			BidSuccessRate:       0.8,
-			BidAvgLatencyMS:      12.5,
-			BidLockBusyTotal:     3,
-			WSConnectionsCurrent: 3,
+			ActiveRooms:               2,
+			ConnectedClients:          3,
+			DroppedEvents:             4,
+			BidRequestsTotal:          10,
+			BidSuccessTotal:           8,
+			BidFailureTotal:           2,
+			BidSuccessRate:            0.8,
+			BidAvgLatencyMS:           12.5,
+			BidLockBusyTotal:          3,
+			BidLockDegradedTotal:      1,
+			WSConnectionsCurrent:      3,
+			BidCommandEnqueueTotal:    11,
+			BidCommandProcessingTotal: 10,
+			BidCommandAcceptedTotal:   7,
+			BidCommandRejectedTotal:   2,
+			BidCommandFailedTotal:     1,
 		}},
 	)
 
@@ -103,8 +109,15 @@ func TestHealthServiceReportsHealthyComponents(t *testing.T) {
 	if engine.BidLockBusyTotal != 3 {
 		t.Fatalf("engine lock busy total = %d", engine.BidLockBusyTotal)
 	}
+	if engine.BidLockDegradedTotal != 1 {
+		t.Fatalf("engine lock degraded total = %d", engine.BidLockDegradedTotal)
+	}
 	if engine.WSConnectionsCurrent != 3 {
 		t.Fatalf("engine ws connections current = %d", engine.WSConnectionsCurrent)
+	}
+	if engine.BidCommandEnqueueTotal != 11 || engine.BidCommandProcessingTotal != 10 ||
+		engine.BidCommandAcceptedTotal != 7 || engine.BidCommandRejectedTotal != 2 || engine.BidCommandFailedTotal != 1 {
+		t.Fatalf("engine bid command stats = %+v", engine)
 	}
 }
 

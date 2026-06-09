@@ -55,3 +55,17 @@ func TestAuctionMetricsRecordsLockBusy(t *testing.T) {
 		t.Fatalf("lock busy total = %d, want 1", snapshot.BidLockBusyTotal)
 	}
 }
+
+func TestAuctionMetricsRecordsLockDegraded(t *testing.T) {
+	metrics := NewAuctionMetrics()
+
+	metrics.RecordLockDegraded()
+	snapshot := metrics.Snapshot()
+
+	if snapshot.BidLockDegradedTotal != 1 {
+		t.Fatalf("lock degraded total = %d, want 1", snapshot.BidLockDegradedTotal)
+	}
+	if snapshot.BidLockBusyTotal != 0 {
+		t.Fatalf("lock busy total = %d, want 0", snapshot.BidLockBusyTotal)
+	}
+}

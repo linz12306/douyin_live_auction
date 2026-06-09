@@ -1,9 +1,14 @@
 package dto
 
-import "douyin-live/backend/internal/model"
+import (
+	"time"
+
+	"douyin-live/backend/internal/model"
+)
 
 type PlaceBidRequest struct {
-	Amount float64 `json:"amount" binding:"required,gt=0"`
+	Amount         float64 `json:"amount" binding:"required,gt=0"`
+	IdempotencyKey string  `json:"-"`
 }
 
 type PlaceBidResponse struct {
@@ -16,6 +21,20 @@ type PlaceBidResponse struct {
 	Extended        bool    `json:"extended"`
 	Settled         bool    `json:"settled"`
 	OrderID         *int64  `json:"order_id,omitempty"`
+}
+
+type BidCommandResponse struct {
+	CommandID      string     `json:"command_id"`
+	AuctionID      int64      `json:"auction_id"`
+	Amount         float64    `json:"amount"`
+	Status         string     `json:"status"`
+	FailureReason  *string    `json:"failure_reason,omitempty"`
+	BidID          *int64     `json:"bid_id,omitempty"`
+	OrderID        *int64     `json:"order_id,omitempty"`
+	AuctionVersion *int64     `json:"auction_version,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	ProcessedAt    *time.Time `json:"processed_at,omitempty"`
 }
 
 type RankingResponse struct {

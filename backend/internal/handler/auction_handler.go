@@ -31,8 +31,42 @@ func (h *AuctionHandler) PlaceBid(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, "请求参数错误")
 		return
 	}
+	req.IdempotencyKey = c.GetHeader("X-Idempotency-Key")
 
 	result, err := h.svc.PlaceBid(c.Request.Context(), userID, role, auctionID, &req)
+	if err != nil {
+		h.handleAuctionError(c, err)
+		return
+	}
+	response.Success(c, http.StatusOK, result)
+}
+
+func (h *AuctionHandler) EnqueueBidCommand(c *gin.Context) {
+	userID := c.GetInt64("user_id")
+	role := c.GetString("role")
+	auctionID := getInt64Param(c, "id")
+
+	var req dto.PlaceBidRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		return
+	}
+	req.IdempotencyKey = c.GetHeader("X-Idempotency-Key")
+
+	result, err := h.svc.EnqueueBidCommand(c.Request.Context(), userID, role, auctionID, &req)
+	if err != nil {
+		h.handleAuctionError(c, err)
+		return
+	}
+	response.Success(c, http.StatusAccepted, result)
+}
+
+func (h *AuctionHandler) GetBidCommand(c *gin.Context) {
+	userID := c.GetInt64("user_id")
+	auctionID := getInt64Param(c, "id")
+	commandID := c.Param("command_id")
+
+	result, err := h.svc.GetBidCommand(c.Request.Context(), userID, auctionID, commandID)
 	if err != nil {
 		h.handleAuctionError(c, err)
 		return
@@ -84,7 +118,8 @@ func (h *AuctionHandler) handleAuctionError(c *gin.Context, err error) {
 		response.Error(c, http.StatusNotFound, err.Error())
 	case errors.Is(err, service.ErrAuctionNotActive), errors.Is(err, service.ErrAuctionAlreadyClosed),
 		errors.Is(err, service.ErrBidTooLow), errors.Is(err, service.ErrCancelBlocked),
-		errors.Is(err, service.ErrCancelReasonRequired), errors.Is(err, service.ErrStatusImmutable):
+		errors.Is(err, service.ErrCancelReasonRequired), errors.Is(err, service.ErrStatusImmutable),
+		errors.Is(err, service.ErrIdempotencyKeyInvalid):
 		response.Error(c, http.StatusBadRequest, err.Error())
 	case errors.Is(err, service.ErrMerchantCannotBid), errors.Is(err, service.ErrNotOwner):
 		response.Error(c, http.StatusForbidden, err.Error())

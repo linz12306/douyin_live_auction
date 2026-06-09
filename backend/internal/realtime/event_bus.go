@@ -17,6 +17,7 @@ const (
 	EventAuctionExtended  AuctionEventType = "auction.extended"
 	EventAuctionEnded     AuctionEventType = "auction.ended"
 	EventAuctionCancelled AuctionEventType = "auction.cancelled"
+	EventBidCommandStatus AuctionEventType = "bid_command.status"
 )
 
 type AuctionEvent struct {
@@ -30,6 +31,11 @@ type AuctionEvent struct {
 	Status         string
 	EndedAt        *time.Time
 	ExtendCount    int
+	CommandID      string
+	CommandStatus  string
+	FailureReason  *string
+	BidID          *int64
+	OrderID        *int64
 	OccurredAt     time.Time
 }
 

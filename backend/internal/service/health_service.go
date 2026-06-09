@@ -38,16 +38,22 @@ func (f EngineStatsProviderFunc) Stats() EngineStats {
 }
 
 type EngineStats struct {
-	ActiveRooms          int
-	ConnectedClients     int
-	DroppedEvents        uint64
-	BidRequestsTotal     uint64
-	BidSuccessTotal      uint64
-	BidFailureTotal      uint64
-	BidSuccessRate       float64
-	BidAvgLatencyMS      float64
-	BidLockBusyTotal     uint64
-	WSConnectionsCurrent int
+	ActiveRooms               int
+	ConnectedClients          int
+	DroppedEvents             uint64
+	BidRequestsTotal          uint64
+	BidSuccessTotal           uint64
+	BidFailureTotal           uint64
+	BidSuccessRate            float64
+	BidAvgLatencyMS           float64
+	BidLockBusyTotal          uint64
+	BidLockDegradedTotal      uint64
+	WSConnectionsCurrent      int
+	BidCommandEnqueueTotal    uint64
+	BidCommandProcessingTotal uint64
+	BidCommandAcceptedTotal   uint64
+	BidCommandRejectedTotal   uint64
+	BidCommandFailedTotal     uint64
 }
 
 type HealthReport struct {
@@ -69,18 +75,24 @@ type HealthComponent struct {
 }
 
 type AuctionEngineComponent struct {
-	Status               string  `json:"status"`
-	ActiveRooms          int     `json:"active_rooms"`
-	ConnectedClients     int     `json:"connected_clients"`
-	DroppedEvents        uint64  `json:"dropped_events"`
-	BidRequestsTotal     uint64  `json:"bid_requests_total"`
-	BidSuccessTotal      uint64  `json:"bid_success_total"`
-	BidFailureTotal      uint64  `json:"bid_failure_total"`
-	BidSuccessRate       float64 `json:"bid_success_rate"`
-	BidAvgLatencyMS      float64 `json:"bid_avg_latency_ms"`
-	BidLockBusyTotal     uint64  `json:"bid_lock_busy_total"`
-	WSConnectionsCurrent int     `json:"ws_connections_current"`
-	Message              string  `json:"message,omitempty"`
+	Status                    string  `json:"status"`
+	ActiveRooms               int     `json:"active_rooms"`
+	ConnectedClients          int     `json:"connected_clients"`
+	DroppedEvents             uint64  `json:"dropped_events"`
+	BidRequestsTotal          uint64  `json:"bid_requests_total"`
+	BidSuccessTotal           uint64  `json:"bid_success_total"`
+	BidFailureTotal           uint64  `json:"bid_failure_total"`
+	BidSuccessRate            float64 `json:"bid_success_rate"`
+	BidAvgLatencyMS           float64 `json:"bid_avg_latency_ms"`
+	BidLockBusyTotal          uint64  `json:"bid_lock_busy_total"`
+	BidLockDegradedTotal      uint64  `json:"bid_lock_degraded_total"`
+	WSConnectionsCurrent      int     `json:"ws_connections_current"`
+	BidCommandEnqueueTotal    uint64  `json:"bid_command_enqueue_total"`
+	BidCommandProcessingTotal uint64  `json:"bid_command_processing_total"`
+	BidCommandAcceptedTotal   uint64  `json:"bid_command_accepted_total"`
+	BidCommandRejectedTotal   uint64  `json:"bid_command_rejected_total"`
+	BidCommandFailedTotal     uint64  `json:"bid_command_failed_total"`
+	Message                   string  `json:"message,omitempty"`
 }
 
 type HealthService struct {
@@ -159,17 +171,23 @@ func (s *HealthService) checkAuctionEngine() AuctionEngineComponent {
 	}
 	stats := s.engine.Stats()
 	return AuctionEngineComponent{
-		Status:               ComponentStatusOK,
-		ActiveRooms:          stats.ActiveRooms,
-		ConnectedClients:     stats.ConnectedClients,
-		DroppedEvents:        stats.DroppedEvents,
-		BidRequestsTotal:     stats.BidRequestsTotal,
-		BidSuccessTotal:      stats.BidSuccessTotal,
-		BidFailureTotal:      stats.BidFailureTotal,
-		BidSuccessRate:       stats.BidSuccessRate,
-		BidAvgLatencyMS:      stats.BidAvgLatencyMS,
-		BidLockBusyTotal:     stats.BidLockBusyTotal,
-		WSConnectionsCurrent: stats.WSConnectionsCurrent,
+		Status:                    ComponentStatusOK,
+		ActiveRooms:               stats.ActiveRooms,
+		ConnectedClients:          stats.ConnectedClients,
+		DroppedEvents:             stats.DroppedEvents,
+		BidRequestsTotal:          stats.BidRequestsTotal,
+		BidSuccessTotal:           stats.BidSuccessTotal,
+		BidFailureTotal:           stats.BidFailureTotal,
+		BidSuccessRate:            stats.BidSuccessRate,
+		BidAvgLatencyMS:           stats.BidAvgLatencyMS,
+		BidLockBusyTotal:          stats.BidLockBusyTotal,
+		BidLockDegradedTotal:      stats.BidLockDegradedTotal,
+		WSConnectionsCurrent:      stats.WSConnectionsCurrent,
+		BidCommandEnqueueTotal:    stats.BidCommandEnqueueTotal,
+		BidCommandProcessingTotal: stats.BidCommandProcessingTotal,
+		BidCommandAcceptedTotal:   stats.BidCommandAcceptedTotal,
+		BidCommandRejectedTotal:   stats.BidCommandRejectedTotal,
+		BidCommandFailedTotal:     stats.BidCommandFailedTotal,
 	}
 }
 

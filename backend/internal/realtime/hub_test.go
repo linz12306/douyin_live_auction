@@ -62,6 +62,36 @@ func TestHubSendsPrivateOutbidOnlyToMatchingUserID(t *testing.T) {
 	assertNoEnvelope(t, otherUser)
 }
 
+func TestHubSendsPrivateBidCommandOnlyToCommandOwner(t *testing.T) {
+	hub := NewHub(nil, nil)
+	owner := make(chan Envelope, 1)
+	otherUser := make(chan Envelope, 1)
+	unregisterOwner := hub.Register(1, 101, owner)
+	defer unregisterOwner()
+	unregisterOther := hub.Register(1, 102, otherUser)
+	defer unregisterOther()
+
+	hub.handleEvent(AuctionEvent{
+		Type:          EventBidCommandStatus,
+		AuctionID:     1,
+		UserID:        101,
+		CommandID:     "cmd-1",
+		CommandStatus: "queued",
+		Amount:        120,
+		OccurredAt:    time.Now(),
+	})
+
+	msg := assertEnvelope(t, owner, MessageBidCommand)
+	payload, ok := msg.Payload.(BidCommandPayload)
+	if !ok {
+		t.Fatalf("payload type = %T, want BidCommandPayload", msg.Payload)
+	}
+	if payload.CommandID != "cmd-1" || payload.Status != "queued" || payload.Amount != 120 {
+		t.Fatalf("unexpected bid command payload: %#v", payload)
+	}
+	assertNoEnvelope(t, otherUser)
+}
+
 func TestHubPriceUpdateKeepsEventVersionWhenSnapshotVersionDiffers(t *testing.T) {
 	snapshotVersion := int64(8)
 	highestBidderID := int64(202)
