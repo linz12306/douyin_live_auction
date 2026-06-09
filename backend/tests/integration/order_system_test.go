@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -116,6 +117,46 @@ func TestOrderTimeoutCancelsAndRefundsOnce(t *testing.T) {
 	}
 	if expired != 0 {
 		t.Fatalf("expected no repeated expiration, got %d", expired)
+	}
+	assertWallet(t, db, userID, 1000000, 0)
+}
+
+func TestOrderCancelAndTimeoutRaceRefundsAtMostOnce(t *testing.T) {
+	r, db := setupAuctionServer(t)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	merchantToken := registerAuctionMerchant(t, ts)
+	userToken, userID := registerAuctionUser(t, ts)
+	orderID := createSettledOrderViaCeilingBid(t, db, ts, merchantToken, userToken, 20)
+
+	now := time.Now()
+	if _, err := db.Exec("UPDATE orders SET created_at = ? WHERE id = ?", now.Add(-31*time.Minute), orderID); err != nil {
+		t.Fatalf("age order: %v", err)
+	}
+	assertWallet(t, db, userID, 999980, 0)
+
+	orderSvc := service.NewOrderService(repository.NewOrderRepo(db))
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			if i%2 == 0 {
+				_, _ = orderSvc.CancelOrder(context.Background(), userID, orderID, "buyer_cancelled")
+				return
+			}
+			_, _ = orderSvc.ExpirePendingConfirmOrders(context.Background(), time.Now())
+		}(i)
+	}
+	wg.Wait()
+
+	var status string
+	if err := db.QueryRow("SELECT status FROM orders WHERE id = ?", orderID).Scan(&status); err != nil {
+		t.Fatalf("query order status: %v", err)
+	}
+	if status != "cancelled" {
+		t.Fatalf("expected cancelled order, got %s", status)
 	}
 	assertWallet(t, db, userID, 1000000, 0)
 }

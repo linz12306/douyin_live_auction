@@ -9,6 +9,7 @@ const (
 	MessageAuctionEnd   = "auction_end"
 	MessageOutbid       = "outbid"
 	MessageAICommentary = "ai_commentary"
+	MessageBidCommand   = "bid_command"
 )
 
 type Envelope struct {
@@ -85,4 +86,13 @@ type OutbidPayload struct {
 type AICommentaryPayload struct {
 	Event      string `json:"event"`
 	Commentary string `json:"commentary"`
+}
+
+type BidCommandPayload struct {
+	CommandID     string  `json:"command_id"`
+	Status        string  `json:"status"`
+	Amount        float64 `json:"amount"`
+	FailureReason *string `json:"failure_reason,omitempty"`
+	BidID         *int64  `json:"bid_id,omitempty"`
+	OrderID       *int64  `json:"order_id,omitempty"`
 }

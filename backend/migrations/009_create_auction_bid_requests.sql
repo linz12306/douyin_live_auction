@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS auction_bid_requests (
+    id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    auction_id        BIGINT NOT NULL,
+    user_id           BIGINT NOT NULL,
+    idempotency_key   VARCHAR(128) NOT NULL,
+    bid_id            BIGINT NOT NULL,
+    amount            DECIMAL(15,2) NOT NULL,
+    current_price     DECIMAL(15,2) NOT NULL,
+    highest_bidder_id BIGINT NOT NULL,
+    response_status   VARCHAR(30) NOT NULL,
+    extended          BOOLEAN NOT NULL DEFAULT FALSE,
+    settled           BOOLEAN NOT NULL DEFAULT FALSE,
+    order_id          BIGINT NULL,
+    created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_bid_request (auction_id, user_id, idempotency_key),
+    FOREIGN KEY (auction_id) REFERENCES auctions(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (bid_id) REFERENCES bids(id),
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    INDEX idx_user_key (user_id, idempotency_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

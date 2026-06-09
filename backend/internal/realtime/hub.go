@@ -183,6 +183,24 @@ func (h *Hub) handleEvent(event AuctionEvent) {
 				Commentary: event.Commentary,
 			},
 		})
+	case EventBidCommandStatus:
+		if event.UserID <= 0 {
+			return
+		}
+		h.SendToUser(event.AuctionID, event.UserID, Envelope{
+			Type:       MessageBidCommand,
+			AuctionID:  event.AuctionID,
+			Version:    event.Version,
+			ServerTime: eventTime(event),
+			Payload: BidCommandPayload{
+				CommandID:     event.CommandID,
+				Status:        event.CommandStatus,
+				Amount:        event.Amount,
+				FailureReason: event.FailureReason,
+				BidID:         event.BidID,
+				OrderID:       event.OrderID,
+			},
+		})
 	}
 }
 

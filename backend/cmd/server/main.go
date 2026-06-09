@@ -51,7 +51,7 @@ func main() {
 
 	// Auction engine
 	auctionEngineRepo := repository.NewAuctionEngineRepo(db)
-	eventBus := realtime.NewInMemoryAuctionEventBus()
+	eventBus := realtime.NewRedisStreamAuctionEventBus(rdb, cfg.RealtimeEventStreamKey)
 	auctionMetrics := service.NewAuctionMetrics()
 	snapshotProvider := realtime.NewSnapshotProvider(auctionEngineRepo)
 	realtimeHub := realtime.NewHub(eventBus, snapshotProvider)
@@ -69,19 +69,31 @@ func main() {
 		hubStats := realtimeHub.Stats()
 		metricsSnapshot := auctionMetrics.Snapshot()
 		return service.EngineStats{
-			ActiveRooms:          hubStats.ActiveRooms,
-			ConnectedClients:     hubStats.ConnectedClients,
-			DroppedEvents:        eventBus.DroppedEvents(),
-			BidRequestsTotal:     metricsSnapshot.BidRequestsTotal,
-			BidSuccessTotal:      metricsSnapshot.BidSuccessTotal,
-			BidFailureTotal:      metricsSnapshot.BidFailureTotal,
-			BidSuccessRate:       metricsSnapshot.BidSuccessRate,
-			BidAvgLatencyMS:      metricsSnapshot.BidAvgLatencyMS,
-			BidLockBusyTotal:     metricsSnapshot.BidLockBusyTotal,
-			WSConnectionsCurrent: hubStats.ConnectedClients,
+			ActiveRooms:               hubStats.ActiveRooms,
+			ConnectedClients:          hubStats.ConnectedClients,
+			DroppedEvents:             eventBus.DroppedEvents(),
+			BidRequestsTotal:          metricsSnapshot.BidRequestsTotal,
+			BidSuccessTotal:           metricsSnapshot.BidSuccessTotal,
+			BidFailureTotal:           metricsSnapshot.BidFailureTotal,
+			BidSuccessRate:            metricsSnapshot.BidSuccessRate,
+			BidAvgLatencyMS:           metricsSnapshot.BidAvgLatencyMS,
+			BidLockBusyTotal:          metricsSnapshot.BidLockBusyTotal,
+			BidLockDegradedTotal:      metricsSnapshot.BidLockDegradedTotal,
+			WSConnectionsCurrent:      hubStats.ConnectedClients,
+			BidCommandEnqueueTotal:    metricsSnapshot.BidCommandEnqueueTotal,
+			BidCommandProcessingTotal: metricsSnapshot.BidCommandProcessingTotal,
+			BidCommandAcceptedTotal:   metricsSnapshot.BidCommandAcceptedTotal,
+			BidCommandRejectedTotal:   metricsSnapshot.BidCommandRejectedTotal,
+			BidCommandFailedTotal:     metricsSnapshot.BidCommandFailedTotal,
 		}
 	}))
 	healthH := handler.NewHealthHandler(healthSvc)
+	auctionSvc.StartBidCommandWorker(context.Background(), service.BidCommandWorkerOptions{
+		StreamKey:   cfg.BidCommandStreamKey,
+		Group:       cfg.BidCommandGroup,
+		Consumer:    cfg.BidCommandConsumer,
+		Concurrency: cfg.BidCommandConcurrency,
+	})
 	startAuctionSettlementWorker(auctionSvc)
 	orderRepo := repository.NewOrderRepo(db)
 	orderSvc := service.NewOrderService(orderRepo)
@@ -156,6 +168,8 @@ func main() {
 		auctions.Use(middleware.JWTAuth(cfg))
 		{
 			auctions.POST("/:id/bid", middleware.RoleGuard("user"), auctionH.PlaceBid)
+			auctions.POST("/:id/bid/async", middleware.RoleGuard("user"), auctionH.EnqueueBidCommand)
+			auctions.GET("/:id/bid-commands/:command_id", middleware.RoleGuard("user"), auctionH.GetBidCommand)
 			auctions.GET("/:id/rankings", auctionH.Rankings)
 			auctions.POST("/:id/activate", middleware.RoleGuard("merchant"), auctionH.Activate)
 			auctions.DELETE("/:id", middleware.RoleGuard("merchant"), auctionH.Cancel)

@@ -47,6 +47,34 @@ export async function placeBid(auctionId: number, amount: number): Promise<void>
   await client.post(`/auctions/${auctionId}/bid`, { amount });
 }
 
+export interface BidCommand {
+  command_id: string;
+  auction_id: number;
+  amount: number;
+  status: 'queued' | 'processing' | 'accepted' | 'rejected' | 'failed';
+  failure_reason?: string | null;
+  bid_id?: number | null;
+  order_id?: number | null;
+  auction_version?: number | null;
+  created_at: string;
+  updated_at: string;
+  processed_at?: string | null;
+}
+
+export async function enqueueBid(auctionId: number, amount: number, idempotencyKey?: string): Promise<BidCommand> {
+  const { data } = await client.post(
+    `/auctions/${auctionId}/bid/async`,
+    { amount },
+    idempotencyKey ? { headers: { 'X-Idempotency-Key': idempotencyKey } } : undefined,
+  );
+  return data.data as BidCommand;
+}
+
+export async function getBidCommand(auctionId: number, commandId: string): Promise<BidCommand> {
+  const { data } = await client.get(`/auctions/${auctionId}/bid-commands/${commandId}`);
+  return data.data as BidCommand;
+}
+
 export async function activateAuction(auctionId: number): Promise<void> {
   await client.post(`/auctions/${auctionId}/activate`);
 }

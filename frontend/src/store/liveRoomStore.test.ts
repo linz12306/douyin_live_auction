@@ -393,6 +393,23 @@ describe('useLiveRoomStore', () => {
     expect(state.notifications[0]?.type).toBe('outbid');
   });
 
+  it('adds command status notifications without changing auction price', () => {
+    useLiveRoomStore.getState().applyMessage(snapshot(3));
+    useLiveRoomStore.getState().applyMessage({
+      type: 'bid_command',
+      auction_id: 7,
+      version: 0,
+      server_time: '2026-05-28T09:59:01.000Z',
+      payload: { command_id: 'cmd-1', status: 'queued', amount: 130 },
+    });
+
+    const state = useLiveRoomStore.getState();
+    expect(state.version).toBe(3);
+    expect(state.currentPrice).toBe(120);
+    expect(state.notifications[0]?.type).toBe('status');
+    expect(state.notifications[0]?.message).toContain('排队');
+  });
+
   it('reconnects once after an unexpected close and replaces stale sockets', () => {
     useLiveRoomStore.getState().connect(7, 'first');
     const firstSocket = FakeWebSocket.instances[0];

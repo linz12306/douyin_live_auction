@@ -168,7 +168,12 @@
 - 商家实时监控页同样复用 `/ws/auctions/:id` 作为实时真理源，只展示状态/排行/出价事件，不提供出价控件；取消竞拍仍走现有 REST 命令路径。
 - 商家商品列表可返回可选 `auction_id`，用于跳转到对应竞拍监控页；用户大厅行为保持不变。
 - `/healthz` 只暴露短消息和轻量 runtime stats，不返回原始 DB/Redis 错误、DSN、密码或堆栈。
-- `/healthz` auction_engine metrics now include process-local bid request totals, success/failure totals, success rate, average latency, lock-busy count, and current WebSocket connections.
+- `/healthz` auction_engine metrics now include process-local bid request totals, success/failure totals, success rate, average latency, lock-busy count, Redis lock degradation count, and current WebSocket connections.
+- Bid placement accepts optional `X-Idempotency-Key`; successful keyed bids are durably replayed from `auction_bid_requests` so client retries do not double-freeze balances or insert duplicate bids.
+- Multi-backend WebSocket fanout now uses Redis Streams by default through `RedisStreamAuctionEventBus`; every backend subscribes with its own independent `XREAD` cursor so events are broadcast rather than load-balanced. `REALTIME_EVENT_STREAM_KEY` defaults to `auction_events`. Reconnect snapshots remain the correctness fallback.
+- Async bid command streaming is implemented as an optional path: sync `POST /api/v1/auctions/:id/bid` remains the fallback, while `POST /api/v1/auctions/:id/bid/async` enqueues durable `auction_bid_commands` rows and wakes Redis Stream `auction_bid_commands` workers. MySQL is the command status source of truth; workers drain commands in internal DB id order per auction under a Redis worker lock and reuse the shared bid transaction core with generated core idempotency keys.
+- Realtime command status uses private `bid_command` WebSocket messages for worker-owned processing/accepted/rejected/failed progress. The async HTTP response and MySQL command table are the queued source of truth; enqueue-stage queued messages are intentionally not published to `auction_events` to avoid flooding the WS backplane during large bid bursts. Accepted async bids still publish committed `auction_events` and therefore continue using existing `price_update`, `outbid`, `extended`, and `auction_end` room messages.
+- Redis Streams WebSocket backplane subscribers use an enlarged local buffer to absorb short local bursts; after this optimization, the local `5000` queued bids / `500` HTTP concurrency / `300` WS connection smoke had `dropped_events=0` while command worker pending/lag stayed `0/0`.
 
 ## 下一阶段建议
 
