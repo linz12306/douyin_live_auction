@@ -172,6 +172,17 @@ func (h *Hub) handleEvent(event AuctionEvent) {
 				TerminalMessage: terminalMessage(event),
 			},
 		})
+	case EventAICommentary:
+		h.Broadcast(event.AuctionID, Envelope{
+			Type:       MessageAICommentary,
+			AuctionID:  event.AuctionID,
+			Version:    event.Version,
+			ServerTime: eventTime(event),
+			Payload: AICommentaryPayload{
+				Event:      event.Status,
+				Commentary: event.Commentary,
+			},
+		})
 	}
 }
 

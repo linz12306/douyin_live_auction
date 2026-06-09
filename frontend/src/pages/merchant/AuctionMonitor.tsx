@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useParams } from 'react-router-dom';
 import { cancelAuction } from '../../api/auction';
+import { generateAuctionAIReport, getAuctionAIReport } from '../../api/ai';
 import MerchantConsole from '../../components/merchant/MerchantConsole';
 import { ConsolePanel, MetricCell, StatusBadge } from '../../components/merchant/MerchantPrimitives';
 import type { Tone } from '../../components/merchant/MerchantPrimitives';
@@ -9,6 +10,7 @@ import { usePageRefresh } from '../../hooks/usePageRefresh';
 import { useAuthStore } from '../../store/authStore';
 import { useLiveRoomStore } from '../../store/liveRoomStore';
 import type { AuctionStatus, RankingItem } from '../../types/auction';
+import type { AuctionAIReport } from '../../types/ai';
 import { remainingMs } from '../app/liveRoomUtils';
 
 const TERMINAL_STATUSES: AuctionStatus[] = ['ended_sold', 'ended_no_bid', 'cancelled'];
@@ -158,6 +160,9 @@ export default function AuctionMonitor() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelState, setCancelState] = useState<'idle' | 'submitting'>('idle');
   const [message, setMessage] = useState('');
+  const [aiReport, setAIReport] = useState<AuctionAIReport | null>(null);
+  const [aiReportState, setAIReportState] = useState<'idle' | 'loading' | 'generating'>('idle');
+  const [aiReportError, setAIReportError] = useState('');
   const nowTick = useClockTick();
 
   const isValidAuctionId = Number.isFinite(auctionId) && auctionId > 0;
@@ -190,6 +195,26 @@ export default function AuctionMonitor() {
     return () => disconnect();
   }, [disconnect, refreshRoom]);
 
+  useEffect(() => {
+    if (!terminal || !isValidAuctionId || !accessToken) return;
+    let mounted = true;
+    setAIReportState('loading');
+    setAIReportError('');
+    getAuctionAIReport(auctionId)
+      .then((report) => {
+        if (mounted) setAIReport(report);
+      })
+      .catch(() => {
+        if (mounted) setAIReport(null);
+      })
+      .finally(() => {
+        if (mounted) setAIReportState('idle');
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [accessToken, auctionId, isValidAuctionId, terminal]);
+
   const terminalLine = useMemo(() => {
     if (!terminal) return '';
     if (roomStatus === 'ended_sold') return `成交价 ${formatPrice(roomFinalPrice ?? roomCurrentPrice)}`;
@@ -216,6 +241,20 @@ export default function AuctionMonitor() {
       setMessage(extractApiError(error, '取消失败，请稍后重试'));
     } finally {
       setCancelState('idle');
+    }
+  }
+
+  async function generateAIReport() {
+    if (!isValidAuctionId) return;
+    setAIReportState('generating');
+    setAIReportError('');
+    try {
+      const report = await generateAuctionAIReport(auctionId);
+      setAIReport(report);
+    } catch (error) {
+      setAIReportError(extractApiError(error, 'AI竞拍分析生成失败，请检查模型配置后重试'));
+    } finally {
+      setAIReportState('idle');
     }
   }
 
@@ -298,6 +337,50 @@ export default function AuctionMonitor() {
               </div>
             </ConsolePanel>
           ) : null}
+
+          {terminal ? (
+            <ConsolePanel className="p-4">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-black text-white">AI竞拍分析报告</h2>
+                  <p className="mt-1 text-xs font-medium text-[#8B97A7]">基于本场竞拍数据生成赛后复盘，内容来自已配置的大模型</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void generateAIReport()}
+                  disabled={aiReportState === 'loading' || aiReportState === 'generating'}
+                  className="rounded-md border border-[#4BA3FF]/35 bg-[#4BA3FF]/10 px-3 py-2 text-xs font-black text-[#9CCBFF] transition hover:bg-[#4BA3FF]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {aiReportState === 'generating' ? '生成中...' : aiReport ? '重新生成' : '生成分析'}
+                </button>
+              </div>
+              {aiReportState === 'loading' ? (
+                <div className="rounded-md border border-[#263241] bg-[#0B1016] px-4 py-5 text-sm font-semibold text-[#8B97A7]">
+                  正在读取AI报告...
+                </div>
+              ) : null}
+              {aiReportError ? (
+                <div className="mb-3 rounded-md border border-[#F05268]/35 bg-[#F05268]/10 px-3 py-2 text-xs font-semibold text-[#FF8A9A]">
+                  {aiReportError}
+                </div>
+              ) : null}
+              {aiReport ? (
+                <div className="space-y-3 rounded-lg border border-[#263241] bg-[#0B1016] p-4">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#D5DCE5]">{aiReport.report}</p>
+                  <div className="grid gap-3 sm:grid-cols-4">
+                    <MetricCell label="参与人数" value={aiReport.metrics.participant_count} />
+                    <MetricCell label="出价次数" value={aiReport.metrics.bid_count} />
+                    <MetricCell label="成交/终态价" value={formatPrice(aiReport.metrics.final_price)} />
+                    <MetricCell label="最后30秒占比" value={`${Math.round(aiReport.metrics.last_30_second_bid_share * 100)}%`} />
+                  </div>
+                </div>
+              ) : aiReportState !== 'loading' ? (
+                <div className="rounded-md border border-dashed border-[#263241] bg-[#0B1016] px-4 py-5 text-xs leading-relaxed text-[#8B97A7]">
+                  暂无AI分析报告，竞拍结束后可手动生成。
+                </div>
+              ) : null}
+            </ConsolePanel>
+          ) : null}
         </section>
 
         <aside className="min-w-0 space-y-5">
@@ -319,7 +402,11 @@ export default function AuctionMonitor() {
             {roomNotifications.length > 0 ? (
               <ul className="max-h-[220px] space-y-2 overflow-y-auto pr-1">
                 {roomNotifications.slice(0, 6).map((item) => (
-                  <li key={item.id} className="rounded-md border border-[#263241] bg-[#0B1016] px-3 py-2 text-xs font-medium text-[#B2BECC]">
+                  <li key={item.id} className={`rounded-md border px-3 py-2 text-xs font-medium ${
+                    item.type === 'ai'
+                      ? 'border-cyan-300/25 bg-cyan-400/10 text-cyan-100'
+                      : 'border-[#263241] bg-[#0B1016] text-[#B2BECC]'
+                  }`}>
                     {item.message}
                   </li>
                 ))}

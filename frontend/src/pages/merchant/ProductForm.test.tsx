@@ -9,6 +9,7 @@ import ProductForm from './ProductForm';
 const mocks = vi.hoisted(() => ({
   createProduct: vi.fn(),
   deleteProductLiveMedia: vi.fn(),
+  generateProductCopy: vi.fn(),
   getProduct: vi.fn(),
   publishProduct: vi.fn(),
   updateProduct: vi.fn(),
@@ -24,6 +25,10 @@ vi.mock('../../api/product', () => ({
   updateProduct: mocks.updateProduct,
   uploadProductImage: mocks.uploadProductImage,
   uploadProductLiveMedia: mocks.uploadProductLiveMedia,
+}));
+
+vi.mock('../../api/ai', () => ({
+  generateProductCopy: mocks.generateProductCopy,
 }));
 
 const draftDetail: ProductDetail = {
@@ -177,5 +182,37 @@ describe('ProductForm live media', () => {
 
     expect(screen.getByText((text) => text.includes('仅支持 jpg/png/webp/mp4/webm'))).toBeInTheDocument();
     expect(mocks.uploadProductLiveMedia).not.toHaveBeenCalled();
+  });
+
+  it('previews AI copy and applies it only after merchant confirmation', async () => {
+    mocks.generateProductCopy.mockResolvedValueOnce({
+      record_id: 5,
+      model: 'test-model',
+      draft: {
+        title: 'AI温润和田玉手镯',
+        description: 'AI生成的商品介绍',
+        selling_points: ['玉质温润', '适合收藏'],
+        live_script: '各位朋友看这只手镯的光泽。',
+      },
+    });
+
+    renderForm('/merchant/products/new');
+    fireEvent.change(screen.getByLabelText(/商品名称/), { target: { value: '和田玉手镯' } });
+
+    fireEvent.click(screen.getByRole('button', { name: '生成AI文案' }));
+
+    await waitFor(() => expect(mocks.generateProductCopy).toHaveBeenCalledWith(expect.objectContaining({
+      title: '和田玉手镯',
+      duration_seconds: 300,
+    })));
+    expect(await screen.findByText('AI温润和田玉手镯')).toBeInTheDocument();
+    expect(screen.getByLabelText(/商品名称/)).toHaveValue('和田玉手镯');
+
+    fireEvent.click(screen.getByRole('button', { name: '应用到商品表单' }));
+
+    expect(screen.getByLabelText(/商品名称/)).toHaveValue('AI温润和田玉手镯');
+    const descriptionInput = screen.getByLabelText(/商品详情介绍/) as HTMLTextAreaElement;
+    expect(descriptionInput.value).toContain('核心卖点');
+    expect(descriptionInput.value).toContain('直播口播');
   });
 });

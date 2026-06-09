@@ -17,6 +17,7 @@ const (
 	EventAuctionExtended  AuctionEventType = "auction.extended"
 	EventAuctionEnded     AuctionEventType = "auction.ended"
 	EventAuctionCancelled AuctionEventType = "auction.cancelled"
+	EventAICommentary     AuctionEventType = "ai.commentary"
 )
 
 type AuctionEvent struct {
@@ -30,6 +31,7 @@ type AuctionEvent struct {
 	Status         string
 	EndedAt        *time.Time
 	ExtendCount    int
+	Commentary     string
 	OccurredAt     time.Time
 }
 

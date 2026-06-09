@@ -43,7 +43,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DB_DSN: root:auction123@tcp(mysql:3306)/auction_db?parseTime=true&loc=Local&charset=utf8mb4
+      DB_DSN: root:auction123@tcp(mysql:3306)/auction_db?parseTime=true&loc=UTC&charset=utf8mb4
       REDIS_ADDR: redis:6379
       REDIS_PASSWORD: ""
       JWT_SECRET: dev-secret-change-me

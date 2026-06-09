@@ -10,7 +10,7 @@ export interface AuctionLobbyItem {
   ended_at?: string;
 }
 
-export type RealtimeMessageType = 'snapshot' | 'price_update' | 'extended' | 'auction_end' | 'outbid';
+export type RealtimeMessageType = 'snapshot' | 'price_update' | 'extended' | 'auction_end' | 'outbid' | 'ai_commentary';
 
 export interface RealtimeEnvelope<T = unknown> {
   type: RealtimeMessageType;
@@ -79,4 +79,9 @@ export interface OutbidPayload {
   previous_amount: number;
   new_amount: number;
   new_bidder_id: number;
+}
+
+export interface AICommentaryPayload {
+  event: string;
+  commentary: string;
 }

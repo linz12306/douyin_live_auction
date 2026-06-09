@@ -9,12 +9,14 @@ import {
   uploadProductImage,
   uploadProductLiveMedia,
 } from '../../api/product';
+import { generateProductCopy } from '../../api/ai';
 import ImageUploader from '../../components/ImageUploader';
 import AuctionRuleForm from '../../components/AuctionRuleForm';
 import MerchantConsole from '../../components/merchant/MerchantConsole';
 import { ConsolePanel } from '../../components/merchant/MerchantPrimitives';
 import PageBackButton from '../../components/PageBackButton';
 import type { ProductLiveMedia, PublishRequest } from '../../types/product';
+import type { ProductCopyDraft } from '../../types/ai';
 
 function getApiErrorMessage(err: unknown, fallback: string) {
   if (typeof err === 'object' && err !== null && 'response' in err) {
@@ -50,6 +52,9 @@ export default function ProductForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
+  const [aiLoading, setAILoading] = useState(false);
+  const [aiError, setAIError] = useState('');
+  const [aiDraft, setAIDraft] = useState<ProductCopyDraft | null>(null);
   const canEditMedia = status === '' || status === 'draft';
 
   useEffect(() => {
@@ -127,6 +132,33 @@ export default function ProductForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGenerateAICopy = async () => {
+    setAIError('');
+    setAILoading(true);
+    try {
+      const result = await generateProductCopy({
+        title,
+        description,
+        start_price: rules.start_price,
+        bid_increment_type: rules.bid_increment_type,
+        bid_increment_value: rules.bid_increment_value,
+        ceiling_price: rules.ceiling_price ?? null,
+        duration_seconds: rules.duration_seconds,
+      });
+      setAIDraft(result.draft);
+    } catch (err: unknown) {
+      setAIError(getApiErrorMessage(err, 'AI文案生成失败，请检查模型配置后重试'));
+    } finally {
+      setAILoading(false);
+    }
+  };
+
+  const handleApplyAIDraft = () => {
+    if (!aiDraft) return;
+    setTitle(aiDraft.title);
+    setDescription(formatAIDescription(aiDraft));
   };
 
   const handlePublish = async () => {
@@ -319,6 +351,61 @@ export default function ProductForm() {
             </ConsolePanel>
 
             <ConsolePanel className="p-4">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-black text-white">AI 商品文案助手</h2>
+                  <p className="mt-1 text-xs font-medium text-[#8B97A7]">根据当前商品信息和竞拍规则生成草稿，确认后再填入表单</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleGenerateAICopy()}
+                  disabled={aiLoading}
+                  className="rounded-md border border-[#4BA3FF]/35 bg-[#4BA3FF]/10 px-3 py-2 text-xs font-black text-[#9CCBFF] transition hover:bg-[#4BA3FF]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {aiLoading ? '生成中...' : '生成AI文案'}
+                </button>
+              </div>
+              {aiError ? (
+                <div className="rounded-md border border-[#F05268]/35 bg-[#F05268]/10 px-3 py-2 text-xs font-semibold text-[#FF8A9A]">
+                  {aiError}
+                </div>
+              ) : null}
+              {aiDraft ? (
+                <div className="space-y-3 rounded-lg border border-[#263241] bg-[#0B1016] p-3">
+                  <div>
+                    <div className="text-[11px] font-semibold text-[#596575]">标题草稿</div>
+                    <div className="mt-1 text-sm font-black text-white">{aiDraft.title}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-[#596575]">介绍草稿</div>
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[#D5DCE5]">{aiDraft.description}</p>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-[#596575]">卖点</div>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-[#D5DCE5]">
+                      {aiDraft.selling_points.map((point) => <li key={point}>{point}</li>)}
+                    </ul>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-[#596575]">直播口播</div>
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[#D5DCE5]">{aiDraft.live_script}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleApplyAIDraft}
+                    className="w-full rounded-md bg-[#21D19F] px-4 py-2.5 text-sm font-black text-[#07100D] transition hover:bg-[#76F2CD]"
+                  >
+                    应用到商品表单
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed border-[#263241] bg-[#0B1016] px-4 py-5 text-xs leading-relaxed text-[#8B97A7]">
+                  AI 只生成草稿，不会自动保存或覆盖商品。生成结果来自已配置的大模型。
+                </div>
+              )}
+            </ConsolePanel>
+
+            <ConsolePanel className="p-4">
               <div className="mb-4">
                 <h2 className="text-sm font-black text-white">商品图库</h2>
                 <p className="mt-1 text-xs font-medium text-[#8B97A7]">最多展示 9 张商品图，草稿阶段可调整</p>
@@ -431,4 +518,9 @@ function getLiveMediaType(file: File): 'image' | 'video' | null {
   if (['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return 'image';
   if (['video/mp4', 'video/webm'].includes(file.type)) return 'video';
   return null;
+}
+
+function formatAIDescription(draft: ProductCopyDraft) {
+  const sellingPoints = draft.selling_points.map((point) => `- ${point}`).join('\n');
+  return `${draft.description}\n\n核心卖点：\n${sellingPoints}\n\n直播口播：\n${draft.live_script}`;
 }

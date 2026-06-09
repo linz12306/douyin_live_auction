@@ -3,6 +3,7 @@ import { computeServerOffset } from '../pages/app/liveRoomUtils';
 import type {
   AuctionEndPayload,
   AuctionStatus,
+  AICommentaryPayload,
   ExtendedPayload,
   OutbidPayload,
   PriceUpdatePayload,
@@ -14,7 +15,7 @@ import type {
 
 export type LiveRoomConnectionState = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed' | 'error';
 export type BidSubmitState = 'idle' | 'submitting' | 'error';
-export type LiveRoomNotificationType = 'bid' | 'outbid' | 'error' | 'status';
+export type LiveRoomNotificationType = 'bid' | 'outbid' | 'error' | 'status' | 'ai';
 
 export interface LiveRoomNotification {
   id: string;
@@ -258,7 +259,7 @@ export const useLiveRoomStore = create<LiveRoomState>((set, get) => ({
       return;
     }
 
-    if (message.type !== 'outbid' && message.version < state.version) {
+    if (message.type !== 'outbid' && message.type !== 'ai_commentary' && message.version < state.version) {
       return;
     }
 
@@ -338,6 +339,17 @@ export const useLiveRoomStore = create<LiveRoomState>((set, get) => ({
           `您已被超过，当前最高出价为 ${payload.new_amount}`,
           message.server_time,
         );
+        set((current: LiveRoomState) => ({
+          serverTimeOffsetMs,
+          notifications: withNotification(current, item),
+        }));
+        return;
+      }
+      case 'ai_commentary': {
+        const payload = asPayload<AICommentaryPayload>(message);
+        const trimmed = payload.commentary.trim();
+        if (!trimmed) return;
+        const item = notification('ai', `AI解说：${trimmed}`, message.server_time);
         set((current: LiveRoomState) => ({
           serverTimeOffsetMs,
           notifications: withNotification(current, item),

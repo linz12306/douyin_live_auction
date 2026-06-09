@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS ai_generation_records (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    merchant_id    BIGINT NOT NULL,
+    target_type    ENUM('product_copy','auction_report') NOT NULL,
+    product_id     BIGINT NULL,
+    auction_id     BIGINT NULL,
+    input_snapshot JSON NOT NULL,
+    output_content LONGTEXT NOT NULL,
+    model          VARCHAR(128) NOT NULL,
+    status         ENUM('succeeded','failed') NOT NULL DEFAULT 'succeeded',
+    error_message  VARCHAR(500) NULL,
+    created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (merchant_id) REFERENCES users(id),
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (auction_id) REFERENCES auctions(id),
+    INDEX idx_ai_generation_merchant_target (merchant_id, target_type, created_at),
+    INDEX idx_ai_generation_auction (auction_id, target_type, created_at),
+    INDEX idx_ai_generation_product (product_id, target_type, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
