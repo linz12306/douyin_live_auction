@@ -1,73 +1,47 @@
-# React + TypeScript + Vite
+# 前端说明
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+本目录是直播拍卖 MVP 的前端应用，使用 React、Vite、TypeScript、React Router、Zustand、Tailwind CSS 和 Vitest。
 
-Currently, two official plugins are available:
+## 主要目录
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `src/pages/app/`：买家侧页面，包括拍卖大厅、直播拍卖房间和订单相关页面。
+- `src/pages/merchant/`：商家侧页面，包括商品管理、拍卖监控、工作台和订单管理。
+- `src/api/`：前端请求封装。
+- `src/stores/`：直播房间等客户端状态。
+- `src/components/`：可复用 UI 组件。
 
-## React Compiler
+## 本地开发
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+安装依赖：
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+启动开发服务：
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev -- --host 127.0.0.1 --port 3000
 ```
+
+应用默认通过 Vite 代理访问 `http://localhost:8080`，代理范围包括 `/api`、`/ws` 和 `/static`。如果后端地址不同，可设置 `VITE_BACKEND_TARGET`；启动前端前，请先在仓库根目录启动 MySQL、Redis 和后端服务。
+
+## 常用命令
+
+```bash
+npm run dev
+npm run test
+npm run build
+npm run lint
+```
+
+- `npm run dev`：启动 Vite 开发服务。
+- `npm run test`：运行 Vitest 测试。
+- `npm run build`：执行 TypeScript 构建和 Vite 打包。
+- `npm run lint`：运行 ESLint。
+
+## 开发提示
+
+- 新页面优先复用现有路由、API 客户端和状态管理模式。
+- 涉及直播房间、拍卖排名或出价状态时，同时检查 WebSocket 数据流和相关测试。
+- 前端变更提交前至少运行与改动范围匹配的测试；影响构建或路由时运行 `npm run build`。
