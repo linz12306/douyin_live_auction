@@ -18,7 +18,8 @@ type LLMMessage struct {
 }
 
 type LLMRequest struct {
-	Messages []LLMMessage
+	Messages     []LLMMessage
+	JSONResponse bool
 }
 
 type LLMClient interface {
@@ -58,6 +59,9 @@ func (c *ChatCompletionClient) Generate(ctx context.Context, req LLMRequest) (st
 		"model":      c.model,
 		"messages":   req.Messages,
 		"max_tokens": c.maxTokens,
+	}
+	if req.JSONResponse {
+		payload["response_format"] = map[string]string{"type": "json_object"}
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {

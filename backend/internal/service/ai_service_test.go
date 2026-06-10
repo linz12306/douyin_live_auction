@@ -96,6 +96,9 @@ func TestAIServiceGeneratesAndSavesProductCopy(t *testing.T) {
 	if len(llm.requests) != 1 {
 		t.Fatalf("llm requests = %d, want 1", len(llm.requests))
 	}
+	if !llm.requests[0].JSONResponse {
+		t.Fatal("product copy request should enable JSON response mode")
+	}
 }
 
 func TestAIServiceGeneratesAuctionReportWithMetrics(t *testing.T) {
@@ -140,6 +143,12 @@ func TestAIServiceGeneratesAuctionReportWithMetrics(t *testing.T) {
 	}
 	if !strings.Contains(saved.InputSnapshot, `"participant_count":38`) {
 		t.Fatalf("input snapshot = %s", saved.InputSnapshot)
+	}
+	if len(llm.requests) != 1 {
+		t.Fatalf("llm requests = %d, want 1", len(llm.requests))
+	}
+	if llm.requests[0].JSONResponse {
+		t.Fatal("auction report request should remain plain text")
 	}
 }
 

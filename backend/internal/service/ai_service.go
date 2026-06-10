@@ -46,10 +46,13 @@ func (s *AIService) GenerateProductCopy(ctx context.Context, merchantID int64, r
 		return nil, err
 	}
 
-	content, err := s.client.Generate(ctx, LLMRequest{Messages: []LLMMessage{
-		{Role: "system", Content: "你是抖音直播竞拍商家的中文商品文案助手。只返回严格JSON，不要Markdown。JSON字段必须是 title, description, selling_points, live_script。"},
-		{Role: "user", Content: "根据以下商品和竞拍规则生成直播竞拍商品文案草稿，语气专业、有成交氛围，但不要承诺保值或投资收益。\n" + string(input)},
-	}})
+	content, err := s.client.Generate(ctx, LLMRequest{
+		Messages: []LLMMessage{
+			{Role: "system", Content: "你是抖音直播竞拍商家的中文商品文案助手。只返回严格JSON，不要Markdown。JSON字段必须是 title, description, selling_points, live_script。"},
+			{Role: "user", Content: "根据以下商品和竞拍规则生成直播竞拍商品文案草稿，语气专业、有成交氛围，但不要承诺保值或投资收益。\n" + string(input)},
+		},
+		JSONResponse: true,
+	})
 	if err != nil {
 		return nil, err
 	}
