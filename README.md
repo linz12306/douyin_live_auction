@@ -43,7 +43,14 @@ REDIS_ADDR=127.0.0.1:16380 go run ./cmd/server
 DB_DSN=root:auction123@tcp(127.0.0.1:3307)/auction_db?parseTime=true&loc=UTC&charset=utf8mb4
 REDIS_ADDR=127.0.0.1:16380
 SERVER_PORT=8080
+AI_BASE_URL=
+AI_API_KEY=
+AI_MODEL=
+AI_TIMEOUT_MS=10000
+AI_MAX_TOKENS=700
 ```
+
+AI 功能使用 OpenAI-compatible `/v1/chat/completions` 服务。配置 `AI_BASE_URL`、`AI_API_KEY` 和 `AI_MODEL` 后重启后端，即可启用商品文案、实时解说和赛后分析报告；未配置时，AI 接口会返回明确的配置错误，实时解说会跳过生成。
 
 在另一个终端启动前端：
 
