@@ -1,44 +1,44 @@
-# AI Coding Usage
+# AI 协作使用记录
 
-## Scope
+## 范围
 
-This project used AI coding assistance for implementation planning, code navigation, patch drafting, test design, documentation, and verification bookkeeping. Human review remained responsible for requirements interpretation, final product choices, credential handling, and accepting changes.
+本项目在实现方案规划、代码导航、补丁草拟、测试设计、文档整理和验证记录中使用了 AI 编程助手。人类开发者负责需求解释、最终产品取舍、凭据处理和变更接受。
 
-No real API keys, production tokens, private credentials, or customer data are recorded in this document.
+本文档不记录真实 API Key、生产 Token、私有凭据或客户数据。
 
-## Workflow
+## 工作流
 
-1. Requirements were grounded in `requirements-v3.md`, `AGENTS.md`, and OpenSpec/Superpowers artifacts before non-trivial implementation.
-2. For behavior changes, AI drafted exploration notes, OpenSpec proposal/design/tasks/spec deltas, and an execution plan before business code changed.
-3. Implementation proceeded in small verified slices, usually starting with focused tests for backend services, integration behavior, frontend state, or browser flows.
-4. Verification results were copied back into task plans and memory so later agents could distinguish accepted state from stale work.
-5. Documentation-only or narrow material cleanup used the repo fast-lane: read only relevant docs, make a small patch, run focused verification, then commit/push the verified slice.
+1. 非平凡实现开始前，先以 `requirements-v3.md`、`AGENTS.md` 和 OpenSpec/Superpowers 产物作为需求依据。
+2. 涉及行为变化时，先由 AI 协助草拟探索记录、OpenSpec proposal/design/tasks/spec delta 和执行计划，再进入业务代码实现。
+3. 实现按小的可验证切片推进，通常先补后端服务、集成行为、前端状态或浏览器流程的聚焦测试。
+4. 验证结果回写到任务计划和 memory 中，方便后续 agent 区分已接受状态和过期工作。
+5. 文档整理或窄范围材料修订使用仓库 fast-lane：只读相关上下文，做最小补丁，运行聚焦验证，再提交并推送已验证切片。
 
-## Human Decision Points
+## 人类决策点
 
-- Chose the latest requirements authority: `requirements-v3.md`.
-- Approved the five-stage project workflow and when a task may use fast-lane.
-- Decided auction semantics such as balance freeze/unfreeze, soft close, cancellation restrictions, settlement, and simulated payment behavior.
-- Accepted merchant dashboard, merchant monitor, and demo readiness as archived OpenSpec changes.
-- Kept demo credentials intentionally local and non-sensitive: `demo_merchant`, `demo_buyer_a`, and `demo_buyer_b` use the shared demo password `test123`.
-- Required Redis to be documented as the project-local port `127.0.0.1:16380`.
+- 确认最新需求权威版本为 `requirements-v3.md`。
+- 确认五段式项目工作流，以及哪些任务可以使用 fast-lane。
+- 决定余额冻结/解冻、Soft Close、取消限制、成交结算和模拟支付等竞拍语义。
+- 接受商家看板、商家竞拍监控和演示准备作为已归档 OpenSpec 变更。
+- 将演示账号限定为本地非敏感数据：`demo_merchant`、`demo_buyer_a`、`demo_buyer_b` 使用共享演示密码 `test123`。
+- 要求 Redis 在文档中统一写为项目本地端口 `127.0.0.1:16380`。
 
-## AI Contribution Estimate
+## AI 贡献估计
 
-- Requirements/spec drafting: high AI contribution, with human acceptance of scope and tradeoffs.
-- Backend and frontend implementation: high AI contribution, constrained by repo patterns, tests, and human-selected semantics.
-- Test authoring and verification loops: high AI contribution, with human-provided acceptance criteria.
-- Product decisions and risk acceptance: human-led.
-- Final repository state: human-owned, with AI assistance recorded through specs, plans, memory, commits, and verification output.
+- 需求和规格草拟：AI 贡献较高，人类负责接受范围和取舍。
+- 后端和前端实现：AI 贡献较高，但受仓库模式、测试和人类选择的业务语义约束。
+- 测试编写和验证循环：AI 贡献较高，人类提供验收标准。
+- 产品决策和风险接受：以人类主导。
+- 最终仓库状态：由人类拥有，AI 协作痕迹通过 specs、plans、memory、commits 和验证输出记录。
 
-Overall AI contribution is estimated at 70-80% of drafting and mechanical implementation effort, and 30-40% of product judgment. The split is approximate because design, coding, and verification were iterative rather than cleanly separable.
+整体估计：AI 参与了约 70-80% 的文档草拟与机械实现工作，产品判断、语义选择和风险接受由人类主导。该比例是近似估计，因为设计、编码和验证是迭代交织完成的。
 
-## Risk Control
+## 风险控制
 
-- Never write real secrets to docs, `.env`, code, or test fixtures.
-- Keep generated/runtime output out of commits, including `node_modules`, `dist`, local DB files, and runtime uploads under `backend/static/avatars/*` or `backend/static/images/*`.
-- Prefer OpenSpec lock for behavior, API, schema, realtime, auction engine, payment/order, and wallet changes.
-- Use focused tests for narrow patches and broader backend/frontend/E2E checks when behavior changes.
-- Run OpenSpec validation before claiming specs are current.
-- Run `git diff --check` before commit to catch whitespace and line-ending issues.
-- Report when frontend/backend tests are intentionally skipped for documentation-only work.
+- 不把真实密钥写入文档、`.env`、代码或测试 fixture。
+- 不提交生成/运行时产物，包括 `node_modules`、`dist`、本地数据库文件，以及 `backend/static/avatars/*`、`backend/static/images/*` 等运行时上传文件。
+- 行为、API、Schema、实时通信、竞拍引擎、支付/订单和钱包相关改动优先使用 OpenSpec lock。
+- 窄范围补丁使用聚焦测试；行为变化使用更完整的后端、前端或 E2E 检查。
+- 声称规格当前有效前，先运行 OpenSpec validation。
+- 提交前运行 `git diff --check`，检查空白和换行问题。
+- 如果文档-only 工作刻意跳过前后端测试，需要在结果中说明原因。
